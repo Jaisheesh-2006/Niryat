@@ -1,0 +1,75 @@
+# Metadata from docs/PLAN.md section 9; no executable or verified rules.
+# Effective dates require primary-source and CA review.
+rules:
+  - id: EXPORT_CONDITIONS
+    description: "Five conditions for export of services"
+    source: "IGST Act, s. 2(6)"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: LUT_REQUIRED
+    description: "LUT (RFD-11) needed to export without paying IGST; valid per financial year"
+    source: "CGST Rules, r. 96A"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: EXPORT_INVOICE_FIELDS
+    description: "Mandatory export invoice fields and LUT endorsement"
+    source: "CGST Rules, r. 46"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: INVOICE_NUMBERING
+    description: "Consecutive, unique per financial year"
+    source: "CGST Rules, r. 46"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: CREDIT_NOTE
+    description: "Refund after invoicing requires a credit note and GST adjustment"
+    source: "CGST Act, s. 34"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: GST_THRESHOLD
+    description: "₹20 lakh aggregate turnover (exports included)"
+    source: "CGST Act, s. 22"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: GSTR1_6A
+    description: "Export invoices reported in Table 6A, zero tax under LUT"
+    source: "GSTR-1 / r. 96A"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: PURPOSE_CODES
+    description: "Curated service purpose codes"
+    source: "RBI purpose code list"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: RBI_REALISATION
+    description: "Export proceeds deadline (services) — currently reported 9 months from invoice"
+    source: "FEMA (Export of Goods & Services) Regulations, 2026"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: REALISATION_ADJUSTMENT
+    description: "Refunds/lost disputes reduce the amount realised"
+    source: "FEMA export regulations"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: PRESUMPTIVE_TAX
+    description: "50% deemed income for eligible professionals, receipts limits"
+    source: "Income-tax Act 2025 (reported s. 58)"
+    effective_from: null
+    verified: false
+    logic: TODO
+  - id: ADVANCE_TAX_DATES
+    description: "15 Jun / 15 Sep / 15 Dec / 15 Mar; presumptive: full by 15 Mar"
+    source: "Income-tax Act"
+    effective_from: null
+    verified: false
+    logic: TODO

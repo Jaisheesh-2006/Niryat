@@ -1,0 +1,22 @@
+{
+  "name": "@niryat/paypal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@niryat/config": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@niryat/config": "workspace:*"
+  }
+}

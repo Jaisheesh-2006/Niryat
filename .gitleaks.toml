@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+# Generated dependencies/build artifacts are not repository source.
+[allowlist]
+paths = [
+  '''(^|[\\/])node_modules[\\/]''',
+  '''(^|[\\/])\.next[\\/]''',
+  '''(^|[\\/])\.turbo[\\/]''',
+  '''(^|[\\/])coverage[\\/]''',
+  '''(^|[\\/])\.git[\\/]''',
+  '''(^|[\\/])\.tmp[\\/]'''
+]

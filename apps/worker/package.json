@@ -1,0 +1,25 @@
+{
+  "name": "@niryat/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "vitest run",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@niryat/config": "workspace:*",
+    "@renderinc/sdk": "1.4.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@niryat/config": "workspace:*",
+    "tsx": "4.23.15"
+  }
+}

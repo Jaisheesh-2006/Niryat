@@ -1,0 +1,30 @@
+{
+  "name": "@niryat/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "seed:judge": "tsx src/seed-judge.ts"
+  },
+  "dependencies": {
+    "@niryat/config": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@niryat/config": "workspace:*",
+    "tsx": "4.23.15",
+    "drizzle-kit": "0.31.11",
+    "@types/pg": "8.23.1"
+  }
+}

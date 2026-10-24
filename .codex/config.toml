@@ -1,0 +1,13 @@
+# Start Codex at the repository root; no token literals or approvals bypass.
+# https://learn.chatgpt.com/docs/extend/mcp
+[mcp_servers.paypal]
+command = "node"
+args = ["scripts/paypal-mcp.mts"]
+env_vars = ["PAYPAL_ACCESS_TOKEN"]
+startup_timeout_sec = 60
+
+[mcp_servers.paypal.env]
+PAYPAL_ENVIRONMENT = "SANDBOX"
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
