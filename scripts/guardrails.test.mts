@@ -44,14 +44,3 @@ test("formats edited files with the installed Biome executable", () => {
     rmdirSync(temporary);
   }
 });
-test("MCP launcher refuses missing tokens and production before spawning npx", () => {
-  for (const environment of ["SANDBOX", "PRODUCTION"]) {
-    const result = spawnSync(process.execPath, [resolve(root, "scripts/paypal-mcp.mts")], {
-      cwd: root,
-      encoding: "utf8",
-      env: { ...process.env, PAYPAL_ACCESS_TOKEN: "", PAYPAL_ENVIRONMENT: environment },
-    });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /requires PAYPAL_ACCESS_TOKEN/);
-  }
-});

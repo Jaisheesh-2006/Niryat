@@ -38,7 +38,9 @@ verify runs strict typechecks, Biome, scaffold/guardrail checks and workspace te
 
 [.env.example](.env.example) lists empty future integration values: PayPal credentials, sandbox environment, webhook ID, login return URL; Anthropic key/model/budget; database and storage URLs; encryption key; AG Studio/Bryntum licence keys. Do not commit real values. The skeleton does not load a root .env file; set integration values through your process environment or Render when the relevant feature is implemented.
 
-Development MCP additionally needs a short-lived sandbox PAYPAL_ACCESS_TOKEN exported in the editor's parent environment. Start editors at the repository root. No token goes in config or command arguments. See [PayPal setup](docs/paypal.md#development-mcp).
+Development PayPal MCP uses the checked-in launcher. When you start the server, it uses an inherited sandbox access token or obtains one from sandbox PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your private repository-root .env. No parent-editor token setup is required. Restart the server after updating credentials. No token is printed, saved or placed in config/arguments. Application env loading is unchanged. See [setup and client checks](docs/paypal.md#development-mcp).
+
+The optional earlier command remains supported: node --env-file=.env scripts/start-codex-paypal.mts (append claude or vscode for those clients).
 
 ## Judge mode and hosting
 

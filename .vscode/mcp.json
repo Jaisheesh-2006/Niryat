@@ -5,13 +5,18 @@
       "command": "node",
       "args": ["${workspaceFolder}/scripts/paypal-mcp.mts"],
       "env": {
-        "PAYPAL_ACCESS_TOKEN": "${env:PAYPAL_ACCESS_TOKEN}",
         "PAYPAL_ENVIRONMENT": "SANDBOX"
       }
     },
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
+    },
+    "my-mcp-server-c76e2498": {
+      "type": "stdio",
+      "command": "serena",
+      "args": ["start-mcp-server", "--context=vscode", "--project", "${workspaceFolder}"]
     }
-  }
+  },
+  "inputs": []
 }

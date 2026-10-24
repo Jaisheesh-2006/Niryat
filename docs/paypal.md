@@ -35,6 +35,40 @@ For invoices, PLAN maps GSTIN to invoicer.tax_id, LUT text to detail.terms_and_c
 
 ## Development MCP
 
-The prompt's [old quickstart URL](https://docs.paypal.ai/developer/tools/ai/mcp-quickstart) returns 404. The [current official quickstart](https://developer.paypal.com/ai-tools/mcp-server) documents npx -y @paypal/mcp --tools=all. The three editor configs use a cross-platform Node launcher for that exact command, inherit PAYPAL_ACCESS_TOKEN, and force PAYPAL_ENVIRONMENT=SANDBOX. Export a sandbox access token in the editor's parent environment; tokens expire and are not the client secret. Never put a token in command arguments or config files.
+The [current official quickstart](https://developer.paypal.com/ai-tools/mcp-server) documents npx -y @paypal/mcp --tools=all. The editor configs run scripts/paypal-mcp.mts, which forces sandbox mode and prepares authentication before starting that exact command. No token belongs in committed configuration or command arguments.
 
-These are coding-assistant tools, not the application's queue implementation. Assistant instructions require user approval before every PayPal MCP action. Live authentication and India-specific behavior remain in [verification](verification.md).
+### Automatic sandbox authentication
+
+When you start the configured PayPal server in an editor, the launcher:
+1. Uses a nonempty PAYPAL_ACCESS_TOKEN already inherited from the editor, preserving the working Codex flow.
+2. Otherwise uses sandbox client credentials inherited from the editor, or reads only the needed PayPal fields from the repository-root private .env at runtime.
+3. Exchanges PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET for a short-lived sandbox token. A token explicitly supplied in .env is also supported.
+4. Starts the MCP server with the token, removing the client credentials and withholding unrelated file secrets from the child environment.
+
+The launcher finds .env relative to its own source path, not the editor's working directory. The file needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET from the sandbox app. PAYPAL_ENVIRONMENT must be SANDBOX or omitted. Production is rejected. Tokens and credentials are never printed or saved. Authentication messages use stderr; stdout remains reserved for MCP protocol traffic.
+
+Assistant tools do not inspect .env during development. Tests inject fake file loaders and mock HTTP responses; pnpm verify does not load the private file or contact PayPal. The actual launcher reads it only when the user starts their MCP server. Application web/API env loading remains unchanged. No new dependency was introduced; Node's built-in [util.parseEnv](https://nodejs.org/docs/latest-v24.x/api/util.html#utilparseenvcontent) parses the local file.
+
+### Check Claude Code
+
+Start Claude Code in the repository, approve the project MCP configuration if prompted, and use /mcp. Select PayPal and reconnect/restart if it was previously failed. The .mcp.json entry no longer requires a parent token substitution. See [Claude MCP management](https://code.claude.com/docs/en/mcp).
+
+### Check VS Code Copilot
+
+In the Niryat workspace, use Ctrl+Shift+P ? MCP: List Servers ? paypal ? Restart Server (or Stop Server, then Start Server). If VS Code offers a reload for the changed configuration, accept it. No special VS Code launch terminal is required for local credentials anymore. In Copilot Chat, select Agent mode and enable PayPal tools through the tools picker. Use Show Output from the server actions for errors. See [VS Code MCP management](https://code.visualstudio.com/docs/agents/run/manage-mcp-servers).
+
+Restart the MCP server to request a fresh token from local client credentials after expiry. If you deliberately supply a token yourself, refresh that token when it expires. Live connections require user-side confirmation; no business action is performed merely to test authentication.
+
+### Optional client launch helper
+
+The earlier explicit helper remains supported from the repository root:
+
+```powershell
+node --env-file=.env scripts/start-codex-paypal.mts
+node --env-file=.env scripts/start-codex-paypal.mts claude
+node --env-file=.env scripts/start-codex-paypal.mts vscode
+```
+
+It obtains a token and launches the chosen client with it. The default remains Codex. For a fresh VS Code process using this optional method, fully close its existing windows first. These helpers target Claude Code and VS Code Copilot, not Claude Desktop or the standalone Copilot CLI.
+
+Every PayPal MCP business action still needs explicit user approval. Live editor checks and India-specific capabilities remain in [verification](verification.md).

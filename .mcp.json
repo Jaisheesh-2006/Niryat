@@ -4,7 +4,6 @@
       "command": "node",
       "args": ["scripts/paypal-mcp.mts"],
       "env": {
-        "PAYPAL_ACCESS_TOKEN": "${PAYPAL_ACCESS_TOKEN}",
         "PAYPAL_ENVIRONMENT": "SANDBOX"
       }
     },
