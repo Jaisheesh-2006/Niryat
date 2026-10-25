@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "test": "vitest run",
-    "test:db": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run",
+    "test:db": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --no-file-parallelism",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "seed:judge": "tsx src/seed-judge.ts"

@@ -1,23 +1,54 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { inspect } from "node:util";
-import { type ProfileInput, profileInputSchema } from "@niryat/shared";
+import {
+  exportConditionIds,
+  type ProfileInput,
+  profileInputSchema,
+  type StoredExportCheck,
+} from "@niryat/shared";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "./client";
 import {
+  createClient,
   createUser,
   findUserByEmail,
   findUserById,
   getProfile,
+  listClients,
   profiles,
+  updateClient,
   upsertProfile,
 } from "./index";
 import * as schema from "./schema";
 import { openTestDb, testDatabaseUrl } from "./testing";
 
 const key = randomBytes(32);
+const exportCheck: StoredExportCheck = {
+  answers: {
+    supplierInIndia: true,
+    clientPresentInIndia: false,
+    paidInForeignCurrency: true,
+    sameEstablishment: false,
+  },
+  result: {
+    eligible: true,
+    conditions: exportConditionIds.map((id) => ({
+      id,
+      status: "pass",
+      reference: "IGST Act 2017, s. 2(6)",
+      message: "Test",
+    })),
+    citation: {
+      ruleId: "EXPORT_CONDITIONS",
+      source: "IGST Act 2017, s. 2(6)",
+      effectiveFrom: "2019-02-01",
+    },
+    checkedOn: "2026-10-26",
+  },
+};
 const profile: ProfileInput = {
   gstRegistered: true,
   gstin: "27ABCDE1234F1Z5",
@@ -34,6 +65,7 @@ describe("storage query failures", () => {
   const userId = randomUUID();
   const email = "synthetic@example.invalid";
   const passwordHash = "synthetic-password-hash";
+  const name = "Synthetic Client";
 
   it.each([
     {
@@ -61,8 +93,23 @@ describe("storage query failures", () => {
       run: (db: Db) => getProfile(db, userId, key),
       message: "Profile lookup failed",
     },
+    {
+      operation: "listClients",
+      run: (db: Db) => listClients(db, userId),
+      message: "Client lookup failed",
+    },
+    {
+      operation: "createClient",
+      run: (db: Db) => createClient(db, userId, { name, country: "US", exportCheck }),
+      message: "Client save failed",
+    },
+    {
+      operation: "updateClient",
+      run: (db: Db) => updateClient(db, userId, randomUUID(), { name, country: "US", exportCheck }),
+      message: "Client save failed",
+    },
   ])("$operation does not expose query values or causes", async ({ run, message }) => {
-    const secrets = [email, passwordHash, userId, profile.gstin, profile.panLast4];
+    const secrets = [email, passwordHash, userId, profile.gstin, profile.panLast4, name];
     const failure = new Error(`Database failure: ${secrets.join(", ")}`);
     const pool = new Pool();
     const query = vi.spyOn(pool, "query").mockImplementation(() => {
