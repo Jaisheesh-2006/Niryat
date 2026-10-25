@@ -48,6 +48,13 @@ TODO(verify): Review current service codes and bank confirmation requirements be
 
 TODO(verify): Have a CA verify all twelve [planned rules](rules-sources.md), statutory exceptions, primary citations and effective dates, especially the conflicting RBI realisation period and Income-tax Act 2025 references. [CBIC](https://taxinformation.cbic.gov.in/), [RBI notifications](https://www.rbi.org.in/Scripts/NotificationUser.aspx), [Income Tax Department](https://www.incometax.gov.in/iec/foportal/).
 
+Source check (2026-10-25): all twelve rules were checked against primary text (CBIC, RBI, e-Gazette). Citations and effective dates are recorded in [rules sources](rules-sources.md) and the rules YAML.
+- The RBI realisation-period conflict is resolved: 9 months from the invoice date, under FEMA 23(R)/2026-RB as amended, from 2026-10-01.
+- Income-tax Act 2025 s. 58 and s. 408 are confirmed.
+- Purpose codes: the 2012 Annex I, its Circ. 50 (2016) amendment and PayPal India's 14-code list are checked; see [rules sources](rules-sources.md#rbi--fema).
+- Still open: which realisation period applies to invoices dated 2025-11-14 to 2026-06-04, and the GSTR-1 JSON format.
+- All twelve rules carry `review: source_checked`. No CA review is planned for the hackathon; it is a disclosed limitation (PLAN section 23).
+
 ## V10 GSTR-1 format
 
 TODO(verify): Confirm the currently accepted Table 6A service-export CSV/JSON format against the [GST offline utilities](https://www.gst.gov.in/download/offlineutilities).

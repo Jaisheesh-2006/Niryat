@@ -123,7 +123,7 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 ### 2. Purpose code advisor
 
-**What:** From the user's work description, suggest the right RBI purpose code (e.g. **P0802** software consultancy, **P1006** business/management consultancy, **P1007** advertising/market research, **P1009** architectural/engineering/technical) and explain why. Flag a mismatch with the code set in PayPal.
+**What:** From the user's work description, suggest the right RBI purpose code (e.g. **P0802** software consultancy, **P1006** business/management consultancy, **P1007** advertising, **P1009** architectural) and explain why. Suggest only codes PayPal India offers ([rules sources](rules-sources.md#rbi--fema)). Flag a mismatch with the code set in PayPal.
 
 **How:** AI classifies the work against a curated code table; the table (not the AI) is the source of truth.
 
@@ -218,7 +218,7 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 ### 9. RBI deadline tracker with PayPal reminders
 
-**What:** For every unpaid or partly paid invoice, count down to the RBI deadline for receiving export proceeds (configurable; currently reported as 9 months from invoice date for services — verify). As the deadline approaches, the agent **sends PayPal invoice reminders** after the user approves, escalating politely.
+**What:** For every unpaid or partly paid invoice, count down to the RBI deadline for receiving export proceeds (configurable; 9 months from invoice date for services, or 12 months if invoiced or settled in INR, under the FEMA 2026 regulations from 1 Oct 2026; see [rules sources](rules-sources.md)). As the deadline approaches, the agent **sends PayPal invoice reminders** after the user approves, escalating politely.
 
 **How:** rules engine for the deadline (stored as a versioned rule); PayPal `send_invoice_reminder` for the action.
 
@@ -310,24 +310,24 @@ Build these **only after features 1–13 are polished** (target: Nov 5).
 
 ## 9. Rules engine
 
-Rules live in a versioned file (e.g. `rules/india-export.yaml`). Each rule has an `id`, `description`, `source` (Act / section / notification), `effective_from`, `verified` flag and logic, and is covered by unit tests.
+Rules live in a versioned file (e.g. `rules/india-export.yaml`). Each rule has an `id`, `description`, `source` (Act / section / notification), `effective_from`, `review` status (`unchecked` / `source_checked`) and logic, and is covered by unit tests.
 
-| Rule ID                  | Rule                                                                           | Source                                              | Status                        |
-| ------------------------ | ------------------------------------------------------------------------------ | --------------------------------------------------- | ----------------------------- |
-| `EXPORT_CONDITIONS`      | Five conditions for export of services                                         | IGST Act, s. 2(6)                                   | Verify wording                |
-| `LUT_REQUIRED`           | LUT (RFD-11) needed to export without paying IGST; valid per financial year    | CGST Rules, r. 96A                                  | Verified (CBIC)               |
-| `EXPORT_INVOICE_FIELDS`  | Mandatory export invoice fields and LUT endorsement                            | CGST Rules, r. 46                                   | Verify                        |
-| `INVOICE_NUMBERING`      | Consecutive, unique per financial year                                         | CGST Rules, r. 46                                   | Verify                        |
-| `CREDIT_NOTE`            | Refund after invoicing requires a credit note and GST adjustment               | CGST Act, s. 34                                     | Verify                        |
-| `GST_THRESHOLD`          | ₹20 lakh aggregate turnover (exports included)                                 | CGST Act, s. 22                                     | Verify                        |
-| `GSTR1_6A`               | Export invoices reported in Table 6A, zero tax under LUT                       | GSTR-1 / r. 96A                                     | Verify file format            |
-| `PURPOSE_CODES`          | Curated service purpose codes                                                  | RBI purpose code list                               | Verify with bank              |
-| `RBI_REALISATION`        | Export proceeds deadline (services) — currently reported 9 months from invoice | FEMA (Export of Goods & Services) Regulations, 2026 | **Verify — sources conflict** |
-| `REALISATION_ADJUSTMENT` | Refunds/lost disputes reduce the amount realised                               | FEMA export regulations                             | **Verify**                    |
-| `PRESUMPTIVE_TAX`        | 50% deemed income for eligible professionals, receipts limits                  | Income-tax Act 2025 (reported s. 58)                | **Verify section and limits** |
-| `ADVANCE_TAX_DATES`      | 15 Jun / 15 Sep / 15 Dec / 15 Mar; presumptive: full by 15 Mar                 | Income-tax Act                                      | Verify under new Act          |
+| Rule ID                  | Rule                                                                                          | Source                                                                  | Status                           |
+| ------------------------ | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------- |
+| `EXPORT_CONDITIONS`      | Five conditions for export of services                                                        | IGST Act, s. 2(6); s. 13(2)                                             | Source-checked                   |
+| `LUT_REQUIRED`           | LUT (RFD-11) before export, per financial year; IGST + interest if unpaid after 1 year        | IGST s. 16; CGST Rules r. 96A; Notfn 37/2017-CT                         | Source-checked                   |
+| `EXPORT_INVOICE_FIELDS`  | Mandatory export invoice fields and LUT endorsement                                           | CGST Rules, r. 46 (Notfn 20/2024-CT)                                    | Source-checked                   |
+| `INVOICE_NUMBERING`      | Consecutive, ≤16 chars (A–Z, 0–9, -, /), unique per financial year                            | CGST Rules, r. 46(b)                                                    | Source-checked                   |
+| `CREDIT_NOTE`            | Credit note may be issued on refund; declare by 30 Nov after FY end                           | CGST Act, s. 34; r. 53(1A)                                              | Source-checked                   |
+| `GST_THRESHOLD`          | ₹20 lakh aggregate turnover (exports included); services exporters below it need not register | CGST Act, s. 22, s. 24; Notfn 10/2017-IT                                | Source-checked                   |
+| `GSTR1_6A`               | Export invoices reported in Table 6A, zero tax under LUT                                      | GSTR-1 Table 6A; Notfn 83/2020-CT                                       | Source-checked; file format open |
+| `PURPOSE_CODES`          | Service purpose codes PayPal India offers, with Annex I descriptions                          | FETERS Annex I, A.P. (DIR) Circ. 84/2012                                | Source-checked                   |
+| `RBI_REALISATION`        | Realise services exports within 9 months of invoice (12 if INR), from 1 Oct 2026              | FEMA (Export and Import of Goods and Services) Regulations, 2026, Reg 5 | Source-checked                   |
+| `REALISATION_ADJUSTMENT` | Refunds/lost disputes reduce realised value only with AD-bank approval                        | FEMA 23(R)/2026-RB, Reg 6                                               | Source-checked                   |
+| `PRESUMPTIVE_TAX`        | 50% deemed income for specified professions (incl. IT); ₹50 lakh / ₹75 lakh limits            | Income-tax Act 2025, s. 58, s. 62(4)                                    | Source-checked                   |
+| `ADVANCE_TAX_DATES`      | 15 Jun / 15 Sep / 15 Dec / 15 Mar; presumptive: full by 15 Mar                                | Income-tax Act 2025, s. 408                                             | Source-checked                   |
 
-A CA reviews this table before the demo.
+Source-checked against primary law on 2026-10-25; details, quotes and open items are in [rules sources](rules-sources.md). No CA review is planned for the hackathon; this is listed as a limitation ([section 23](#23-disclaimer)) and every rule-based statement in the app carries a "verify with your CA" note.
 
 ---
 
@@ -420,7 +420,7 @@ A project can win at most one main prize and one sponsor prize; AG Studio is the
 | `matches`        | fira_line_id, payment_id, confidence, confirmed_by_user                                                                                                                          |
 | `agent_actions`  | id, user_id, paypal_action, payload, status (proposed / approved / rejected / done), created_at                                                                                  |
 | `tasks`          | id, user_id, type, due_date, status, source_rule_id                                                                                                                              |
-| `rule_versions`  | rule_id, version, effective_from, source, verified                                                                                                                               |
+| `rule_versions`  | rule_id, version, effective_from, source, review                                                                                                                                 |
 
 Sensitive fields (GSTIN, PAN fragments, addresses) are encrypted at rest.
 
@@ -502,7 +502,7 @@ PayPal stays on screen for most of the video: _"Every action here happens in Pay
 | 1:35–1:55 | Buyer opens a **PayPal dispute** → alert: _"this export may no longer count as realised"_; a **PayPal refund** updates GST credit-note data                                                                      |
 | 1:55–2:20 | Upload the FIRA → AI matches it to PayPal payments, flags 1 line with a reason → generate GSTR-1 export file                                                                                                     |
 | 2:20–2:40 | Monthly close agent proposes **PayPal reminders** before the RBI deadline → approve → reminder sent; Bryntum calendar shows upcoming deadlines                                                                   |
-| 2:40–2:55 | Safety and business: rules with citations, CA-reviewed, user approves every PayPal action, no auto-filing; next: CA dashboard                                                                                    |
+| 2:40–2:55 | Safety and business: rules with primary-source citations, user approves every PayPal action, no auto-filing; next: CA dashboard                                                                                  |
 | 2:55–3:00 | _"Run your export business on PayPal. Niryat keeps it legal in India."_                                                                                                                                          |
 
 No third-party logos (Skydo, Wise, ClearTax, etc.) and no copyrighted music in the video.
@@ -511,17 +511,17 @@ No third-party logos (Skydo, Wise, ClearTax, etc.) and no copyrighted music in t
 
 ## 17. Timeline
 
-| Dates (2026)        | Goal                                                                                                                                                                                                                                                 |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Oct 24–25**       | Day-1 checks ([section 21](#21-day-1-verification-checklist)), especially which PayPal features work on India sandbox accounts; repo + LICENSE; Render hello-world on a paid Postgres plan; get your own redacted FIRA; CA friend reviews rules list |
-| **Oct 26–30**       | Features 1–5: Log in with PayPal + health check, purpose code advisor, export check, PayPal invoicing (one-time, recurring, milestone), real-time payment tracking; rules engine v1 with tests                                                       |
-| **Oct 31–Nov 4**    | Features 6–9: refunds and disputes, FIRA matching, monthly close agent with approval queue, RBI tracker with PayPal reminders                                                                                                                        |
-| **Nov 1**           | **Start AG Studio and Bryntum trials** (so they last through Dec 15)                                                                                                                                                                                 |
-| **Nov 4–7**         | Features 10–13: GSTR-1 data, Bryntum calendar, AG Studio dashboard, advance tax; judge mode; polish. Stretch features only if 1–13 are solid                                                                                                         |
-| **Nov 8**           | **Feature freeze**                                                                                                                                                                                                                                   |
-| **Nov 8–10**        | Testing, README, Devpost write-up, record and edit the video                                                                                                                                                                                         |
-| **Nov 11**          | **Submit** (one day of buffer before the deadline)                                                                                                                                                                                                   |
-| **Nov 12 – Dec 15** | Keep the hosted demo, sandbox accounts, trials and AI budget alive until judging ends                                                                                                                                                                |
+| Dates (2026)        | Goal                                                                                                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Oct 24–25**       | Day-1 checks ([section 21](#21-day-1-verification-checklist)), especially which PayPal features work on India sandbox accounts; repo + LICENSE; Render hello-world on a paid Postgres plan; get your own redacted FIRA; rules checked against primary sources |
+| **Oct 26–30**       | Features 1–5: Log in with PayPal + health check, purpose code advisor, export check, PayPal invoicing (one-time, recurring, milestone), real-time payment tracking; rules engine v1 with tests                                                                |
+| **Oct 31–Nov 4**    | Features 6–9: refunds and disputes, FIRA matching, monthly close agent with approval queue, RBI tracker with PayPal reminders                                                                                                                                 |
+| **Nov 1**           | **Start AG Studio and Bryntum trials** (so they last through Dec 15)                                                                                                                                                                                          |
+| **Nov 4–7**         | Features 10–13: GSTR-1 data, Bryntum calendar, AG Studio dashboard, advance tax; judge mode; polish. Stretch features only if 1–13 are solid                                                                                                                  |
+| **Nov 8**           | **Feature freeze**                                                                                                                                                                                                                                            |
+| **Nov 8–10**        | Testing, README, Devpost write-up, record and edit the video                                                                                                                                                                                                  |
+| **Nov 11**          | **Submit** (one day of buffer before the deadline)                                                                                                                                                                                                            |
+| **Nov 12 – Dec 15** | Keep the hosted demo, sandbox accounts, trials and AI budget alive until judging ends                                                                                                                                                                         |
 
 ---
 
@@ -556,21 +556,21 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 
 ## 20. Risks and mitigations
 
-| Risk                                                        | Mitigation                                                                                    |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Some PayPal features unavailable on India sandbox accounts  | Test each on Day 1; drop only the unavailable sub-item; ask on the PayPal Discord immediately |
-| Rules wrong or outdated (2026 changes, conflicting sources) | Versioned rules with sources and `verified` flags; CA review; configurable deadlines          |
-| Seen as tax advice                                          | Framed as "preparation for your CA"; user approves everything; nothing auto-filed             |
-| Agent takes a wrong PayPal action                           | Every PayPal action goes through the approval queue; all actions logged                       |
-| AI misreads an email or FIRA                                | Show extracted values beside the source; require confirmation for low-confidence results      |
-| Trial licences expire during judging                        | Start AG Studio and Bryntum trials on or after Nov 1; request hackathon licences on Discord   |
-| Hosted demo goes down before Dec 15                         | Paid Render Postgres (free tier expires after 30 days); credits budgeted through Dec 15       |
-| AI budget runs out during judging                           | Monthly budget cap and rate limits                                                            |
-| Keys leaked in the public repo                              | `.env` never committed; only sandbox test credentials published                               |
-| Judges unfamiliar with Indian GST                           | Lead with rupee amounts at risk; one simple explainer graphic                                 |
-| No API for the GST portal or FIRA downloads                 | Generate official upload files; FIRA via file upload — real data, not simulated               |
-| Sensitive data (GSTIN, PAN, income)                         | Encryption at rest, minimal permissions, no training on user data                             |
-| Scope creep                                                 | Feature freeze on Nov 8; stretch features only after 1–13 are polished                        |
+| Risk                                                        | Mitigation                                                                                     |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Some PayPal features unavailable on India sandbox accounts  | Test each on Day 1; drop only the unavailable sub-item; ask on the PayPal Discord immediately  |
+| Rules wrong or outdated (2026 changes, conflicting sources) | Versioned rules with sources and `review` status; primary-source check; configurable deadlines |
+| Seen as tax advice                                          | Framed as "preparation for your CA"; user approves everything; nothing auto-filed              |
+| Agent takes a wrong PayPal action                           | Every PayPal action goes through the approval queue; all actions logged                        |
+| AI misreads an email or FIRA                                | Show extracted values beside the source; require confirmation for low-confidence results       |
+| Trial licences expire during judging                        | Start AG Studio and Bryntum trials on or after Nov 1; request hackathon licences on Discord    |
+| Hosted demo goes down before Dec 15                         | Paid Render Postgres (free tier expires after 30 days); credits budgeted through Dec 15        |
+| AI budget runs out during judging                           | Monthly budget cap and rate limits                                                             |
+| Keys leaked in the public repo                              | `.env` never committed; only sandbox test credentials published                                |
+| Judges unfamiliar with Indian GST                           | Lead with rupee amounts at risk; one simple explainer graphic                                  |
+| No API for the GST portal or FIRA downloads                 | Generate official upload files; FIRA via file upload — real data, not simulated                |
+| Sensitive data (GSTIN, PAN, income)                         | Encryption at rest, minimal permissions, no training on user data                              |
+| Scope creep                                                 | Feature freeze on Nov 8; stretch features only after 1–13 are polished                         |
 
 ---
 
@@ -613,7 +613,7 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 
 ## 23. Disclaimer
 
-Niryat prepares information and documents to help users and their chartered accountants. It does **not** provide tax or legal advice, does **not** file returns on anyone's behalf, and only takes PayPal actions (such as sending invoices or reminders) after the user approves them. Rules are sourced and versioned but must be verified against official notifications and with a qualified CA.
+Niryat prepares information and documents to help users and their chartered accountants. It does **not** provide tax or legal advice, does **not** file returns on anyone's behalf, and only takes PayPal actions (such as sending invoices or reminders) after the user approves them. Rules are sourced, versioned and checked against official primary texts, but **have not been reviewed by a chartered accountant**; this is a known limitation of the hackathon build. Confirm anything you act on with a qualified CA.
 
 ---
 

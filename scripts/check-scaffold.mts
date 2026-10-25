@@ -30,7 +30,7 @@ assert.deepEqual(
   [...yaml.matchAll(/- id: ([A-Z_0-9]+)/g)].map((match) => match[1]),
   ids,
 );
-assert.equal([...yaml.matchAll(/verified: false/g)].length, 12);
+assert.equal([...yaml.matchAll(/review: (unchecked|source_checked)/g)].length, 12);
 assert.equal([...yaml.matchAll(/logic: TODO/g)].length, 12);
 for (const line of read(".env.example")
   .split("\n")

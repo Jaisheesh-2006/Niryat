@@ -22,7 +22,7 @@ profiles; curated PURPOSE_CODES table; AI classification (no PayPal mutation).
 
 ## Edge cases
 
-Ambiguous work descriptions; multiple services; missing code; bank confirmation; no invented code.
+Ambiguous work descriptions; multiple services; missing code; bank confirmation; no invented code; only codes PayPal India offers, never P0104 (goods) or P0301 (travel); work whose Annex code PayPal lacks (P0807, P1014, P1015, P1016, P1022) gets the nearest offered code ([rules sources](../rules-sources.md#rbi--fema)).
 
 ## Test cases (TODO)
 

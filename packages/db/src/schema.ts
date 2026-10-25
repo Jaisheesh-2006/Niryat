@@ -131,7 +131,7 @@ export const ruleVersions = pgTable(
     version: integer("version").notNull(),
     effectiveFrom: date("effective_from"),
     source: text("source"),
-    verified: boolean("verified").default(false),
+    review: text("review").notNull().default("unchecked"),
   },
   (table) => [primaryKey({ columns: [table.ruleId, table.version] })],
 );

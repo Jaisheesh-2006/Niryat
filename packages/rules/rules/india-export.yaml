@@ -1,75 +1,76 @@
-# Metadata from docs/PLAN.md section 9; no executable or verified rules.
-# Effective dates require primary-source and CA review.
+# Metadata from docs/PLAN.md section 9. Descriptions, sources and effective dates were checked
+# against primary sources on 2026-10-25 (see docs/rules-sources.md). A source_checked review means
+# the entry matches primary text; no CA review is planned (disclosed limitation). No logic yet.
 rules:
   - id: EXPORT_CONDITIONS
-    description: "Five conditions for export of services"
-    source: "IGST Act, s. 2(6)"
-    effective_from: null
-    verified: false
+    description: "Export of services only if all five hold: supplier in India; recipient outside India; place of supply outside India (default: recipient's location); paid in convertible foreign exchange or RBI-permitted INR; not merely establishments of one person"
+    source: "IGST Act 2017, s. 2(6)(i)-(v) (cl. (iv) amended by Act 32 of 2018); place of supply s. 13(2)"
+    effective_from: 2019-02-01
+    review: source_checked
     logic: TODO
   - id: LUT_REQUIRED
-    description: "LUT (RFD-11) needed to export without paying IGST; valid per financial year"
-    source: "CGST Rules, r. 96A"
-    effective_from: null
-    verified: false
+    description: "Registered exporter may export without IGST by filing a Letter of Undertaking (FORM GST RFD-11) before export, once per financial year; if payment is not received within 1 year of invoice (or the FEMA period if later), pay IGST with interest within 15 days"
+    source: "IGST Act s. 16(1),(3); CGST Rules r. 96A(1)(b) as substituted by Notfn 12/2024-CT; Notfn 37/2017-CT"
+    effective_from: 2024-07-10
+    review: source_checked
     logic: TODO
   - id: EXPORT_INVOICE_FIELDS
-    description: "Mandatory export invoice fields and LUT endorsement"
-    source: "CGST Rules, r. 46"
-    effective_from: null
-    verified: false
+    description: "Rule 46 particulars plus the endorsement SUPPLY MEANT FOR EXPORT/SUPPLY TO SEZ UNIT OR SEZ DEVELOPER FOR AUTHORISED OPERATIONS UNDER BOND OR LETTER OF UNDERTAKING WITHOUT PAYMENT OF INTEGRATED TAX, and recipient name and address, delivery address and country of destination"
+    source: "CGST Rules r. 46 and export proviso (amended by Notfn 20/2024-CT)"
+    effective_from: 2024-11-01
+    review: source_checked
     logic: TODO
   - id: INVOICE_NUMBERING
-    description: "Consecutive, unique per financial year"
-    source: "CGST Rules, r. 46"
-    effective_from: null
-    verified: false
+    description: "Consecutive serial number of at most 16 characters (letters, digits, '-' and '/'), in one or more series, unique for a financial year"
+    source: "CGST Rules r. 46(b); same format for credit notes r. 53(1A)"
+    effective_from: 2017-07-01
+    review: source_checked
     logic: TODO
   - id: CREDIT_NOTE
-    description: "Refund after invoicing requires a credit note and GST adjustment"
-    source: "CGST Act, s. 34"
-    effective_from: null
-    verified: false
+    description: "Supplier may issue a credit note when value is reduced or a supply is refunded; declare it by 30 November after the financial year end, or the annual return date if earlier; for LUT exports it corrects value only (no tax to adjust)"
+    source: "CGST Act s. 34(1)-(2); CGST Rules r. 53(1A); FORM GSTR-1 Table 9B"
+    effective_from: 2025-10-01
+    review: source_checked
     logic: TODO
   - id: GST_THRESHOLD
-    description: "₹20 lakh aggregate turnover (exports included)"
-    source: "CGST Act, s. 22"
-    effective_from: null
-    verified: false
+    description: "Registration required once all-India aggregate turnover (exports included) exceeds Rs 20 lakh in a financial year (Rs 10 lakh in remaining special category States); services exporters at or below that are exempt from compulsory inter-State registration"
+    source: "CGST Act s. 22(1), s. 2(6), s. 24(i); IGST Act s. 7(5)(a); Notfn 10/2017-IT as amended by Notfn 03/2019-IT"
+    effective_from: 2020-01-01
+    review: source_checked
     logic: TODO
   - id: GSTR1_6A
-    description: "Export invoices reported in Table 6A, zero tax under LUT"
-    source: "GSTR-1 / r. 96A"
-    effective_from: null
-    verified: false
+    description: "Exports reported in GSTR-1 Table 6A; LUT exports at zero tax; shipping-bill details may be left out; due 11th of next month (monthly) or 13th after the quarter (QRMP)"
+    source: "FORM GSTR-1 Table 6A and instructions 8, 11; CGST Act s. 37(1); CGST Rules r. 59; Notfn 83/2020-CT"
+    effective_from: 2021-01-01
+    review: source_checked
     logic: TODO
   - id: PURPOSE_CODES
-    description: "Curated service purpose codes"
-    source: "RBI purpose code list"
-    effective_from: null
-    verified: false
+    description: "Curated service purpose codes for inward remittances; code descriptions must come from the current FETERS Annex, not the withdrawn pre-2012 list"
+    source: "FETERS purpose codes, Annex I to A.P. (DIR Series) Circular No. 84 dated 2012-02-29, as modified by A.P. (DIR Series) Circular No. 50 dated 2016-02-11"
+    effective_from: 2012-04-01
+    review: source_checked
     logic: TODO
   - id: RBI_REALISATION
-    description: "Export proceeds deadline (services) — currently reported 9 months from invoice"
-    source: "FEMA (Export of Goods & Services) Regulations, 2026"
-    effective_from: null
-    verified: false
+    description: "Realise and repatriate the full (or AD-reduced) export value of services within 9 months from the invoice date, or 12 months if invoiced or settled in INR; the AD bank may extend; invoices dated before 2026-10-01 follow FEMA 23(R)/2015-RB"
+    source: "FEMA (Export and Import of Goods and Services) Regulations, 2026 (FEMA 23(R)/2026-RB) Reg 5(1)(a), as amended by FEMA 23(R)/(1)/2026-RB"
+    effective_from: 2026-10-01
+    review: source_checked
     logic: TODO
   - id: REALISATION_ADJUSTMENT
-    description: "Refunds/lost disputes reduce the amount realised"
-    source: "FEMA export regulations"
-    effective_from: null
-    verified: false
+    description: "A refund or lost dispute is an under-realisation; it reduces export value only when the AD bank allows it, which for invoices up to Rs 10 lakh may rest on the exporter's declaration"
+    source: "FEMA 23(R)/2026-RB Reg 6 and Reg 4(2) proviso"
+    effective_from: 2026-10-01
+    review: source_checked
     logic: TODO
   - id: PRESUMPTIVE_TAX
-    description: "50% deemed income for eligible professionals, receipts limits"
-    source: "Income-tax Act 2025 (reported s. 58)"
-    effective_from: null
-    verified: false
+    description: "Resident individual or non-LLP firm in a specified profession (includes information technology): deemed income is 50% of gross receipts, or actual profit if higher; gross receipts up to Rs 50 lakh, or Rs 75 lakh if cash receipts are at most 5%"
+    source: "Income-tax Act 2025 s. 58(2) Table Sl. 3, s. 58(11)(b), s. 62(4); 1961 Act s. 44ADA for tax years before 2026-04-01"
+    effective_from: 2026-04-01
+    review: source_checked
     logic: TODO
   - id: ADVANCE_TAX_DATES
-    description: "15 Jun / 15 Sep / 15 Dec / 15 Mar; presumptive: full by 15 Mar"
-    source: "Income-tax Act"
-    effective_from: null
-    verified: false
+    description: "Cumulative 15% / 45% / 75% / 100% by 15 Jun / 15 Sep / 15 Dec / 15 Mar; s. 58 presumptive filers pay 100% by 15 Mar; not payable if tax for the year is under Rs 10,000"
+    source: "Income-tax Act 2025 ss. 403, 404, 408 (interest ss. 424, 425); 1961 Act ss. 207-211, 234B, 234C for earlier years"
+    effective_from: 2026-04-01
+    review: source_checked
     logic: TODO

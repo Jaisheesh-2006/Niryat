@@ -17,3 +17,5 @@ Thumbs.db
 docs/verification-local.json
 .tmp/
 current-phase-plan.md
+
+PROMPT.md

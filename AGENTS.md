@@ -54,12 +54,13 @@ pnpm verify passes, relevant tests are added, and only actually satisfied spec c
 
 The Server SDK lacks Invoicing and Disputes. India sandbox results are in docs/paypal-sandbox-findings.md: recurring invoices work; partial payments, domestic recipients and attachment upload do not.
 AG Studio and Bryntum licences come from environment configuration; start trials on/after Nov 1, 2026 so they cover judging. Neither package is installed yet.
-Rule sources and effective dates need CA review; verified=false must remain until review. Do not treat plan estimates as law.
+Rules carry review: source_checked (matches primary law, docs/rules-sources.md) or unchecked; no CA review is planned for the hackathon, which is a stated limitation. Do not treat plan estimates as law.
 Shared packages export source; their build step typechecks. Next alone produces production assets.
 Node/pnpm version pins are intentional; pnpm records exact release-age exceptions for the verified stable Next release.
 
 ## Workflow and references
 
 Work on one spec per task. Plan before multi-file changes, keep commits small, and read the nearest nested AGENTS.md first. Never commit or publish unless requested.
+Current state: phase statuses are in [build flow](docs/build-flow.md). The active task plan is the local, git-ignored current-phase-plan.md, if present. PayPal facts are in [sandbox findings](docs/paypal-sandbox-findings.md).
 Whenever an APIMatic tool is used (the PayPal Context Plugin's paypal:* skills or any other APIMatic tooling), add an entry to [APIMatic usage](docs/apimatic-usage.md) in the same task: date, tool, purpose and outcome. It is evidence for the APIMatic sponsor prize.
 See [architecture](docs/architecture.md), [PayPal](docs/paypal.md), [rules](docs/rules-sources.md), [glossary](docs/glossary.md), [ADRs](docs/decisions/), [verification](docs/verification.md) and [APIMatic usage](docs/apimatic-usage.md).
