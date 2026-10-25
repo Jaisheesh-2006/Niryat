@@ -39,6 +39,6 @@ Zod validates external inputs and environment values. Rules are pure, versioned 
 
 apps/web uses Next.js App Router; apps/api uses Hono on Node 24. Shared packages export TypeScript source; their build step checks types, while Next produces a production build. apps/worker registers monthlyClose with Render's TypeScript SDK and returns not_implemented.
 
-Drizzle declares the twelve tables from PLAN section 13. No migrations, connection factory or seed data are shipped. Encryption of sensitive fields, uniqueness constraints and tenant isolation must be designed in the relevant feature specs before data is stored. PDFs and FIRAs will use external file storage.
+Drizzle declares the twelve tables from PLAN section 13. Migrations live in packages/db/drizzle; createDb in packages/db/src/client.ts; GSTIN and PAN fragments are AES-GCM encrypted. No seed data yet. PDFs and FIRAs will use external file storage.
 
 Render hosting uses two web services, one workflow service and paid Postgres. Workflows currently need a separate trigger for monthly scheduling; add it with [spec 08](specs/08-monthly-close.md), following [Render's scheduling guidance](https://render.com/docs/workflows). AG Studio and Bryntum remain deferred dependencies.

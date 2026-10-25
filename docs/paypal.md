@@ -47,7 +47,7 @@ When you start the configured PayPal server in an editor, the launcher:
 
 The launcher finds .env relative to its own source path, not the editor's working directory. The file needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET from the sandbox app. PAYPAL_ENVIRONMENT must be SANDBOX or omitted. Production is rejected. Tokens and credentials are never printed or saved. Authentication messages use stderr; stdout remains reserved for MCP protocol traffic.
 
-Assistant tools do not inspect .env during development. Tests inject fake file loaders and mock HTTP responses; pnpm verify does not load the private file or contact PayPal. The actual launcher reads it only when the user starts their MCP server. Application web/API env loading remains unchanged. No new dependency was introduced; Node's built-in [util.parseEnv](https://nodejs.org/docs/latest-v24.x/api/util.html#utilparseenvcontent) parses the local file.
+Assistant tools do not inspect .env during development. Launcher tests inject fake file loaders and mock HTTP responses; pnpm verify does not load the private file or contact PayPal. The actual launcher reads it only when the user starts their MCP server. The API server, drizzle-kit and explicit `test:db` scripts load the root .env when present; ordinary `test` scripts and `pnpm verify` do not. No new dependency was introduced; Node's built-in [util.parseEnv](https://nodejs.org/docs/latest-v24.x/api/util.html#utilparseenvcontent) parses the local file.
 
 ### Check Claude Code
 

@@ -12,7 +12,7 @@ This commit is a scaffold. Product scope and ordering live in [PLAN](docs/PLAN.m
 - packages/rules: pure, cited legal/numeric logic; currently inert YAML metadata.
 - packages/paypal: SDK, REST and webhook boundaries.
 - packages/agent: future Claude + PayPal Toolkit; approval-queue contract.
-- packages/db: Drizzle table stubs; packages/shared: shared boundaries.
+- packages/db: Drizzle schema, migrations, encrypted profile storage; packages/shared: shared zod request schemas.
 - packages/config: strict TypeScript base and safe zod environment parser.
 - docs/specs: thirteen ordered, unimplemented feature specs.
 
