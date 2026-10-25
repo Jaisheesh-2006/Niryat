@@ -240,6 +240,9 @@ importers:
       "@niryat/db":
         specifier: workspace:*
         version: link:../../packages/db
+      "@niryat/rules":
+        specifier: workspace:*
+        version: link:../../packages/rules
       "@niryat/shared":
         specifier: workspace:*
         version: link:../../packages/shared

@@ -3,6 +3,7 @@ import { profileInputSchema } from "@niryat/shared";
 import { Hono } from "hono";
 import { readSession } from "../auth/session";
 import type { AppDeps } from "./auth";
+import { parseJsonBody } from "./body";
 
 export function profileRoutes(deps: AppDeps): Hono {
   const routes = new Hono();
@@ -15,16 +16,9 @@ export function profileRoutes(deps: AppDeps): Hono {
   routes.put("/profile", async (c) => {
     const userId = await readSession(c, deps.sessionSecret);
     if (!userId) return c.json({ error: "unauthenticated" }, 401);
-    if (c.req.header("Content-Type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") {
-      return c.json({ error: "unsupported_media_type" }, 415);
-    }
-    const body = await c.req.json<unknown>().catch(() => undefined);
-    const parsed = profileInputSchema.safeParse(body);
-    if (!parsed.success) {
-      const fields = [...new Set(parsed.error.issues.map((issue) => issue.path.join(".")))];
-      return c.json({ error: "invalid_request", fields }, 400);
-    }
-    return c.json(await upsertProfile(deps.db, userId, parsed.data, deps.encryptionKey));
+    const body = await parseJsonBody(c, profileInputSchema);
+    if (!body.ok) return body.response;
+    return c.json(await upsertProfile(deps.db, userId, body.data, deps.encryptionKey));
   });
   return routes;
 }

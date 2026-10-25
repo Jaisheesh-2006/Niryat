@@ -18,6 +18,7 @@
   "dependencies": {
     "@niryat/config": "workspace:*",
     "@niryat/db": "workspace:*",
+    "@niryat/rules": "workspace:*",
     "@niryat/shared": "workspace:*",
     "@hono/node-server": "2.1.5",
     "hono": "4.13.13",
