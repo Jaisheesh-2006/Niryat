@@ -12,10 +12,11 @@ import {
 } from "drizzle-orm/pg-core";
 
 // Structural stubs from PLAN section 13. No migrations or domain behavior yet.
-// TODO: Implement field encryption before persisting GSTIN, PAN fragments or addresses.
+// gstin and pan_last4 hold AES-GCM ciphertext (see encryption.ts).
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email"),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
   paypalPayerId: text("paypal_payer_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
