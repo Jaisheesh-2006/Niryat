@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { SignOutButton } from "../components/SignOutButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,7 +11,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <nav aria-label="Main">
+          <Link href="/">Home</Link>
+          <Link href="/profile">Profile</Link>
+          <Link href="/health-check">Health check</Link>
+          <Link href="/clients">Clients</Link>
+          <SignOutButton />
+        </nav>
+        <main>{children}</main>
+      </body>
     </html>
   );
 }

@@ -10,3 +10,52 @@ main {
   margin: 5rem auto;
   padding: 0 1.5rem;
 }
+nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+label,
+legend {
+  display: block;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+input,
+select,
+textarea {
+  display: block;
+  margin-top: 0.25rem;
+  padding: 0.4rem;
+  font: inherit;
+}
+fieldset {
+  border: none;
+  padding: 0;
+}
+fieldset label {
+  display: inline;
+  font-weight: 400;
+  margin-right: 1rem;
+}
+button {
+  margin-top: 1rem;
+  padding: 0.4rem 1rem;
+  font: inherit;
+}
+[role="alert"] {
+  color: #b00020;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th,
+td {
+  border: 1px solid #8884;
+  padding: 0.4rem;
+  text-align: left;
+  vertical-align: top;
+}
