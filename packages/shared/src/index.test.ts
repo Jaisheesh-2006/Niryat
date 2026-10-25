@@ -15,6 +15,7 @@ const profile = {
   workType: "Software development",
   purposeCode: "P0802",
   panLast4: "234F",
+  expectedTurnoverInr: 1_800_000,
 };
 
 it("accepts valid credentials and normalizes email", () => {
@@ -52,6 +53,7 @@ it("accepts an incomplete profile with nullable fields", () => {
     workType: null,
     purposeCode: null,
     panLast4: null,
+    expectedTurnoverInr: null,
   };
   expect(profileInputSchema.parse(incomplete)).toEqual(incomplete);
 });
@@ -60,6 +62,8 @@ it.each([
   { field: "gstin", value: "27ABCDE1234F1Z" },
   { field: "purposeCode", value: "P080" },
   { field: "lutValidTo", value: "2026-03-31" },
+  { field: "expectedTurnoverInr", value: -1 },
+  { field: "expectedTurnoverInr", value: 1.5 },
 ])("rejects an invalid $field and identifies its path", ({ field, value }) => {
   const result = profileInputSchema.safeParse({ ...profile, [field]: value });
   expect(result.success).toBe(false);

@@ -32,13 +32,16 @@ export const profiles = pgTable("profiles", {
   workType: text("work_type"),
   purposeCode: text("purpose_code"),
   panLast4: text("pan_last4"),
+  expectedTurnoverInr: integer("expected_turnover_inr"),
 });
 export const clients = pgTable("clients", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id),
-  name: text("name"),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
   address: text("address"),
-  country: text("country"),
+  country: text("country").notNull(),
   email: text("email"),
   exportCheckResult: jsonb("export_check_result"),
 });

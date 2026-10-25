@@ -35,6 +35,7 @@ export const profileInputSchema = z
       .toUpperCase()
       .regex(/^[0-9A-Z]{4}$/)
       .nullable(),
+    expectedTurnoverInr: z.number().int().min(0).max(2_000_000_000).nullable(),
   })
   .refine((p) => !p.lutValidFrom || !p.lutValidTo || p.lutValidFrom <= p.lutValidTo, {
     path: ["lutValidTo"],

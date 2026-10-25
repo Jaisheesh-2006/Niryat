@@ -27,6 +27,7 @@ const profile: ProfileInput = {
   workType: "Software development",
   purposeCode: "P0802",
   panLast4: "234F",
+  expectedTurnoverInr: 1_800_000,
 };
 
 describe("storage query failures", () => {

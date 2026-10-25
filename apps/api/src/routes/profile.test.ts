@@ -17,6 +17,7 @@ describe.skipIf(!testDatabaseUrl)("profile routes", () => {
     workType: "Software development",
     purposeCode: "P0802",
     panLast4: "234F",
+    expectedTurnoverInr: 1_800_000,
   };
   const savedProfile = { ...profile, gstin: "27ABCDE1234F1Z5" };
 
