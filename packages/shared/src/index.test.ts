@@ -1,5 +1,12 @@
 import { expect, it } from "vitest";
-import { credentialsSchema, identifierSchema, profileInputSchema } from "./index";
+import {
+  clientInputSchema,
+  credentialsSchema,
+  exportCheckResultSchema,
+  exportConditionIds,
+  identifierSchema,
+  profileInputSchema,
+} from "./index";
 
 it("rejects empty identifiers at the boundary", () => {
   expect(identifierSchema.safeParse("  ").success).toBe(false);
@@ -69,5 +76,57 @@ it.each([
   expect(result.success).toBe(false);
   if (!result.success) {
     expect(result.error.issues.map((issue) => issue.path)).toContainEqual([field]);
+  }
+});
+
+const client = {
+  name: " Acme ",
+  country: " us ",
+  answers: {
+    supplierInIndia: null,
+    clientPresentInIndia: null,
+    paidInForeignCurrency: null,
+    sameEstablishment: null,
+  },
+};
+
+it("normalizes a client name and country with all answers null", () => {
+  expect(clientInputSchema.parse(client)).toEqual({ ...client, name: "Acme", country: "US" });
+});
+
+it("rejects a three-letter country and identifies its path", () => {
+  const result = clientInputSchema.safeParse({ ...client, country: "USA" });
+  expect(result.success).toBe(false);
+  if (!result.success) {
+    expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["country"]);
+  }
+});
+
+it("strips userId from a client body", () => {
+  expect(
+    clientInputSchema.parse({ ...client, userId: "00000000-0000-4000-8000-000000000001" }),
+  ).not.toHaveProperty("userId");
+});
+
+it("rejects an export check with four conditions instead of five", () => {
+  const check = {
+    eligible: true,
+    conditions: exportConditionIds.map((id) => ({
+      id,
+      status: "pass",
+      reference: "Test reference",
+      message: "Test message",
+    })),
+    citation: { ruleId: "EXPORT_CONDITIONS", source: "Test source", effectiveFrom: null },
+    checkedOn: "2026-10-26",
+  };
+  expect(exportCheckResultSchema.safeParse(check).success).toBe(true);
+  const result = exportCheckResultSchema.safeParse({
+    ...check,
+    conditions: check.conditions.slice(0, 4),
+  });
+  expect(result.success).toBe(false);
+  if (!result.success) {
+    expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["conditions"]);
   }
 });

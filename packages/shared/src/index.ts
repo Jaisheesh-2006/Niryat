@@ -42,3 +42,117 @@ export const profileInputSchema = z
     message: "lutValidTo must not be before lutValidFrom",
   });
 export type ProfileInput = z.infer<typeof profileInputSchema>;
+
+// Phase 2 contracts. Response schemas let apps/web validate API JSON.
+export const CA_NOTE = "Verify with your CA.";
+export const BANK_NOTE = "Confirm the code with your bank before changing it in PayPal.";
+
+export const ruleCitationSchema = z.object({
+  ruleId: z.string(),
+  source: z.string(),
+  effectiveFrom: z.iso.date().nullable(),
+});
+export type RuleCitation = z.infer<typeof ruleCitationSchema>;
+
+export const healthFlagCodes = [
+  "lut_missing",
+  "lut_not_started",
+  "lut_expired",
+  "lut_expiring",
+  "gstin_missing",
+  "turnover_missing",
+  "gst_threshold_exceeded",
+  "gst_threshold_near",
+  "purpose_code_missing",
+  "purpose_code_goods_or_travel",
+  "purpose_code_not_offered",
+  "purpose_code_mismatch",
+  "work_type_missing",
+] as const;
+export const healthFlagSchema = z.object({
+  code: z.enum(healthFlagCodes),
+  severity: z.enum(["high", "medium", "low"]),
+  message: z.string(),
+  citation: ruleCitationSchema,
+  note: z.literal(CA_NOTE),
+});
+export type HealthFlag = z.infer<typeof healthFlagSchema>;
+
+export const purposeCodeSuggestionSchema = z.object({
+  code: z.string().nullable(),
+  label: z.string().nullable(),
+  reason: z.string(),
+  note: z.literal(BANK_NOTE),
+});
+export type PurposeCodeSuggestion = z.infer<typeof purposeCodeSuggestionSchema>;
+
+export const healthReportSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  flags: z.array(healthFlagSchema),
+  suggestion: purposeCodeSuggestionSchema.nullable(),
+  checkedOn: z.iso.date(),
+});
+export type HealthReport = z.infer<typeof healthReportSchema>;
+
+export const purposeCodeEntrySchema = z.object({
+  code: z.string().regex(/^P\d{4}$/),
+  paypalLabel: z.string(),
+  annexDescription: z.string(),
+  suggest: z.enum(["yes", "rarely", "never"]),
+});
+export type PurposeCodeEntry = z.infer<typeof purposeCodeEntrySchema>;
+export const purposeCodesResponseSchema = z.object({
+  citation: ruleCitationSchema,
+  codes: z.array(purposeCodeEntrySchema),
+});
+
+export const exportAnswersSchema = z.object({
+  supplierInIndia: z.boolean().nullable(),
+  clientPresentInIndia: z.boolean().nullable(),
+  paidInForeignCurrency: z.boolean().nullable(),
+  sameEstablishment: z.boolean().nullable(),
+});
+export type ExportAnswers = z.infer<typeof exportAnswersSchema>;
+export const clientInputSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  country: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{2}$/),
+  answers: exportAnswersSchema,
+});
+export type ClientInput = z.infer<typeof clientInputSchema>;
+
+export const exportConditionIds = [
+  "supplier_in_india",
+  "recipient_outside_india",
+  "place_of_supply_outside_india",
+  "foreign_exchange",
+  "not_same_person",
+] as const;
+export const exportConditionSchema = z.object({
+  id: z.enum(exportConditionIds),
+  status: z.enum(["pass", "fail", "unknown"]),
+  reference: z.string(),
+  message: z.string(),
+});
+export const exportCheckResultSchema = z.object({
+  eligible: z.boolean(),
+  conditions: z.array(exportConditionSchema).length(5),
+  citation: ruleCitationSchema,
+  checkedOn: z.iso.date(),
+});
+export type ExportCheckResult = z.infer<typeof exportCheckResultSchema>;
+export const storedExportCheckSchema = z.object({
+  answers: exportAnswersSchema,
+  result: exportCheckResultSchema,
+});
+export type StoredExportCheck = z.infer<typeof storedExportCheckSchema>;
+export const clientSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  country: z.string(),
+  exportCheck: storedExportCheckSchema,
+});
+export type Client = z.infer<typeof clientSchema>;
