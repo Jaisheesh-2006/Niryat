@@ -7,3 +7,15 @@ const schema = z.object({
   PAYPAL_ENVIRONMENT: z.literal("SANDBOX").default("SANDBOX"),
 });
 export const loadEnv = (input: unknown) => parseEnv(schema, input);
+
+const authSchema = z.object({
+  DATABASE_URL: z.url(),
+  ENCRYPTION_KEY: z.string().min(1),
+  SESSION_SECRET: z.string().min(32),
+});
+
+export function loadAuthEnv(
+  input: Record<string, string | undefined>,
+): z.output<typeof authSchema> | undefined {
+  return input.DATABASE_URL ? parseEnv(authSchema, input) : undefined;
+}

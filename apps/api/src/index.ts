@@ -1,4 +1,9 @@
 import { Hono } from "hono";
+import { type AppDeps, authRoutes } from "./routes/auth";
 
-export const app = new Hono();
-app.get("/health", (context) => context.json({ status: "ok" }));
+export function createApp(deps?: AppDeps): Hono {
+  const app = new Hono();
+  app.get("/health", (context) => context.json({ status: "ok" }));
+  if (deps) app.route("/", authRoutes(deps));
+  return app;
+}

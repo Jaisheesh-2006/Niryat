@@ -11,11 +11,14 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "test": "vitest run",
+    "test:db": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts"
   },
   "dependencies": {
     "@niryat/config": "workspace:*",
+    "@niryat/db": "workspace:*",
+    "@niryat/shared": "workspace:*",
     "@hono/node-server": "2.1.5",
     "hono": "4.13.13",
     "zod": "4.6.7"
