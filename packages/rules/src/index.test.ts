@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import * as rulesModule from "./index";
 import { parseRules, RULES_FILE_URL, ruleMetadataSchema } from "./index";
+
+const IMPLEMENTED: Record<string, string> = { PURPOSE_CODES: "checkPurposeCode" };
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {
   it.each([
@@ -20,17 +23,38 @@ describe("rule metadata table-driven pattern (no tax logic)", () => {
       }).success,
     ).toBe(valid);
   });
-  it("gives all twelve planned rules a review status and no executable logic", () => {
+  it.each([
+    { logic: "checkLut", valid: true },
+    { logic: "Bad-name", valid: false },
+  ])("logic=$logic => $valid", ({ logic, valid }) => {
+    expect(
+      ruleMetadataSchema.safeParse({
+        id: "LUT_REQUIRED",
+        description: "Placeholder",
+        source: "docs/rules-sources.md",
+        effective_from: null,
+        review: "source_checked",
+        logic,
+      }).success,
+    ).toBe(valid);
+  });
+
+  it("gives all twelve planned rules a review status and the expected logic pointer", () => {
     const yaml = readFileSync(new URL("../rules/india-export.yaml", import.meta.url), "utf8");
     expect(yaml.match(/review: (unchecked|source_checked)/g)).toHaveLength(12);
-    expect(yaml.match(/logic: TODO/g)).toHaveLength(12);
+    expect(yaml.match(/logic: /g)).toHaveLength(12);
+    for (const rule of parseRules(yaml)) {
+      expect(rule.logic).toBe(IMPLEMENTED[rule.id] ?? "TODO");
+      if (rule.logic !== "TODO")
+        expect(rulesModule).toHaveProperty(rule.logic, expect.any(Function));
+    }
   });
 });
 
 describe("rules loader", () => {
   const yamlText = readFileSync(RULES_FILE_URL, "utf8");
 
-  it("loads the twelve rules in order with their recorded review status and no executable logic", () => {
+  it("loads the twelve rules in order with their recorded review status and logic pointer", () => {
     const rules = parseRules(yamlText);
     expect(rules.map((rule) => rule.id)).toEqual([
       "EXPORT_CONDITIONS",
@@ -47,7 +71,9 @@ describe("rules loader", () => {
       "ADVANCE_TAX_DATES",
     ]);
     for (const rule of rules) {
-      expect(rule.logic).toBe("TODO");
+      expect(rule.logic).toBe(IMPLEMENTED[rule.id] ?? "TODO");
+      if (rule.logic !== "TODO")
+        expect(rulesModule).toHaveProperty(rule.logic, expect.any(Function));
       expect(rule.review).toBe("source_checked");
     }
   });

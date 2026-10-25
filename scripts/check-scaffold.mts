@@ -31,7 +31,7 @@ assert.deepEqual(
   ids,
 );
 assert.equal([...yaml.matchAll(/review: (unchecked|source_checked)/g)].length, 12);
-assert.equal([...yaml.matchAll(/logic: TODO/g)].length, 12);
+assert.equal([...yaml.matchAll(/logic: (TODO|[a-z][A-Za-z0-9]*)/g)].length, 12);
 for (const line of read(".env.example")
   .split("\n")
   .filter((line) => line && !line.startsWith("#"))) {
@@ -53,5 +53,5 @@ function inspect(path: string) {
 }
 inspect(root);
 console.log(
-  "Scaffold checks passed: 13 specs, 42 exact criteria, 12 inert rules, short instructions, empty template values, no Cursor files/symlinks.",
+  "Scaffold checks passed: 13 specs, criteria match PLAN, 12 rules with review and logic, short instructions, empty template values, no Cursor files/symlinks.",
 );

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Metadata only. No legal/numeric rule is executable yet.
+// logic is TODO or the name of the exported function that implements the rule.
 // review: unchecked, or source_checked (matches primary law; see docs/rules-sources.md).
 export const ruleMetadataSchema = z.strictObject({
   id: z.string().regex(/^[A-Z][A-Z0-9_]+$/),
@@ -8,8 +8,10 @@ export const ruleMetadataSchema = z.strictObject({
   source: z.string().min(1),
   effective_from: z.iso.date().nullable(),
   review: z.enum(["unchecked", "source_checked"]),
-  logic: z.literal("TODO"),
+  logic: z.string().regex(/^(TODO|[a-z][A-Za-z0-9]*)$/),
 });
 export type RuleMetadata = z.infer<typeof ruleMetadataSchema>;
 
+export * from "./cite";
 export * from "./load";
+export * from "./purpose-codes";
