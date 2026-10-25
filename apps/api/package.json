@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "test": "vitest run",
-    "test:db": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run",
+    "test:db": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --no-file-parallelism",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts"
   },
