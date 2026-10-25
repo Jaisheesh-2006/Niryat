@@ -16,3 +16,4 @@ Thumbs.db
 .gemini/settings.local.json
 docs/verification-local.json
 .tmp/
+current-phase-plan.md

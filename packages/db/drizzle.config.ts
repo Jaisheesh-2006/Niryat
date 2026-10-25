@@ -1,6 +1,15 @@
+import { resolve } from "node:path";
 import { parseEnv } from "@niryat/config";
 import { defineConfig } from "drizzle-kit";
 import { z } from "zod";
+
+// drizzle-kit runs from packages/db and does not read the root .env; load it when present.
+// Variables already set in the shell take precedence over the file.
+try {
+  process.loadEnvFile(resolve("../../.env"));
+} catch (error) {
+  if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+}
 
 // Generation is offline; migrations require DATABASE_URL supplied by the developer.
 const env = parseEnv(

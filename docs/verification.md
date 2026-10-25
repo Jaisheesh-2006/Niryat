@@ -10,21 +10,31 @@ TODO(verify): Confirm the retired prompt URL's replacement with PayPal; configur
 
 TODO(verify): Test Log in with PayPal and scopes with the India seller and US buyer. [PayPal identity docs](https://developer.paypal.com/docs/log-in-with-paypal/).
 
+Sandbox result (2026-10-25), from [paypal-login-check.ts](../scripts/spikes/paypal-login-check.ts): the US personal account completes sign-in and profile retrieval. Two separate India business accounts fail at profile retrieval (`/v1/identity/oauth2/userinfo`). The code exchange works but returns no `id_token`, and `userinfo` returns HTTP 400 "Unable to fetch details to serve the request" for both the `paypalv1.1` and `openid` schemas. Log in with PayPal cannot identify India sellers, so spec 01 needs a fallback sign-in.
+
 ## V03 Invoicing and reminders
 
 TODO(verify): Create/send a one-time India sandbox invoice and reminder; confirm numbering and required field mappings. [Invoicing v2](https://developer.paypal.com/docs/api/invoicing/v2/).
+
+Sandbox result (2026-10-25): create, send, pay and remind all work for an India seller to a US buyer. `invoice_number`, `note` and `terms_and_conditions` were accepted; `invoicer.tax_id` was not exercised. See [findings](paypal-sandbox-findings.md).
 
 ## V04 Recurring invoices
 
 TODO(verify): Confirm recurring-series creation/activation for India; document account limitations. [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit).
 
+Sandbox result (2026-10-25): `POST /v2/invoicing/recurring-invoices` plus `/activate` works; the series reads back `ACTIVE`. See [findings](paypal-sandbox-findings.md).
+
 ## V05 Partial payments and attachments
 
 TODO(verify): Confirm India partial-payment settings and PDF attachment support, using a note link as the documented fallback. [Invoicing v2](https://developer.paypal.com/docs/api/invoicing/v2/).
 
+Sandbox result (2026-10-25): partial payments are rejected ("not available in your country"). Attachments have no upload endpoint and store unvalidated references only, so use the note link. See [findings](paypal-sandbox-findings.md).
+
 ## V06 Events, refunds, disputes and history
 
 TODO(verify): Exercise signed events, refund/dispute outcomes and transaction fee/net/FX coverage on India sandbox. [Webhook events](https://developer.paypal.com/api/rest/webhooks/event-names/), [Disputes testing](https://developer.paypal.com/docs/disputes/test-go-live/).
+
+Sandbox result (2026-10-25): fee and net are verified, from both the capture and transaction search, with no FX on a USD balance. A buyer-opened dispute (`PP-R-TBU-10194472`) is listed and readable through the Disputes API. A refund webhook was delivered. No `CUSTOMER.DISPUTE.CREATED` event appeared for that dispute, although the webhook is subscribed. Still open: webhook signature verification and the dispute event. See [findings](paypal-sandbox-findings.md#disputes-and-webhooks-2026-10-25).
 
 ## V07 FIRA sample
 

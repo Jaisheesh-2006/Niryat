@@ -376,14 +376,14 @@ APIMatic PayPal Context Plugin used while coding the integration     ← APIMati
 | Need                              | PayPal capability                                                                  | India sandbox |
 | --------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
 | Sign in                           | Log in with PayPal                                                                 | Verify        |
-| Create and send export invoices   | Invoicing API v2 (`create_invoice`, `send_invoice`)                                | Verify        |
-| Retainer billing                  | Recurring invoice series (`create_recurring_series`, `activate_recurring_series`)  | Verify        |
-| Milestone billing                 | Partial payments on invoices                                                       | Verify        |
-| Remind late payers                | `send_invoice_reminder`                                                            | Verify        |
+| Create and send export invoices   | Invoicing API v2 (`create_invoice`, `send_invoice`)                                | Works         |
+| Retainer billing                  | Recurring invoice series (`create_recurring_series`, `activate_recurring_series`)  | Works         |
+| Milestone billing                 | Partial payments on invoices                                                       | Unavailable   |
+| Remind late payers                | `send_invoice_reminder`                                                            | Works         |
 | Detect payments in real time      | Webhooks (invoice paid, payment capture completed)                                 | Verify        |
 | Refunds                           | Webhooks (refund events), `record_refund_for_invoice`                              | Verify        |
 | Disputes                          | Webhooks (dispute created/updated) + Disputes API (`list_disputes`, `get_dispute`) | Verify        |
-| Fees, net amounts, reconciliation | Transaction history (`list_transactions`)                                          | Verify        |
+| Fees, net amounts, reconciliation | Transaction history (`list_transactions`)                                          | Works         |
 | Agent access to PayPal            | PayPal Agent Toolkit (sandbox mode)                                                | n/a           |
 
 **Accounts:** one **India** sandbox business account (seller) and one **US** sandbox personal account (buyer).
@@ -577,15 +577,15 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 ## 21. Day-1 verification checklist
 
 **PayPal (India sandbox seller → US sandbox buyer):**
-- [ ] Log in with PayPal works
-- [ ] Invoices can be created and sent to a US buyer
-- [ ] Recurring invoice series can be created and activated
-- [ ] Partial payments on invoices are supported
-- [ ] Invoice reminders can be sent
-- [ ] Webhooks fire for payments, refunds and disputes
-- [ ] A dispute can be opened from the buyer account and read via the Disputes API
-- [ ] Transaction history returns fees and net amounts
-- [ ] Invoice attachments work (otherwise link the PDF in `note`)
+- [ ] Log in with PayPal works: **not for India business sellers** ([findings](paypal-sandbox-findings.md#log-in-with-paypal-separate-spike-2026-10-25))
+- [x] Invoices can be created and sent to a US buyer
+- [x] Recurring invoice series can be created and activated
+- [ ] Partial payments on invoices are supported: **not for India sellers** ([findings](paypal-sandbox-findings.md))
+- [x] Invoice reminders can be sent
+- [ ] Webhooks fire for payments, refunds and disputes: refund event seen; **no dispute event** ([findings](paypal-sandbox-findings.md#disputes-and-webhooks-2026-10-25))
+- [x] A dispute can be opened from the buyer account and read via the Disputes API
+- [x] Transaction history returns fees and net amounts
+- [x] Invoice attachments work (otherwise link the PDF in `note`): no upload, so link the PDF in `note` ([findings](paypal-sandbox-findings.md))
 
 **Indian rules:**
 - [ ] Current RBI realisation period for services (official RBI notification)

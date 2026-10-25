@@ -26,6 +26,14 @@ clients, invoices, profiles, agent_actions; Invoicing v2 REST; PDF storage; appr
 
 Duplicate requests; fiscal-year rollover; rejected extraction; unavailable India recurring/partial payments; attachment fallback.
 
+## India sandbox limitations
+
+Confirmed on 2026-10-25 for an India seller and US buyer ([findings](../paypal-sandbox-findings.md)):
+- **Partial payments are unavailable** ("not available in your country"), so milestone invoices are documented as unavailable. Any alternative, such as one invoice per milestone, is a product decision.
+- **Recipients inside India are blocked** on send (HTTP 406 `INR_FOREIGN_CURRENCY_BLOCKED`). Check the recipient's country (spec 03) before sending.
+- **No attachment upload.** Host the GST invoice PDF and link it in `detail.note`.
+- One-time invoices, recurring series (create + activate) and reminders work.
+
 ## Test cases (TODO)
 
 - TODO: Add acceptance tests for each criterion, including the edge cases above.

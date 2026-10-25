@@ -52,7 +52,7 @@ pnpm verify passes, relevant tests are added, and only actually satisfied spec c
 
 ## Gotchas
 
-The Server SDK lacks Invoicing and Disputes. India account capabilities need sandbox verification; do not assume recurring invoices or partial payments work.
+The Server SDK lacks Invoicing and Disputes. India sandbox results are in docs/paypal-sandbox-findings.md: recurring invoices work; partial payments, domestic recipients and attachment upload do not.
 AG Studio and Bryntum licences come from environment configuration; start trials on/after Nov 1, 2026 so they cover judging. Neither package is installed yet.
 Rule sources and effective dates need CA review; verified=false must remain until review. Do not treat plan estimates as law.
 Shared packages export source; their build step typechecks. Next alone produces production assets.
