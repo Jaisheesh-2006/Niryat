@@ -13,7 +13,7 @@ rules:
     source: "IGST Act s. 16(1),(3); CGST Rules r. 96A(1)(b) as substituted by Notfn 12/2024-CT; Notfn 37/2017-CT"
     effective_from: 2024-07-10
     review: source_checked
-    logic: TODO
+    logic: checkLut
   - id: EXPORT_INVOICE_FIELDS
     description: "Rule 46 particulars plus the endorsement SUPPLY MEANT FOR EXPORT/SUPPLY TO SEZ UNIT OR SEZ DEVELOPER FOR AUTHORISED OPERATIONS UNDER BOND OR LETTER OF UNDERTAKING WITHOUT PAYMENT OF INTEGRATED TAX, and recipient name and address, delivery address and country of destination"
     source: "CGST Rules r. 46 and export proviso (amended by Notfn 20/2024-CT)"
@@ -37,7 +37,7 @@ rules:
     source: "CGST Act s. 22(1), s. 2(6), s. 24(i); IGST Act s. 7(5)(a); Notfn 10/2017-IT as amended by Notfn 03/2019-IT"
     effective_from: 2020-01-01
     review: source_checked
-    logic: TODO
+    logic: checkGstThreshold
   - id: GSTR1_6A
     description: "Exports reported in GSTR-1 Table 6A; LUT exports at zero tax; shipping-bill details may be left out; due 11th of next month (monthly) or 13th after the quarter (QRMP)"
     source: "FORM GSTR-1 Table 6A and instructions 8, 11; CGST Act s. 37(1); CGST Rules r. 59; Notfn 83/2020-CT"

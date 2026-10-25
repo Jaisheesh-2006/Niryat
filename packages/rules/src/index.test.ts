@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import * as rulesModule from "./index";
 import { parseRules, RULES_FILE_URL, ruleMetadataSchema } from "./index";
 
-const IMPLEMENTED: Record<string, string> = { PURPOSE_CODES: "checkPurposeCode" };
+const IMPLEMENTED: Record<string, string> = {
+  PURPOSE_CODES: "checkPurposeCode",
+  LUT_REQUIRED: "checkLut",
+  GST_THRESHOLD: "checkGstThreshold",
+};
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {
   it.each([
