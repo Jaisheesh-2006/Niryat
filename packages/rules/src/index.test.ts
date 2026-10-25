@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ruleMetadataSchema } from "./index";
+import { parseRules, RULES_FILE_URL, ruleMetadataSchema } from "./index";
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {
   it.each([
@@ -24,5 +24,56 @@ describe("rule metadata table-driven pattern (no tax logic)", () => {
     const yaml = readFileSync(new URL("../rules/india-export.yaml", import.meta.url), "utf8");
     expect(yaml.match(/review: (unchecked|source_checked)/g)).toHaveLength(12);
     expect(yaml.match(/logic: TODO/g)).toHaveLength(12);
+  });
+});
+
+describe("rules loader", () => {
+  const yamlText = readFileSync(RULES_FILE_URL, "utf8");
+
+  it("loads the twelve rules in order with their recorded review status and no executable logic", () => {
+    const rules = parseRules(yamlText);
+    expect(rules.map((rule) => rule.id)).toEqual([
+      "EXPORT_CONDITIONS",
+      "LUT_REQUIRED",
+      "EXPORT_INVOICE_FIELDS",
+      "INVOICE_NUMBERING",
+      "CREDIT_NOTE",
+      "GST_THRESHOLD",
+      "GSTR1_6A",
+      "PURPOSE_CODES",
+      "RBI_REALISATION",
+      "REALISATION_ADJUSTMENT",
+      "PRESUMPTIVE_TAX",
+      "ADVANCE_TAX_DATES",
+    ]);
+    for (const rule of rules) {
+      expect(rule.logic).toBe("TODO");
+      expect(rule.review).toBe("source_checked");
+    }
+  });
+
+  it("rejects duplicate rule ids", () => {
+    expect(() => parseRules(yamlText.replace("id: LUT_REQUIRED", "id: EXPORT_CONDITIONS"))).toThrow(
+      "Duplicate rule id: EXPORT_CONDITIONS",
+    );
+  });
+
+  it("reports invalid field paths without their values", () => {
+    expect(() =>
+      parseRules(yamlText.replace("review: source_checked", "review: ca_reviewed")),
+    ).toThrow(/^Rules file is invalid: rules\.0\.review$/);
+  });
+
+  it("rejects malformed YAML without exposing its contents", () => {
+    expect(() => parseRules("rules: [\n")).toThrow(/^Rules file is invalid: rules$/);
+  });
+
+  it.each([
+    ["empty rules", "rules: []"],
+    ["missing rules", "{}"],
+    ["null rules", "rules: null"],
+    ["unknown root field", `${yamlText}\nextra: true`],
+  ])("rejects %s", (_name, input) => {
+    expect(() => parseRules(input)).toThrow("Rules file is invalid");
   });
 });

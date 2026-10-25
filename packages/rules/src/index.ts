@@ -11,3 +11,5 @@ export const ruleMetadataSchema = z.strictObject({
   logic: z.literal("TODO"),
 });
 export type RuleMetadata = z.infer<typeof ruleMetadataSchema>;
+
+export * from "./load";
