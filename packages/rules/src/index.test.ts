@@ -4,6 +4,7 @@ import * as rulesModule from "./index";
 import { parseRules, RULES_FILE_URL, ruleMetadataSchema } from "./index";
 
 const IMPLEMENTED: Record<string, string> = {
+  EXPORT_CONDITIONS: "checkExportConditions",
   PURPOSE_CODES: "checkPurposeCode",
   LUT_REQUIRED: "checkLut",
   GST_THRESHOLD: "checkGstThreshold",
