@@ -19,13 +19,13 @@ rules:
     source: "CGST Rules r. 46 and export proviso (amended by Notfn 20/2024-CT)"
     effective_from: 2024-11-01
     review: source_checked
-    logic: TODO
+    logic: prepareExportInvoice
   - id: INVOICE_NUMBERING
     description: "Consecutive serial number of at most 16 characters (letters, digits, '-' and '/'), in one or more series, unique for a financial year"
     source: "CGST Rules r. 46(b); same format for credit notes r. 53(1A)"
     effective_from: 2017-07-01
     review: source_checked
-    logic: TODO
+    logic: invoiceNumberFor
   - id: CREDIT_NOTE
     description: "Supplier may issue a credit note when value is reduced or a supply is refunded; declare it by 30 November after the financial year end, or the annual return date if earlier; for LUT exports it corrects value only (no tax to adjust)"
     source: "CGST Act s. 34(1)-(2); CGST Rules r. 53(1A); FORM GSTR-1 Table 9B"

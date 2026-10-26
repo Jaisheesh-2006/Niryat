@@ -8,6 +8,8 @@ const IMPLEMENTED: Record<string, string> = {
   PURPOSE_CODES: "checkPurposeCode",
   LUT_REQUIRED: "checkLut",
   GST_THRESHOLD: "checkGstThreshold",
+  INVOICE_NUMBERING: "invoiceNumberFor",
+  EXPORT_INVOICE_FIELDS: "prepareExportInvoice",
 };
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {
