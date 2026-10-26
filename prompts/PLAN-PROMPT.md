@@ -1,14 +1,14 @@
-Read `@current-phase-plan.md` to understand the project's existing phase plan, structure, conventions, and level of detail. Also summarize Phase 1 in simple, concise bullets, covering what was implemented and what Phase 2 builds upon.
+Read `@current-phase-plan.md` to understand the project's existing phase plan, structure, conventions, and level of detail.
 
-Next, read `@docs/build-flow.md` and all relevant Phase 2 specifications and source documents. Inspect the existing codebase where necessary to understand the architecture, current implementations, interfaces, and conventions.
+Next, read `@docs/build-flow.md` and all relevant **Phase 3** specifications and source documents. Inspect the existing codebase where necessary to understand the architecture, current implementations, interfaces, and conventions.
 
-Update `@current-phase-plan.md` with the implementation plan for Phase 2, which I will execute using a smaller coding model.
+Update `@current-phase-plan.md` with the implementation plan for **Phase 3**, which I will execute using another coding model (could be a better or smaller model).
 
 **The goal is to create a precise implementation plan, not to write the implementation itself.**
 
 Follow these principles:
 - **Be precise about requirements, flexible about implementation.** Clearly specify what needs to be built, why, which files are involved, how components interact, and what constraints must be followed. Let the coding model determine routine implementation details by inspecting the actual codebase.
-- Break Phase 2 into small, ordered, independently verifiable tasks. For each task, specify its objective, relevant files, implementation requirements, dependencies, edge cases, tests, and acceptance criteria.
+- Break **Phase 3** into small, ordered, independently verifiable tasks. For each task, specify its objective, relevant files, implementation requirements, dependencies, edge cases, tests, and acceptance criteria.
 - Define exact interfaces, function signatures, data contracts, schema constraints, constants, error behavior, security requirements, and architectural decisions wherever ambiguity could lead to incorrect implementation.
 - **Avoid writing complete code in the plan.** Do not include full function implementations, entire components, large JSX/CSS blocks, or routine boilerplate. Use concise descriptions, function signatures, tables, or pseudocode instead.
 - Include short code snippets only when essential to explain complex logic, subtle edge cases, critical invariants, or requirements that would otherwise be ambiguous.
@@ -19,7 +19,7 @@ Follow these principles:
 - Avoid duplicating information across tasks. Define shared contracts and architectural decisions once, then reference them where needed.
 - Do not invent requirements or assume that files, functions, dependencies, or APIs exist without verification. Resolve ambiguities using the source documents and codebase; explicitly flag genuine unresolved conflicts.
 
-Before finalizing, verify that the plan covers all Phase 2 requirements and exit criteria in `@docs/build-flow.md` and the relevant specifications. Ensure that a smaller coding model can implement each task without making major architectural decisions or guessing about required behavior.
+Before finalizing, verify that the plan covers all **Phase 3** requirements and exit criteria in `@docs/build-flow.md` and the relevant specifications. Ensure that a smaller coding model can implement each task without making major architectural decisions or guessing about required behavior.
 
 Update `@current-phase-plan.md` directly. Keep the plan actionable, easy to navigate, and detailed enough to execute, but do not turn it into a complete solution with prewritten code.
 

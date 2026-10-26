@@ -52,6 +52,22 @@ Not checked:
 - Whether sandbox sends dispute events only once an inquiry escalates to a claim.
 - Webhook signature verification.
 
+## Invoicer tax ID (2026-10-26)
+
+Checked by hand with PowerShell REST calls. A draft carrying `invoicer.tax_id` `27ABCDE1234F1Z5` (a synthetic GSTIN) was accepted as `INV2-R497-9J3K-BYTU-YSQH`, and the read-back echoed `tax_id` unchanged. The draft was deleted and never sent. So the GSTIN can go in `invoicer.tax_id` as PLAN §5 maps it. How the buyer sees it was not checked.
+
+## Recurring series generation (2026-10-26)
+
+Checked in the seller's sandbox web UI. Every monthly series from the spike runs (the spike was run several times) is `ACTIVE`, with its next occurrence on 24 or 25 Nov 2026. The Invoices tab lists only the spike's `SPIKE-…` one-time invoices. **No series has generated an invoice yet**, so activating on the start date did not create one immediately. How PayPal numbers a generated cycle invoice is still open.
+
+A daily series was rejected: `plan_detail.frequency` `{ interval_unit: "DAY", interval_count: 1 }` returned HTTP 400 `INVALID_REQUEST`, issue `INVALID_INTEGER_MIN_VALUE` on `/plan_detail/frequency/interval_count` (debug_id `f5363330694b4`). A weekly series is used for the numbering check instead.
+
+**A series cannot carry our invoice number.** Weekly series `RI-4LR45473RT776064X` was created with `recurring_info.detail.invoice_number` `RCHK-…/1`, and the create succeeded. The read-back `recurring_info.detail` held only `currency_code`, `category_code` and `payment_term`: PayPal dropped the number without an error. The DRAFT series has no field linking it to invoices it generates. Activating it with a body-less POST sent as form data returned HTTP 415 `UNSUPPORTED_MEDIA_TYPE` (debug_id `f309592d02c89`); the spike's body-less POST with no content type had returned 204. Re-sent with `Content-Type: application/json` and no body, activation succeeded and the series read back `ACTIVE`. Its first generated invoice, and PayPal's number for it, are due about a week later (check D3, around 2026-11-02).
+
+## Invoice-paid webhook shape (2026-10-26)
+
+A real `INVOICING.INVOICE.PAID` delivery (`event_version` `1.0`, sent 2026-10-25T05:33:39Z, for invoice `INV2-C4CX-ZELE-MP48-2RSQ`) was captured at a request-inspection URL. The invoice is wrapped as `resource.invoice` (`id`, `status`, `detail`, …), not placed directly under `resource`. `resource.invoice.payments.transactions[].payment_id` was `7A790963PN770190D`, the capture ID of that payment, so an invoice-paid event leads straight to the capture. The request carried `paypal-transmission-id`, `paypal-transmission-sig`, `paypal-auth-algo` (`SHA256withRSA`) and `paypal-cert-url` headers.
+
 ## Log in with PayPal (separate spike, 2026-10-25)
 
 Tested with [paypal-login-check.ts](../scripts/spikes/paypal-login-check.ts): the authorization-code flow, then `GET /v1/identity/oauth2/userinfo`.
