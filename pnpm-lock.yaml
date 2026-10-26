@@ -234,21 +234,33 @@ importers:
       "@hono/node-server":
         specifier: 2.1.5
         version: 2.1.5(hono@4.13.13)
+      "@niryat/agent":
+        specifier: workspace:*
+        version: link:../../packages/agent
       "@niryat/config":
         specifier: workspace:*
         version: link:../../packages/config
       "@niryat/db":
         specifier: workspace:*
         version: link:../../packages/db
+      "@niryat/paypal":
+        specifier: workspace:*
+        version: link:../../packages/paypal
       "@niryat/rules":
         specifier: workspace:*
         version: link:../../packages/rules
       "@niryat/shared":
         specifier: workspace:*
         version: link:../../packages/shared
+      aws4fetch:
+        specifier: 1.0.20
+        version: 1.0.20
       hono:
         specifier: 4.13.13
         version: 4.13.13
+      pdf-lib:
+        specifier: 1.17.1
+        version: 1.17.1
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -1632,6 +1644,18 @@ packages:
       }
     engines: { node: ">=14.17.0" }
 
+  "@pdf-lib/standard-fonts@1.0.0":
+    resolution:
+      {
+        integrity: sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==,
+      }
+
+  "@pdf-lib/upng@1.0.1":
+    resolution:
+      {
+        integrity: sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==,
+      }
+
   "@redis/bloom@5.12.1":
     resolution:
       {
@@ -2160,6 +2184,12 @@ packages:
     resolution:
       {
         integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==,
+      }
+
+  aws4fetch@1.0.20:
+    resolution:
+      {
+        integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==,
       }
 
   axios@1.20.0:
@@ -2885,6 +2915,18 @@ packages:
         integrity: sha512-opyTPaunsklCBpTK8JGef6mfPhLSnyy5a0IN9vKtx3+4aExf+KxEqYwIy3hqkedXIB97u357uLMJsOnm3GVjsw==,
       }
 
+  pako@1.0.11:
+    resolution:
+      {
+        integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==,
+      }
+
+  pdf-lib@1.17.1:
+    resolution:
+      {
+        integrity: sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==,
+      }
+
   pg-cloudflare@1.4.1:
     resolution:
       {
@@ -3142,6 +3184,12 @@ packages:
         integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==,
       }
     engines: { node: ">=12.0.0" }
+
+  tslib@1.14.1:
+    resolution:
+      {
+        integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==,
+      }
 
   tslib@2.8.1:
     resolution:
@@ -3828,6 +3876,14 @@ snapshots:
       - debug
       - supports-color
 
+  "@pdf-lib/standard-fonts@1.0.0":
+    dependencies:
+      pako: 1.0.11
+
+  "@pdf-lib/upng@1.0.1":
+    dependencies:
+      pako: 1.0.11
+
   "@redis/bloom@5.12.1(@redis/client@5.12.1)":
     dependencies:
       "@redis/client": 5.12.1
@@ -4035,6 +4091,8 @@ snapshots:
   assertion-error@2.0.1: {}
 
   asynckit@0.4.0: {}
+
+  aws4fetch@1.0.20: {}
 
   axios@1.20.0(debug@4.4.3):
     dependencies:
@@ -4438,6 +4496,15 @@ snapshots:
 
   openapi-typescript-helpers@0.0.15: {}
 
+  pako@1.0.11: {}
+
+  pdf-lib@1.17.1:
+    dependencies:
+      "@pdf-lib/standard-fonts": 1.0.0
+      "@pdf-lib/upng": 1.0.1
+      pako: 1.0.11
+      tslib: 1.14.1
+
   pg-cloudflare@1.4.1:
     optional: true
 
@@ -4609,6 +4676,8 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
+
+  tslib@1.14.1: {}
 
   tslib@2.8.1: {}
 

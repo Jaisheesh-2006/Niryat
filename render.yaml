@@ -41,6 +41,14 @@ services:
         sync: false
       - key: FILE_STORAGE_URL
         sync: false
+      - key: FILE_STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: FILE_STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: FILE_STORAGE_REGION
+        sync: false
+      - key: PUBLIC_APP_URL
+        sync: false
       - key: ENCRYPTION_KEY
         sync: false
       - key: SESSION_SECRET
