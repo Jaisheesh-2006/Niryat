@@ -23,6 +23,7 @@ import type { AppDeps } from "./auth";
 
 describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
   const invoiceDate = "2026-10-26";
+  const recurrence = { intervalUnit: "MONTH", intervalCount: 1, totalCycles: 2 } as const;
   let t: Awaited<ReturnType<typeof openTestDb>>;
   let deps: AppDeps;
   let app: ReturnType<typeof createApp>;
@@ -316,6 +317,116 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     ]);
   });
 
+  it("issues a recurring first cycle with the next number and PDF without calling PayPal", async () => {
+    const { cookie, input, id: userId } = await setup();
+    await issue(cookie, input);
+    const invoice = await issue(cookie, { ...input, type: "recurring", recurrence });
+    expect(invoice).toMatchObject({
+      type: "recurring",
+      recurrence,
+      number: `${financialYear(invoiceDate)}/0002`,
+      date: invoiceDate,
+      status: "issued",
+      paypalInvoiceId: null,
+      paypalRecurringSeriesId: null,
+      action: {
+        status: "proposed",
+        paypalAction: "create_recurring_series",
+        payload: {
+          invoiceId: invoice.id,
+          create: {
+            plan_detail: {
+              frequency: { interval_unit: "MONTH", interval_count: 1 },
+              total_cycles: 2,
+              start_series_date: invoiceDate,
+            },
+            recurring_info: {
+              detail: {
+                currency_code: "USD",
+                note: `GST invoice PDF: ${invoice.pdfUrl}`,
+                terms_and_conditions: `${LUT_ENDORSEMENT}\nLUT reference: LUT-1`,
+              },
+              invoicer: { business_name: profile.legalName, tax_id: profile.gstin },
+            },
+          },
+        },
+      },
+    });
+    const payload = z
+      .strictObject({
+        invoiceId: z.uuid(),
+        create: z.object({
+          recurring_info: z.object({ detail: z.record(z.string(), z.unknown()) }),
+        }),
+      })
+      .parse(invoice.action?.payload);
+    expect(payload.create.recurring_info.detail).not.toHaveProperty("invoice_number");
+    expect(calls).toEqual([]);
+    expect(objects.size).toBe(2);
+    const response = await app.request(filePath(invoice));
+    expect(response.status).toBe(200);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      objects.get(pdfKey(userId, invoice.id)),
+    );
+  });
+
+  it("creates and activates a series only after approval, accepting an empty response", async () => {
+    const { cookie, input } = await setup();
+    const invoice = await issue(cookie, { ...input, type: "recurring", recurrence });
+    const id = actionId(invoice);
+    replies = [{ id: "RI-TEST" }, undefined];
+    const sent = await readInvoice(await post(cookie, `/actions/${id}/approve`));
+    expect(sent).toMatchObject({
+      status: "sent",
+      paypalRecurringSeriesId: "RI-TEST",
+      paypalInvoiceId: null,
+      action: { status: "done", error: null, payload: invoice.action?.payload },
+    });
+    expect(calls).toEqual([
+      {
+        path: "/v2/invoicing/recurring-invoices",
+        body: invoice.action?.payload.create,
+        requestId: `${id}-create`,
+      },
+      {
+        path: "/v2/invoicing/recurring-invoices/RI-TEST/activate",
+        body: undefined,
+        requestId: `${id}-activate`,
+      },
+    ]);
+    expect((await post(cookie, `/actions/${id}/approve`)).status).toBe(409);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("retains the created series ID after failure and retries only activate", async () => {
+    const { cookie, input } = await setup();
+    const invoice = await issue(cookie, { ...input, type: "recurring", recurrence });
+    const id = actionId(invoice);
+    const path = `/actions/${id}/approve`;
+    replies = [{ id: "RI-TEST" }, new PayPalApiError(500, "INTERNAL_SERVER_ERROR"), undefined];
+    const response = await post(cookie, path);
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: "paypal_failed",
+      code: "INTERNAL_SERVER_ERROR",
+    });
+    expect((await list(cookie))[0]).toMatchObject({
+      status: "issued",
+      paypalRecurringSeriesId: "RI-TEST",
+      paypalInvoiceId: null,
+      action: { status: "failed", error: "INTERNAL_SERVER_ERROR" },
+    });
+    expect(await readInvoice(await post(cookie, path))).toMatchObject({
+      status: "sent",
+      action: { status: "done", error: null },
+    });
+    expect(calls.map(({ path, requestId }) => ({ path, requestId }))).toEqual([
+      { path: "/v2/invoicing/recurring-invoices", requestId: `${id}-create` },
+      { path: "/v2/invoicing/recurring-invoices/RI-TEST/activate", requestId: `${id}-activate` },
+      { path: "/v2/invoicing/recurring-invoices/RI-TEST/activate", requestId: `${id}-activate` },
+    ]);
+  });
+
   it("accepts the created invoice ID from href and an empty send response", async () => {
     const { cookie, input } = await setup();
     const invoice = await issue(cookie, input);
@@ -443,15 +554,15 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect((await issue(cookie, input)).number).toBe(`${financialYear(invoiceDate)}/0001`);
   });
 
-  it("validates issue bodies and defers recurring invoices", async () => {
+  it("validates issue bodies and requires recurrence for recurring invoices", async () => {
     const { cookie, input } = await setup();
     const recurring = await post(cookie, "/invoices", {
       ...input,
       type: "recurring",
-      recurrence: { intervalUnit: "MONTH", intervalCount: 1, totalCycles: 2 },
+      recurrence: null,
     });
     expect(recurring.status).toBe(400);
-    expect(await recurring.json()).toEqual({ error: "invalid_request", fields: ["type"] });
+    expect(await recurring.json()).toEqual({ error: "invalid_request", fields: ["recurrence"] });
     const invalid = await post(cookie, "/invoices", { ...input, amount: 100 });
     expect(invalid.status).toBe(400);
     expect(await invalid.json()).toEqual({ error: "invalid_request", fields: ["amount"] });
@@ -508,20 +619,27 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect(calls).toEqual([]);
   });
 
-  it("rejects malformed or mismatched payloads before any PayPal call", async () => {
-    const { cookie, input, id: userId } = await setup();
-    const invoice = await issue(cookie, input);
-    const action = invoice.action;
-    if (!action) throw new Error("Expected a proposed action");
-    for (const payload of [
-      { invoiceId: invoice.id, create: {}, send: {} },
-      { ...action.payload, invoiceId: randomUUID() },
-    ]) {
-      await expect(
-        actionHandlers(deps).send_invoice({ ...action, userId, payload }),
-      ).rejects.toMatchObject({ code: "invalid_payload" });
-    }
-    expect(calls).toEqual([]);
-    expect((await getInvoiceForAction(t.db, userId, action.id))?.status).toBe("issued");
-  });
+  it.each(["one_time", "recurring"] as const)(
+    "rejects malformed or mismatched %s payloads before any PayPal call",
+    async (type) => {
+      const { cookie, input, id: userId } = await setup();
+      const invoice = await issue(cookie, {
+        ...input,
+        type,
+        recurrence: type === "recurring" ? recurrence : null,
+      });
+      const action = invoice.action;
+      if (!action) throw new Error("Expected a proposed action");
+      for (const payload of [
+        { invoiceId: invoice.id, create: {}, send: {} },
+        { ...action.payload, invoiceId: randomUUID() },
+      ]) {
+        await expect(
+          actionHandlers(deps)[action.paypalAction]({ ...action, userId, payload }),
+        ).rejects.toMatchObject({ code: "invalid_payload" });
+      }
+      expect(calls).toEqual([]);
+      expect((await getInvoiceForAction(t.db, userId, action.id))?.status).toBe("issued");
+    },
+  );
 });

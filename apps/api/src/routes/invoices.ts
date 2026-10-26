@@ -9,7 +9,7 @@ import {
   listInvoices,
   rejectAction,
 } from "@niryat/db";
-import { buildInvoiceRequest, buildSendRequest } from "@niryat/paypal";
+import { buildInvoiceRequest, buildSendRequest, buildSeriesRequest } from "@niryat/paypal";
 import {
   financialYear,
   invoiceNumberFor,
@@ -39,9 +39,6 @@ export function invoiceRoutes(deps: AppDeps): Hono {
     if (!userId) return c.json({ error: "unauthenticated" }, 401);
     const body = await parseJsonBody(c, invoiceInputSchema);
     if (!body.ok) return body.response;
-    if (body.data.type === "recurring") {
-      return c.json({ error: "invalid_request", fields: ["type"] }, 400);
-    }
     const files = deps.files;
     if (!files) return c.json({ error: "file_storage_unavailable" }, 503);
     const client = (await listClients(deps.db, userId, deps.encryptionKey)).find(
@@ -90,29 +87,42 @@ export function invoiceRoutes(deps: AppDeps): Hono {
           });
           const token = newFileToken();
           const pdfUrl = `${deps.publicAppUrl ?? "http://localhost:3000"}/api/files/${token}`;
+          const createInput = {
+            ...body.data,
+            number,
+            date,
+            legalName,
+            gstin: profile.gstRegistered ? profile.gstin : null,
+            clientName: client.name,
+            clientEmail,
+            note: `${profile.gstRegistered ? "GST invoice PDF" : "Invoice PDF"}: ${pdfUrl}`,
+            ...(profile.gstRegistered
+              ? { terms: `${LUT_ENDORSEMENT}\nLUT reference: ${profile.lutNumber}` }
+              : {}),
+          };
           return {
             pdfToken: token,
             pdfUrl,
-            action: {
-              paypalAction: "send_invoice",
-              payload: {
-                invoiceId: id,
-                create: buildInvoiceRequest({
-                  ...body.data,
-                  number,
-                  date,
-                  legalName,
-                  gstin: profile.gstRegistered ? profile.gstin : null,
-                  clientName: client.name,
-                  clientEmail,
-                  note: `${profile.gstRegistered ? "GST invoice PDF" : "Invoice PDF"}: ${pdfUrl}`,
-                  ...(profile.gstRegistered
-                    ? { terms: `${LUT_ENDORSEMENT}\nLUT reference: ${profile.lutNumber}` }
-                    : {}),
-                }),
-                send: buildSendRequest({ subject: `Invoice ${number} from ${legalName}` }),
-              },
-            },
+            action:
+              body.data.recurrence === null
+                ? {
+                    paypalAction: "send_invoice",
+                    payload: {
+                      invoiceId: id,
+                      create: buildInvoiceRequest(createInput),
+                      send: buildSendRequest({ subject: `Invoice ${number} from ${legalName}` }),
+                    },
+                  }
+                : {
+                    paypalAction: "create_recurring_series",
+                    payload: {
+                      invoiceId: id,
+                      create: buildSeriesRequest({
+                        ...createInput,
+                        recurrence: body.data.recurrence,
+                      }),
+                    },
+                  },
           };
         },
         (seq) => invoiceNumberFor(date, seq).number,

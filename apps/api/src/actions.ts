@@ -1,6 +1,6 @@
 import type { ActionHandler, PayPalActionName } from "@niryat/agent";
-import { getInvoiceForAction, markSent, setPayPalInvoiceId } from "@niryat/db";
-import { invoiceInputSchema } from "@niryat/shared";
+import { getInvoiceForAction, markSent, setPayPalInvoiceId, setPayPalSeriesId } from "@niryat/db";
+import { invoiceInputSchema, recurrenceSchema } from "@niryat/shared";
 import { z } from "zod";
 import type { AppDeps } from "./routes/auth";
 
@@ -51,6 +51,27 @@ const createdSchema = z
   .object({ id: paypalInvoiceIdSchema.optional(), href: z.url().optional() })
   .transform((reply) => reply.id ?? reply.href?.split("/").pop())
   .pipe(paypalInvoiceIdSchema);
+const createSeriesPayloadSchema = z.strictObject({
+  invoiceId: z.uuid(),
+  create: z.strictObject({
+    plan_detail: z.strictObject({
+      frequency: z.strictObject({
+        interval_unit: recurrenceSchema.shape.intervalUnit,
+        interval_count: recurrenceSchema.shape.intervalCount,
+      }),
+      total_cycles: recurrenceSchema.shape.totalCycles,
+      start_series_date: z.iso.date(),
+    }),
+    recurring_info: sendInvoicePayloadSchema.shape.create.extend({
+      detail: sendInvoicePayloadSchema.shape.create.shape.detail.omit({
+        invoice_number: true,
+        invoice_date: true,
+      }),
+    }),
+  }),
+});
+const paypalSeriesIdSchema = z.string().regex(/^RI-[A-Z0-9]+$/);
+const createdSeriesSchema = z.object({ id: paypalSeriesIdSchema });
 const parseAny = z.json().optional().parse;
 
 export function actionHandlers(deps: AppDeps): Readonly<Record<PayPalActionName, ActionHandler>> {
@@ -86,8 +107,37 @@ export function actionHandlers(deps: AppDeps): Readonly<Record<PayPalActionName,
       );
       await markSent(deps.db, action.userId, invoice.id);
     },
-    async create_recurring_series() {
-      throw Object.assign(new Error("invalid_payload"), { code: "invalid_payload" });
+    async create_recurring_series(action) {
+      const parsed = createSeriesPayloadSchema.safeParse(action.payload);
+      const invoice = await getInvoiceForAction(deps.db, action.userId, action.id);
+      if (!parsed.success || !invoice || parsed.data.invoiceId !== invoice.id) {
+        throw Object.assign(new Error("invalid_payload"), { code: "invalid_payload" });
+      }
+      const paypal = deps.paypal;
+      if (!paypal) throw new Error("PayPal unavailable");
+      let id = invoice.paypalRecurringSeriesId;
+      if (id === null) {
+        const created = await paypal.rest.post(
+          "/v2/invoicing/recurring-invoices",
+          parsed.data.create,
+          `${action.id}-create`,
+          createdSeriesSchema.parse,
+        );
+        id = created.id;
+        await setPayPalSeriesId(deps.db, action.userId, invoice.id, id);
+      }
+      const paypalId = paypalSeriesIdSchema.safeParse(id);
+      if (!paypalId.success) {
+        throw Object.assign(new Error("invalid_payload"), { code: "invalid_payload" });
+      }
+      await paypal.rest.post(
+        `/v2/invoicing/recurring-invoices/${paypalId.data}/activate`,
+        undefined,
+        `${action.id}-activate`,
+        parseAny,
+      );
+      // shortcut: series payments stay unlinked until cycle adoption (see current-phase-plan §8).
+      await markSent(deps.db, action.userId, invoice.id);
     },
   };
 }
