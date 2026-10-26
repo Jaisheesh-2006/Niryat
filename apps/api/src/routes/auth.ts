@@ -1,14 +1,19 @@
 import { createUser, type Db, findUserByEmail, findUserById } from "@niryat/db";
+import type { PayPalLedger, PayPalRestClient } from "@niryat/paypal";
 import { credentialsSchema } from "@niryat/shared";
 import { Hono } from "hono";
 import { hashPassword, verifyPassword } from "../auth/password";
 import { endSession, readSession, startSession } from "../auth/session";
+import type { FileStore } from "../files";
 
 export interface AppDeps {
   db: Db;
   encryptionKey: Buffer;
   sessionSecret: string;
   secureCookies: boolean;
+  paypal?: { rest: PayPalRestClient; ledger: PayPalLedger; webhookId: string };
+  files?: FileStore;
+  publicAppUrl?: string;
 }
 
 const dummyHash = `scrypt$16384$8$1$${Buffer.alloc(16).toString("base64")}$${Buffer.alloc(64).toString("base64")}`;

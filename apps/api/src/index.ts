@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { type AppDeps, authRoutes } from "./routes/auth";
 import { clientRoutes } from "./routes/clients";
 import { healthCheckRoutes } from "./routes/health-check";
+import { invoiceRoutes } from "./routes/invoices";
 import { profileRoutes } from "./routes/profile";
 import { rules } from "./rules";
 
@@ -14,6 +15,7 @@ export function createApp(deps?: AppDeps): Hono {
   );
   if (deps) {
     app.route("/", clientRoutes(deps));
+    app.route("/", invoiceRoutes(deps));
     app.route("/", authRoutes(deps));
     app.route("/", profileRoutes(deps));
     app.route("/", healthCheckRoutes(deps));

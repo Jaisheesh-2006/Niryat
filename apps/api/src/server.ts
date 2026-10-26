@@ -1,7 +1,9 @@
 import { resolve } from "node:path";
 import { serve } from "@hono/node-server";
 import { createDb, parseEncryptionKey } from "@niryat/db";
-import { loadAuthEnv, loadEnv } from "./env";
+import { createPayPalLedger, createPayPalRestClient } from "@niryat/paypal";
+import { loadAuthEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
+import { createS3FileStore } from "./files";
 import { createApp } from "./index";
 
 try {
@@ -11,6 +13,11 @@ try {
 }
 const env = loadEnv(process.env);
 const authEnv = loadAuthEnv(process.env);
+const paypalEnv = loadPayPalEnv(process.env);
+const fileStorageEnv = loadFileStorageEnv(process.env);
+const paypalCredentials = paypalEnv
+  ? { clientId: paypalEnv.PAYPAL_CLIENT_ID, clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET }
+  : undefined;
 const encryptionKey = authEnv ? parseEncryptionKey(authEnv.ENCRYPTION_KEY) : undefined;
 const database = authEnv ? createDb(authEnv.DATABASE_URL) : undefined;
 const app =
@@ -20,6 +27,17 @@ const app =
         encryptionKey,
         sessionSecret: authEnv.SESSION_SECRET,
         secureCookies: env.NODE_ENV === "production",
+        publicAppUrl: env.PUBLIC_APP_URL,
+        ...(fileStorageEnv ? { files: createS3FileStore(fileStorageEnv) } : {}),
+        ...(paypalEnv && paypalCredentials
+          ? {
+              paypal: {
+                rest: createPayPalRestClient(paypalCredentials),
+                ledger: createPayPalLedger(paypalCredentials),
+                webhookId: paypalEnv.PAYPAL_WEBHOOK_ID,
+              },
+            }
+          : {}),
       })
     : createApp();
 if (!authEnv) console.log("Auth disabled: DATABASE_URL not set");
