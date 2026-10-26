@@ -6,10 +6,10 @@ This commit is a scaffold. Product scope and ordering live in [PLAN](docs/PLAN.m
 
 ## Map
 
-- apps/web: Next.js App Router; placeholder dashboard/calendar host.
+- apps/web: Next.js App Router; sign-in, profile, health check and clients pages.
 - apps/api: Hono on Node; health route, future REST/webhooks.
 - apps/worker: Render Workflows monthlyClose stub.
-- packages/rules: pure, cited legal/numeric logic; currently inert YAML metadata.
+- packages/rules: pure, cited legal/numeric logic; YAML logic names the implementing function.
 - packages/paypal: SDK, REST and webhook boundaries.
 - packages/agent: future Claude + PayPal Toolkit; approval-queue contract.
 - packages/db: Drizzle schema, migrations, encrypted profile storage; packages/shared: shared zod request schemas.

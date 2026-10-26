@@ -33,11 +33,13 @@ Webhook verification belongs to packages/paypal/src/webhooks and currently throw
 
 Every PayPal action requires explicit user approval. The queue contract is in packages/agent; persistence and execution remain unimplemented. Future execution must check owner, exact approved payload and current status atomically, handle retries without duplicate actions, and log each tool call. Approval cannot be supplied by the model itself.
 
-Zod validates external inputs and environment values. Rules are pure, versioned and cited; AI handles extraction, classification, matching and explanations, never legal or numeric truth. All rule metadata is inert until primary-source and CA review.
+Zod validates external inputs and environment values. Rules are pure, versioned and cited; AI handles extraction, classification, matching and explanations, never legal or numeric truth. A rule whose YAML `logic` names a function is implemented in packages/rules; the rest are metadata only.
 
 ## Storage and runtime
 
 apps/web uses Next.js App Router; apps/api uses Hono on Node 24. Shared packages export TypeScript source; their build step checks types, while Next produces a production build. apps/worker registers monthlyClose with Render's TypeScript SDK and returns not_implemented.
+
+The web app proxies /api/* to the API through Next rewrites, so the session cookie stays same-origin.
 
 Drizzle declares the twelve tables from PLAN section 13. Migrations live in packages/db/drizzle; createDb in packages/db/src/client.ts; GSTIN and PAN fragments are AES-GCM encrypted. No seed data yet. PDFs and FIRAs will use external file storage.
 

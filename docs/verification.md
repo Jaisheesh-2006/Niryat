@@ -44,6 +44,8 @@ TODO(verify): Obtain the team's own consented, redacted PayPal India FIRA and in
 
 TODO(verify): Review current service codes and bank confirmation requirements before populating the catalogue. [RBI](https://www.rbi.org.in/), [PayPal India purpose codes](https://www.paypal.com/in/cshelp/article/what-is-a-purpose-code-help231).
 
+Catalogue (2026-10-25): the 14 PayPal India codes with Annex I descriptions are in packages/rules/src/purpose-codes.ts; the bank still assigns the final code.
+
 ## V09 Rules review
 
 TODO(verify): Have a CA verify all twelve [planned rules](rules-sources.md), statutory exceptions, primary citations and effective dates, especially the conflicting RBI realisation period and Income-tax Act 2025 references. [CBIC](https://taxinformation.cbic.gov.in/), [RBI notifications](https://www.rbi.org.in/Scripts/NotificationUser.aspx), [Income Tax Department](https://www.incometax.gov.in/iec/foportal/).

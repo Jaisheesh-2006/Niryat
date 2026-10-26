@@ -51,7 +51,7 @@ flowchart LR
 
 | Foundation                                                                              | Built with | Notes from the spike                                                                                                                               |
 | --------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database: migrations, connection, encryption of GSTIN/PAN/addresses, per-user isolation | Spec 01    | **Done (2026-10-25)**: migrations, connection, encrypted GSTIN/PAN fragments and per-user isolation; client address encryption deferred to spec 03 |
+| Database: migrations, connection, encryption of GSTIN/PAN/addresses, per-user isolation | Spec 01    | **Done (2026-10-25)**: migrations, connection, encrypted GSTIN/PAN fragments and per-user isolation; client address encryption deferred to spec 04 |
 | Session + email sign-in                                                                 | Spec 01    | **Done (2026-10-25)**: email/password sign-in and signed-cookie sessions (API only)                                                                |
 | Rules loader + per-rule unit tests                                                      | Spec 01    | **Done (2026-10-25)**: loader and metadata tests; rules stay inert until implemented                                                               |
 | REST client for Invoicing v2 / Disputes v1 in `packages/paypal/src/rest`                | Spec 04    | Cache the OAuth token and refresh before expiry (PayPal reuses a token for ~9 h); `PayPal-Request-Id` on every POST; zod-validate responses        |
@@ -63,6 +63,8 @@ flowchart LR
 **Exit gate:** each foundation has tests and is used by at least one passing spec checkbox.
 
 ## Phase 2: Profile and pure rules: specs 01–03 (Oct 26–28)
+
+**Status: complete (2026-10-26).** The export check shows "blocked" with reasons; spec 04 enforces it on the invoice route.
 
 **Goal:** the user signs in, completes a profile and sees a cited health score.
 - [01 Health check](specs/01-health-check.md): sign-in, profile, health score with rule citations.

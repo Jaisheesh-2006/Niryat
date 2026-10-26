@@ -1,6 +1,6 @@
 # 3. Export eligibility check
 
-Status: planned; scaffold only. Source: [PLAN section 5](../PLAN.md#5-v1-features-in-order-of-importance).
+Status: check built (2026-10-26); the invoice route enforces it in spec 04.
 
 ## Goal
 
@@ -12,7 +12,7 @@ As an Indian freelancer paid through PayPal, I want to understand whether a job 
 
 ## Acceptance criteria
 
-- [ ] Each condition shown as pass/fail with its legal reference
+- [x] Each condition shown as pass/fail with its legal reference
 - [ ] A failing check blocks the zero-rated export invoice path and explains why
 
 ## Data & APIs used
@@ -23,10 +23,10 @@ clients.export_check_result, profiles; EXPORT_CONDITIONS; no external API.
 
 Unknown place of supply; related establishments; incomplete answers; failed conditions must block the path.
 
-## Test cases (TODO)
+## Test cases
 
-- TODO: Add acceptance tests for each criterion, including the edge cases above.
-- TODO: Add boundary, retry/idempotency and authorization tests where applicable.
+- [Export-condition rules](../../packages/rules/src/export-conditions.test.ts) cover all five conditions, citations, India recipients, incomplete answers and unknown foreign-exchange permission.
+- [Clients API](../../apps/api/src/routes/clients.test.ts) and [client storage](../../packages/db/src/clients.test.ts) cover saved results, recomputation, validation and per-user isolation; [client form](../../apps/web/src/components/ClientForm.test.tsx) covers create and edit submission.
 
 ## Out of scope
 

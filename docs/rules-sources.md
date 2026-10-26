@@ -157,4 +157,4 @@ The key quotes were re-checked by hand against the saved primary text:
 - r. 96A(1)(b), the r. 46 endorsement, r. 46(b), s. 34(2) and Notfn 10/2017-IT;
 - Income-tax Act 2025 ss. 1(3), 58(2), 62(4) and 408.
 
-Before turning on any rule's logic, record its citation and `effective_from` in `rule_versions`, and add table-driven tests covering the boundaries and the effective date ([rules AGENTS](../packages/rules/AGENTS.md)).
+Before turning on a rule's logic, add table-driven tests covering its boundaries and effective date ([rules AGENTS](../packages/rules/AGENTS.md)). Stored results embed the rule's source and effective date. `rule_versions` rows are written when a rule first gets a second version.

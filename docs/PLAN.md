@@ -117,9 +117,9 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 **Done when:**
 - [ ] User signs in with PayPal (sandbox) and the PayPal business account is connected
-- [ ] Profile saves GST status, GSTIN, LUT details, work type, purpose code
-- [ ] Health score (0–100) with at least: LUT status, purpose-code fit, GST threshold proximity
-- [ ] Each red flag shows the rule it comes from and a "verify with your CA" note
+- [x] Profile saves GST status, GSTIN, LUT details, work type, purpose code
+- [x] Health score (0–100) with at least: LUT status, purpose-code fit, GST threshold proximity
+- [x] Each red flag shows the rule it comes from and a "verify with your CA" note
 
 ### 2. Purpose code advisor
 
@@ -128,9 +128,9 @@ Every feature below is **required for v1**. Build them in this order; each one l
 **How:** AI classifies the work against a curated code table; the table (not the AI) is the source of truth.
 
 **Done when:**
-- [ ] Curated table of the most common service purpose codes, with descriptions and sources
-- [ ] Suggestion + one-line reason + "confirm with your bank" note
-- [ ] Mismatch warning feeds into the health score
+- [x] Curated table of the most common service purpose codes, with descriptions and sources
+- [x] Suggestion + one-line reason + "confirm with your bank" note
+- [x] Mismatch warning feeds into the health score
 
 ### 3. Export eligibility check
 
@@ -139,7 +139,7 @@ Every feature below is **required for v1**. Build them in this order; each one l
 **How:** rules engine only.
 
 **Done when:**
-- [ ] Each condition shown as pass/fail with its legal reference
+- [x] Each condition shown as pass/fail with its legal reference
 - [ ] A failing check blocks the zero-rated export invoice path and explains why
 
 ### 4. PayPal export invoicing (one-time, recurring, milestone)
