@@ -5,6 +5,7 @@ import { clientRoutes } from "./routes/clients";
 import { healthCheckRoutes } from "./routes/health-check";
 import { invoiceRoutes } from "./routes/invoices";
 import { profileRoutes } from "./routes/profile";
+import { webhookRoutes } from "./routes/webhooks";
 import { rules } from "./rules";
 
 export function createApp(deps?: AppDeps): Hono {
@@ -14,6 +15,7 @@ export function createApp(deps?: AppDeps): Hono {
     c.json({ citation: cite(rules, "PURPOSE_CODES"), codes: PAYPAL_INDIA_PURPOSE_CODES }),
   );
   if (deps) {
+    if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", clientRoutes(deps));
     app.route("/", invoiceRoutes(deps));
     app.route("/", authRoutes(deps));
