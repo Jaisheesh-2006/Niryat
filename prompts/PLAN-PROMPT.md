@@ -7,7 +7,6 @@ Update `@current-phase-plan.md` with the implementation plan for Phase 2, which 
 **The goal is to create a precise implementation plan, not to write the implementation itself.**
 
 Follow these principles:
-
 - **Be precise about requirements, flexible about implementation.** Clearly specify what needs to be built, why, which files are involved, how components interact, and what constraints must be followed. Let the coding model determine routine implementation details by inspecting the actual codebase.
 - Break Phase 2 into small, ordered, independently verifiable tasks. For each task, specify its objective, relevant files, implementation requirements, dependencies, edge cases, tests, and acceptance criteria.
 - Define exact interfaces, function signatures, data contracts, schema constraints, constants, error behavior, security requirements, and architectural decisions wherever ambiguity could lead to incorrect implementation.

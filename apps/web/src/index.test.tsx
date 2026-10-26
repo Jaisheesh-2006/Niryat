@@ -1,7 +1,10 @@
+import type { ProfileInput, PurposeCodeEntry } from "@niryat/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
 import Home from "./app/page";
 import { AuthForm } from "./components/AuthForm";
+import { ProfileForm } from "./components/ProfileForm";
+import { profileBody } from "./lib/forms";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -13,6 +16,35 @@ it("renders the home page with sign-up and sign-in links without external servic
   expect(html).toContain('href="/signup"');
   expect(html).toContain('href="/login"');
 });
+
+it.each(["P9999", "P0802", null])(
+  "preserves saved purpose code %s when editing turnover",
+  (purposeCode) => {
+    const initial: ProfileInput = {
+      gstRegistered: false,
+      gstin: null,
+      lutNumber: null,
+      lutValidFrom: null,
+      lutValidTo: null,
+      expectedTurnoverInr: 100000,
+      workType: "Software development",
+      purposeCode,
+      panLast4: null,
+    };
+    const codes: PurposeCodeEntry[] = [
+      { code: "P0802", paypalLabel: "Software", annexDescription: "Software", suggest: "yes" },
+    ];
+    const html = renderToStaticMarkup(<ProfileForm initial={initial} codes={codes} />);
+    const selected = html.match(/<option value="([^"]*)" selected=""/)?.[1];
+    expect(selected).toBe(purposeCode ?? "");
+    expect(html.match(/<option value="P0802"/g)).toHaveLength(1);
+
+    const form = new FormData();
+    form.set("purposeCode", selected ?? "");
+    form.set("expectedTurnoverInr", "200000");
+    expect(profileBody(form)).toMatchObject({ purposeCode, expectedTurnoverInr: 200000 });
+  },
+);
 
 it.each(["login", "signup"] as const)(
   "%s keeps credentials in a POST body when JavaScript is unavailable",
