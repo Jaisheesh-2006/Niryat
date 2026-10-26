@@ -10,6 +10,8 @@ describe.skipIf(!testDatabaseUrl)("client routes", () => {
   let app: ReturnType<typeof createApp>;
   const input: ClientInput = {
     name: "Acme Inc",
+    email: null,
+    address: null,
     country: "us",
     answers: {
       supplierInIndia: true,

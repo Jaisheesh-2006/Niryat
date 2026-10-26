@@ -10,8 +10,12 @@ export const credentialsSchema = z.object({
 });
 export type Credentials = z.infer<typeof credentialsSchema>;
 
+export const PDF_TEXT_PATTERN = /^[\x20-\x7E\u00A0-\u00FF\n]*$/;
+
 export const profileInputSchema = z
   .object({
+    legalName: z.string().trim().min(1).max(200).regex(PDF_TEXT_PATTERN).nullable(),
+    address: z.string().trim().min(1).max(500).regex(PDF_TEXT_PATTERN).nullable(),
     gstRegistered: z.boolean(),
     gstin: z
       .string()
@@ -114,7 +118,9 @@ export const exportAnswersSchema = z.object({
 });
 export type ExportAnswers = z.infer<typeof exportAnswersSchema>;
 export const clientInputSchema = z.object({
-  name: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(200).regex(PDF_TEXT_PATTERN),
+  email: z.string().trim().toLowerCase().pipe(z.email()).nullable().default(null),
+  address: z.string().trim().min(1).max(500).regex(PDF_TEXT_PATTERN).nullable().default(null),
   country: z
     .string()
     .trim()
@@ -152,7 +158,91 @@ export type StoredExportCheck = z.infer<typeof storedExportCheckSchema>;
 export const clientSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  email: z.string().nullable(),
+  address: z.string().nullable(),
   country: z.string(),
   exportCheck: storedExportCheckSchema,
 });
 export type Client = z.infer<typeof clientSchema>;
+
+export const actionStatusSchema = z.enum(["proposed", "approved", "rejected", "done", "failed"]);
+export type ActionStatus = z.infer<typeof actionStatusSchema>;
+export const paypalActionNames = ["send_invoice", "create_recurring_series"] as const;
+export const invoiceCurrencies = ["USD", "EUR", "GBP", "AUD", "CAD"] as const;
+
+export const recurrenceSchema = z.object({
+  intervalUnit: z.enum(["WEEK", "MONTH", "YEAR"]),
+  intervalCount: z.number().int().min(1).max(12),
+  totalCycles: z.number().int().min(1).max(36),
+});
+export type Recurrence = z.infer<typeof recurrenceSchema>;
+
+export const invoiceInputSchema = z
+  .object({
+    clientId: z.uuid(),
+    type: z.enum(["one_time", "recurring"]),
+    description: z.string().trim().min(1).max(200).regex(PDF_TEXT_PATTERN),
+    sac: z.string().regex(/^\d{4}(\d{2})?(\d{2})?$/),
+    currency: z.enum(invoiceCurrencies),
+    amount: z
+      .string()
+      .regex(/^\d{1,9}(\.\d{1,2})?$/)
+      .refine((amount) => /[1-9]/.test(amount)),
+    recurrence: recurrenceSchema.nullable().default(null),
+  })
+  .refine((invoice) => (invoice.type === "recurring") === (invoice.recurrence !== null), {
+    path: ["recurrence"],
+    message: "recurrence is required only for recurring invoices",
+  });
+export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
+
+export const paymentSchema = z.object({
+  id: z.uuid(),
+  paypalTxnId: z.string(),
+  gross: z.string(),
+  fee: z.string().nullable(),
+  net: z.string().nullable(),
+  currency: z.string(),
+  fxRate: z.string().nullable(),
+  receivedAt: z.iso.datetime(),
+});
+export type Payment = z.infer<typeof paymentSchema>;
+
+export const actionSchema = z.object({
+  id: z.uuid(),
+  paypalAction: z.enum(paypalActionNames),
+  status: actionStatusSchema,
+  payload: z.record(z.string(), z.unknown()),
+  error: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+});
+export type Action = z.infer<typeof actionSchema>;
+
+export const invoiceStatuses = ["issued", "sent", "partially_paid", "paid"] as const;
+export const invoiceSchema = z.object({
+  id: z.uuid(),
+  clientId: z.uuid(),
+  clientName: z.string(),
+  type: z.enum(["one_time", "recurring"]),
+  number: z.string(),
+  fy: z.string(),
+  date: z.iso.date(),
+  currency: z.enum(invoiceCurrencies),
+  amount: z.string(),
+  description: z.string(),
+  sac: z.string(),
+  recurrence: recurrenceSchema.nullable(),
+  status: z.enum(invoiceStatuses),
+  pdfUrl: z.string(),
+  paypalInvoiceId: z.string().nullable(),
+  paypalRecurringSeriesId: z.string().nullable(),
+  paidTotal: z.string(),
+  payments: z.array(paymentSchema),
+  action: actionSchema.nullable(),
+});
+export type Invoice = z.infer<typeof invoiceSchema>;
+
+export const invoiceBlockedSchema = z.object({
+  error: z.literal("invoice_blocked"),
+  reasons: z.array(z.string()).min(1),
+});

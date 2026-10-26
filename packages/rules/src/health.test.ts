@@ -7,6 +7,8 @@ import { parseRules, RULES_FILE_URL } from "./load";
 const rules = parseRules(readFileSync(RULES_FILE_URL, "utf8"));
 const today = "2026-10-26";
 const profile: ProfileInput = {
+  legalName: "Ananya Rao",
+  address: "12 MG Road, Pune 411001",
   gstRegistered: true,
   gstin: "27ABCDE1234F1Z5",
   lutNumber: "AD271026000001",

@@ -50,6 +50,8 @@ const exportCheck: StoredExportCheck = {
   },
 };
 const profile: ProfileInput = {
+  legalName: "Ananya Rao",
+  address: "12 MG Road, Pune 411001",
   gstRegistered: true,
   gstin: "27ABCDE1234F1Z5",
   lutNumber: "LUT-1",

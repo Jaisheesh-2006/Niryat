@@ -9,6 +9,8 @@ describe.skipIf(!testDatabaseUrl)("profile routes", () => {
   let t: Awaited<ReturnType<typeof openTestDb>>;
   let app: ReturnType<typeof createApp>;
   const profile: ProfileInput = {
+    legalName: "Ananya Rao",
+    address: "12 MG Road, Pune 411001",
     gstRegistered: true,
     gstin: "27abcde1234f1z5",
     lutNumber: "LUT-1",

@@ -1,11 +1,16 @@
 import { expect, it } from "vitest";
 import {
+  actionStatusSchema,
   clientInputSchema,
   credentialsSchema,
   exportCheckResultSchema,
   exportConditionIds,
   identifierSchema,
+  invoiceBlockedSchema,
+  invoiceInputSchema,
+  invoiceSchema,
   profileInputSchema,
+  recurrenceSchema,
 } from "./index";
 
 it("rejects empty identifiers at the boundary", () => {
@@ -14,6 +19,8 @@ it("rejects empty identifiers at the boundary", () => {
 });
 
 const profile = {
+  legalName: "Ananya Rao",
+  address: "12 MG Road, Pune 411001",
   gstRegistered: true,
   gstin: "27ABCDE1234F1Z5",
   lutNumber: "LUT-1",
@@ -43,6 +50,8 @@ it("accepts a complete profile and normalizes its fields", () => {
   expect(
     profileInputSchema.parse({
       ...profile,
+      legalName: " Ananya Rao ",
+      address: " 12 MG Road, Pune 411001 ",
       gstin: " 27abcde1234f1z5 ",
       purposeCode: " p0802 ",
       panLast4: " 234f ",
@@ -52,6 +61,8 @@ it("accepts a complete profile and normalizes its fields", () => {
 
 it("accepts an incomplete profile with nullable fields", () => {
   const incomplete = {
+    legalName: null,
+    address: null,
     gstRegistered: false,
     gstin: null,
     lutNumber: null,
@@ -91,7 +102,19 @@ const client = {
 };
 
 it("normalizes a client name and country with all answers null", () => {
-  expect(clientInputSchema.parse(client)).toEqual({ ...client, name: "Acme", country: "US" });
+  expect(clientInputSchema.parse(client)).toEqual({
+    ...client,
+    name: "Acme",
+    country: "US",
+    email: null,
+    address: null,
+  });
+});
+
+it("normalizes client email and address", () => {
+  expect(
+    clientInputSchema.parse({ ...client, email: " A@B.COM ", address: " 12 Main Street " }),
+  ).toMatchObject({ email: "a@b.com", address: "12 Main Street" });
 });
 
 it("rejects a three-letter country and identifies its path", () => {
@@ -100,6 +123,149 @@ it("rejects a three-letter country and identifies its path", () => {
   if (!result.success) {
     expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["country"]);
   }
+});
+
+const invoice = {
+  clientId: "10000000-0000-4000-8000-000000000001",
+  type: "one_time",
+  description: "Software development",
+  sac: "998314",
+  currency: "USD",
+  amount: "100.00",
+};
+const recurrence = { intervalUnit: "MONTH", intervalCount: 1, totalCycles: 2 };
+
+it("defaults one-time recurrence to null and accepts a recurring invoice", () => {
+  expect(invoiceInputSchema.parse(invoice)).toEqual({ ...invoice, recurrence: null });
+  const recurring = { ...invoice, type: "recurring", recurrence };
+  expect(invoiceInputSchema.parse(recurring)).toEqual(recurring);
+});
+
+it.each([
+  { type: "recurring", recurrence: null },
+  { type: "recurring" },
+  { type: "one_time", recurrence },
+])("rejects mismatched recurrence for $type", (fields) => {
+  const result = invoiceInputSchema.safeParse({ ...invoice, ...fields });
+  expect(result.success).toBe(false);
+  if (!result.success) {
+    expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["recurrence"]);
+  }
+});
+
+it.each(["100", "100.5", "0.01", "999999999.99"])("preserves decimal amount %s", (amount) => {
+  expect(invoiceInputSchema.parse({ ...invoice, amount }).amount).toBe(amount);
+});
+
+it.each([
+  { field: "amount", value: "0" },
+  { field: "amount", value: "0.00" },
+  { field: "amount", value: "-1" },
+  { field: "amount", value: "1.234" },
+  { field: "amount", value: "1e3" },
+  { field: "amount", value: 100 },
+  { field: "amount", value: "1000000000" },
+  { field: "currency", value: "INR" },
+  { field: "sac", value: "99831" },
+  { field: "description", value: "Design ₹" },
+])("rejects invalid invoice $field: $value", ({ field, value }) => {
+  const result = invoiceInputSchema.safeParse({ ...invoice, [field]: value });
+  expect(result.success).toBe(false);
+  if (!result.success) {
+    expect(result.error.issues.map((issue) => issue.path)).toContainEqual([field]);
+  }
+});
+
+it.each(["9983", "998314", "99831400"])("accepts SAC %s and printable accented text", (sac) => {
+  expect(invoiceInputSchema.parse({ ...invoice, sac, description: "Café design" })).toMatchObject({
+    sac,
+    description: "Café design",
+  });
+});
+
+it.each([
+  { intervalUnit: "DAY" },
+  { intervalCount: 0 },
+  { intervalCount: 13 },
+  { intervalCount: 1.5 },
+  { totalCycles: 0 },
+  { totalCycles: 37 },
+])("rejects unsupported recurrence %j", (fields) => {
+  expect(recurrenceSchema.safeParse({ ...recurrence, ...fields }).success).toBe(false);
+});
+
+it.each([
+  { field: "legalName", value: undefined },
+  { field: "address", value: undefined },
+  { field: "legalName", value: " " },
+  { field: "address", value: " " },
+  { field: "legalName", value: "₹" },
+  { field: "address", value: "₹" },
+  { field: "legalName", value: "a".repeat(201) },
+  { field: "address", value: "a".repeat(501) },
+])("rejects invalid profile $field", ({ field, value }) => {
+  expect(profileInputSchema.safeParse({ ...profile, [field]: value }).success).toBe(false);
+});
+
+it.each([{ name: "₹" }, { address: "₹" }, { email: "invalid" }])(
+  "rejects unsupported client fields %j",
+  (fields) => {
+    expect(clientInputSchema.safeParse({ ...client, ...fields }).success).toBe(false);
+  },
+);
+
+it("accepts failed actions and rejects automatic approval", () => {
+  expect(actionStatusSchema.parse("failed")).toBe("failed");
+  expect(actionStatusSchema.safeParse("auto-approved").success).toBe(false);
+});
+
+it("validates invoice responses with payments and an action", () => {
+  const response = {
+    ...invoice,
+    id: "20000000-0000-4000-8000-000000000001",
+    clientName: "Acme Inc",
+    number: "2026-27/0001",
+    fy: "2026-27",
+    date: "2026-10-26",
+    recurrence: null,
+    status: "paid",
+    pdfUrl: "/api/files/test-token",
+    paypalInvoiceId: "INV2-test",
+    paypalRecurringSeriesId: null,
+    paidTotal: "100.00",
+    payments: [
+      {
+        id: "30000000-0000-4000-8000-000000000001",
+        paypalTxnId: "test-capture",
+        gross: "100.00",
+        fee: null,
+        net: null,
+        currency: "USD",
+        fxRate: null,
+        receivedAt: "2026-10-26T12:00:00Z",
+      },
+    ],
+    action: {
+      id: "40000000-0000-4000-8000-000000000001",
+      paypalAction: "send_invoice",
+      status: "done",
+      payload: { detail: { invoice_number: "2026-27/0001" } },
+      error: null,
+      createdAt: "2026-10-26T11:00:00Z",
+    },
+  };
+  expect(invoiceSchema.parse(response)).toEqual(response);
+  expect(invoiceSchema.safeParse({ ...response, status: "unknown" }).success).toBe(false);
+  expect(
+    invoiceSchema.safeParse({ ...response, payments: [{ ...response.payments[0], gross: 100 }] })
+      .success,
+  ).toBe(false);
+});
+
+it("requires at least one invoice-blocked reason", () => {
+  const blocked = { error: "invoice_blocked", reasons: ["Complete your compliance profile."] };
+  expect(invoiceBlockedSchema.parse(blocked)).toEqual(blocked);
+  expect(invoiceBlockedSchema.safeParse({ ...blocked, reasons: [] }).success).toBe(false);
 });
 
 it("strips userId from a client body", () => {

@@ -48,7 +48,13 @@ describe.skipIf(!testDatabaseUrl)("client storage", () => {
     return user;
   }
 
-  const input = { name: "Synthetic Client", country: "US", exportCheck };
+  const input = {
+    name: "Synthetic Client",
+    country: "US",
+    email: null,
+    address: null,
+    exportCheck,
+  };
 
   it("creates and lists clients ordered by name", async () => {
     const user = await addUser();
@@ -65,6 +71,8 @@ describe.skipIf(!testDatabaseUrl)("client storage", () => {
     const updated = {
       name: "Local Co",
       country: "IN",
+      email: null,
+      address: null,
       exportCheck: {
         answers: { ...exportCheck.answers, supplierInIndia: false },
         result: {

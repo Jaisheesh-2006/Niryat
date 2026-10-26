@@ -21,6 +21,8 @@ it.each(["P9999", "P0802", null])(
   "preserves saved purpose code %s when editing turnover",
   (purposeCode) => {
     const initial: ProfileInput = {
+      legalName: "Ananya Rao",
+      address: "12 MG Road, Pune 411001",
       gstRegistered: false,
       gstin: null,
       lutNumber: null,
