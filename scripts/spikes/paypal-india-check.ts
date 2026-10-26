@@ -13,17 +13,14 @@
 // buyer, and check 4 activates a two-cycle monthly recurring series. Nothing here touches production or moves money.
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { PayPalRestClient } from "../../packages/paypal/src/rest/index.ts";
+import type { PayPalRestPath } from "../../packages/paypal/src/rest/index.ts";
 
 const BASE_URL = "https://api-m.sandbox.paypal.com";
 // Used only for requests that are never sent: endpoint probes and drafts that are deleted.
 const PLACEHOLDER_RECIPIENT = "spike-recipient@example.com";
 
 // Invoicing v2 and Disputes v1 paths follow the packages/paypal/rest boundary type.
-type RestPath =
-  | Parameters<PayPalRestClient["request"]>[0]
-  | "/v1/oauth2/token"
-  | "/v1/reporting/transactions";
+type RestPath = PayPalRestPath | "/v1/oauth2/token" | "/v1/reporting/transactions";
 
 type Verdict = "works" | "partial" | "unsupported" | "fails" | "blocked";
 interface Outcome {
