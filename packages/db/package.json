@@ -18,7 +18,9 @@
     "seed:judge": "tsx src/seed-judge.ts"
   },
   "dependencies": {
+    "@niryat/agent": "workspace:*",
     "@niryat/config": "workspace:*",
+    "@niryat/paypal": "workspace:*",
     "@niryat/shared": "workspace:*",
     "drizzle-orm": "0.45.4",
     "pg": "8.23.1",

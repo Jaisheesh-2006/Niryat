@@ -1,0 +1,83 @@
+import type { CaptureRecord } from "@niryat/paypal";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
+import type { Db } from "./client";
+import { invoices, payments } from "./schema";
+
+export async function recordPayment(
+  db: Db,
+  capture: CaptureRecord,
+): Promise<{ invoiceId: string | null }> {
+  return db
+    .transaction(async (tx) => {
+      const [invoice] = capture.paypalInvoiceId
+        ? await tx
+            .select({ id: invoices.id })
+            .from(invoices)
+            .where(
+              or(
+                eq(invoices.paypalInvoiceId, capture.paypalInvoiceId),
+                eq(invoices.paypalRecurringSeriesId, capture.paypalInvoiceId),
+              ),
+            )
+        : [];
+      const values = {
+        invoiceId: invoice?.id ?? null,
+        paypalTxnId: capture.captureId,
+        kind: "payment",
+        gross: capture.gross,
+        fee: capture.fee,
+        net: capture.net,
+        currency: capture.currency,
+        fxRate: capture.fxRate,
+        receivedAt: new Date(capture.createTime),
+      };
+      const [saved] = await tx
+        .insert(payments)
+        .values(values)
+        .onConflictDoUpdate({
+          target: payments.paypalTxnId,
+          set: { ...values, invoiceId: sql`coalesce(${payments.invoiceId}, excluded.invoice_id)` },
+        })
+        .returning({ invoiceId: payments.invoiceId });
+      if (!saved) throw new Error("Payment save failed");
+      if (saved.invoiceId) {
+        // Serialize roll-ups without conflicting with payment inserts' foreign-key locks.
+        await tx
+          .select({ id: invoices.id })
+          .from(invoices)
+          .where(eq(invoices.id, saved.invoiceId))
+          .for("no key update");
+        const total = sql`(select coalesce(sum(${payments.gross}), 0) from ${payments}
+          where ${payments.invoiceId} = ${invoices.id} and ${payments.kind} = 'payment'
+          and ${payments.currency} = ${invoices.currency})`;
+        await tx
+          .update(invoices)
+          .set({
+            status: sql`case when ${total} >= ${invoices.amount} then 'paid'
+              when ${total} > 0 then 'partially_paid' else ${invoices.status} end`,
+          })
+          .where(
+            and(
+              eq(invoices.id, saved.invoiceId),
+              inArray(invoices.status, ["sent", "partially_paid", "paid"]),
+            ),
+          );
+      }
+      return saved;
+    })
+    .catch(() => {
+      throw new Error("Payment save failed");
+    });
+}
+
+export async function knownTransactionIds(db: Db, ids: readonly string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const rows = await db
+    .select({ id: payments.paypalTxnId })
+    .from(payments)
+    .where(inArray(payments.paypalTxnId, [...ids]))
+    .catch(() => {
+      throw new Error("Payment lookup failed");
+    });
+  return new Set(rows.map((row) => row.id));
+}

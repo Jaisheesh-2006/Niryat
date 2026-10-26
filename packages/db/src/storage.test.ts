@@ -12,13 +12,24 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "./client";
 import {
+  actionStore,
   createClient,
   createUser,
+  findPdfByToken,
   findUserByEmail,
   findUserById,
+  getInvoiceForAction,
   getProfile,
+  issueInvoice,
+  knownTransactionIds,
   listClients,
+  listInvoices,
+  markSent,
   profiles,
+  recordPayment,
+  rejectAction,
+  setPayPalInvoiceId,
+  setPayPalSeriesId,
   updateClient,
   upsertProfile,
 } from "./index";
@@ -124,6 +135,98 @@ describe("storage query failures", () => {
         }),
       message: "Client save failed",
     },
+    {
+      operation: "issueInvoice",
+      run: (db: Db) =>
+        issueInvoice(
+          db,
+          userId,
+          {
+            clientId: userId,
+            type: "one_time",
+            date: "2026-10-26",
+            fy: "2026-27",
+            currency: "USD",
+            amount: "100.00",
+            description: "Synthetic invoice",
+            sac: "998314",
+            recurrence: null,
+          },
+          async () => ({
+            pdfToken: "synthetic-token",
+            pdfUrl: "https://example.invalid/pdf",
+            action: { paypalAction: "send_invoice", payload: {} },
+          }),
+          () => "2026-27/0001",
+        ),
+      message: "Invoice save failed",
+    },
+    {
+      operation: "listInvoices",
+      run: (db: Db) => listInvoices(db, userId),
+      message: "Invoice lookup failed",
+    },
+    {
+      operation: "getInvoiceForAction",
+      run: (db: Db) => getInvoiceForAction(db, userId, userId),
+      message: "Invoice lookup failed",
+    },
+    {
+      operation: "findPdfByToken",
+      run: (db: Db) => findPdfByToken(db, "synthetic-token"),
+      message: "Invoice lookup failed",
+    },
+    {
+      operation: "setPayPalInvoiceId",
+      run: (db: Db) => setPayPalInvoiceId(db, userId, userId, "INV2-SYNTHETIC"),
+      message: "Invoice save failed",
+    },
+    {
+      operation: "setPayPalSeriesId",
+      run: (db: Db) => setPayPalSeriesId(db, userId, userId, "SERIES-SYNTHETIC"),
+      message: "Invoice save failed",
+    },
+    {
+      operation: "markSent",
+      run: (db: Db) => markSent(db, userId, userId),
+      message: "Invoice save failed",
+    },
+    {
+      operation: "claim",
+      run: (db: Db) => actionStore(db).claim(userId, userId),
+      message: "Action save failed",
+    },
+    {
+      operation: "finish",
+      run: (db: Db) => actionStore(db).finish(userId, { status: "failed", error: "HTTP_503" }),
+      message: "Action save failed",
+    },
+    {
+      operation: "rejectAction",
+      run: (db: Db) => rejectAction(db, userId, userId),
+      message: "Action save failed",
+    },
+    {
+      operation: "recordPayment",
+      run: (db: Db) =>
+        recordPayment(db, {
+          captureId: "CAPTURE-SYNTHETIC",
+          status: "COMPLETED",
+          paypalInvoiceId: "INV2-SYNTHETIC",
+          gross: "100.00",
+          fee: null,
+          net: null,
+          currency: "USD",
+          fxRate: null,
+          createTime: "2026-10-26T12:00:00Z",
+        }),
+      message: "Payment save failed",
+    },
+    {
+      operation: "knownTransactionIds",
+      run: (db: Db) => knownTransactionIds(db, ["CAPTURE-SYNTHETIC"]),
+      message: "Payment lookup failed",
+    },
   ])("$operation does not expose query values or causes", async ({ run, message }) => {
     const secrets = [
       email,
@@ -133,9 +236,15 @@ describe("storage query failures", () => {
       profile.panLast4,
       profile.address,
       name,
+      "synthetic-token",
+      "INV2-SYNTHETIC",
+      "SERIES-SYNTHETIC",
+      "CAPTURE-SYNTHETIC",
+      "100.00",
     ];
     const failure = new Error(`Database failure: ${secrets.join(", ")}`);
     const pool = new Pool();
+    const connect = vi.spyOn(pool, "connect").mockRejectedValue(failure);
     const query = vi.spyOn(pool, "query").mockImplementation(() => {
       throw failure;
     });
@@ -146,7 +255,7 @@ describe("storage query failures", () => {
       } catch (error) {
         caught = error;
       }
-      expect(query).toHaveBeenCalledOnce();
+      expect(query.mock.calls.length + connect.mock.calls.length).toBe(1);
       expect(caught).toBeInstanceOf(Error);
       if (!(caught instanceof Error)) {
         throw new Error("Expected a storage error");
@@ -159,6 +268,7 @@ describe("storage query failures", () => {
       }
     } finally {
       query.mockRestore();
+      connect.mockRestore();
       await pool.end();
     }
   });

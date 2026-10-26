@@ -322,9 +322,15 @@ importers:
 
   packages/db:
     dependencies:
+      "@niryat/agent":
+        specifier: workspace:*
+        version: link:../agent
       "@niryat/config":
         specifier: workspace:*
         version: link:../config
+      "@niryat/paypal":
+        specifier: workspace:*
+        version: link:../paypal
       "@niryat/shared":
         specifier: workspace:*
         version: link:../shared
