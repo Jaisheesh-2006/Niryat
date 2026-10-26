@@ -57,6 +57,32 @@ services:
         fromDatabase:
           name: niryat-db
           property: connectionString
+  # Nightly sync (spec 05); webhooks are the real-time source.
+  - type: cron
+    name: niryat-sync
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "30 20 * * *"
+    buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm exec turbo run build --filter=@niryat/api
+    startCommand: corepack pnpm --filter @niryat/api sync:payments
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: niryat-db
+          property: connectionString
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_ENVIRONMENT
+        sync: false
   - type: workflow
     name: niryat-worker
     runtime: node
