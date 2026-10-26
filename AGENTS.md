@@ -50,6 +50,8 @@ On restricted PowerShell, use corepack.cmd pnpm or pnpm.cmd instead of the ps1 s
 
 pnpm verify passes, relevant tests are added, and only actually satisfied spec checkboxes are ticked. Run pnpm build for web/build changes. Keep all feature checkboxes open in the scaffold.
 
+Browser verification is performed by the user. Do not run browser verification or set up browser/helper connections unless the user explicitly requests it. When browser checks are relevant or required by a task, provide exact manual steps: startup commands, URLs, prerequisites, inputs/actions and expected results. Report those checks as awaiting user verification until the user confirms them; continue running required non-browser checks yourself.
+
 ## Gotchas
 
 The Server SDK lacks Invoicing and Disputes. India sandbox results are in docs/paypal-sandbox-findings.md: recurring invoices work; partial payments, domestic recipients and attachment upload do not.
