@@ -15,6 +15,13 @@
       "when": 1792954044649,
       "tag": "0001_woozy_silverclaw",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793022949089,
+      "tag": "0002_thick_jigsaw",
+      "breakpoints": true
     }
   ]
 }

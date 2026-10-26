@@ -17,6 +17,10 @@ function parseProfile(input: unknown): ProfileInput {
 function decryptProfile(row: typeof profiles.$inferSelect, key: Buffer): ProfileInput {
   return parseProfile({
     ...row,
+    address:
+      row.address === null
+        ? null
+        : decryptField(row.address, key, `profiles.address:${row.userId}`),
     gstin: row.gstin === null ? null : decryptField(row.gstin, key, `profiles.gstin:${row.userId}`),
     panLast4:
       row.panLast4 === null
@@ -34,6 +38,10 @@ export async function upsertProfile(
   const profile = parseProfile(input);
   const values = {
     ...profile,
+    address:
+      profile.address === null
+        ? null
+        : encryptField(profile.address, key, `profiles.address:${userId}`),
     gstin:
       profile.gstin === null ? null : encryptField(profile.gstin, key, `profiles.gstin:${userId}`),
     panLast4:

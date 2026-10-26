@@ -13,18 +13,20 @@ export function clientRoutes(deps: AppDeps): Hono {
   routes.get("/clients", async (c) => {
     const userId = await readSession(c, deps.sessionSecret);
     if (!userId) return c.json({ error: "unauthenticated" }, 401);
-    return c.json(await listClients(deps.db, userId));
+    return c.json(await listClients(deps.db, userId, deps.encryptionKey));
   });
   routes.post("/clients", async (c) => {
     const userId = await readSession(c, deps.sessionSecret);
     if (!userId) return c.json({ error: "unauthenticated" }, 401);
     const body = await parseJsonBody(c, clientInputSchema);
     if (!body.ok) return body.response;
-    const { name, country, answers } = body.data;
+    const { name, country, email, address, answers } = body.data;
     const result = checkExportConditions({ country, answers }, { today: todayInIndia(), rules });
-    const client = await createClient(deps.db, userId, {
+    const client = await createClient(deps.db, userId, deps.encryptionKey, {
       name,
       country,
+      email,
+      address,
       exportCheck: { answers, result },
     });
     return c.json(client, 201);
@@ -36,11 +38,13 @@ export function clientRoutes(deps: AppDeps): Hono {
     if (!id.success) return c.json({ error: "not_found" }, 404);
     const body = await parseJsonBody(c, clientInputSchema);
     if (!body.ok) return body.response;
-    const { name, country, answers } = body.data;
+    const { name, country, email, address, answers } = body.data;
     const result = checkExportConditions({ country, answers }, { today: todayInIndia(), rules });
-    const client = await updateClient(deps.db, userId, id.data, {
+    const client = await updateClient(deps.db, userId, deps.encryptionKey, id.data, {
       name,
       country,
+      email,
+      address,
       exportCheck: { answers, result },
     });
     return client ? c.json(client) : c.json({ error: "not_found" }, 404);

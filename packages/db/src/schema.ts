@@ -8,11 +8,12 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
-// Structural stubs from PLAN section 13. No migrations or domain behavior yet.
-// gstin and pan_last4 hold AES-GCM ciphertext (see encryption.ts).
+// Remaining structural stubs follow PLAN section 13.
+// gstin, pan_last4 and addresses hold AES-GCM ciphertext (see encryption.ts).
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
@@ -24,6 +25,8 @@ export const profiles = pgTable("profiles", {
   userId: uuid("user_id")
     .primaryKey()
     .references(() => users.id),
+  legalName: text("legal_name"),
+  address: text("address"),
   gstRegistered: boolean("gst_registered"),
   gstin: text("gstin"),
   lutNumber: text("lut_number"),
@@ -45,33 +48,50 @@ export const clients = pgTable("clients", {
   email: text("email"),
   exportCheckResult: jsonb("export_check_result"),
 });
-export const invoices = pgTable("invoices", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id),
-  clientId: uuid("client_id").references(() => clients.id),
-  type: text("type"),
-  number: text("number"),
-  fy: text("fy"),
-  date: date("date"),
-  currency: text("currency"),
-  amount: numeric("amount"),
-  description: text("description"),
-  paypalInvoiceId: text("paypal_invoice_id"),
-  paypalRecurringSeriesId: text("paypal_recurring_series_id"),
-  pdfUrl: text("pdf_url"),
-  status: text("status"),
-});
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    type: text("type").notNull(),
+    number: text("number").notNull(),
+    fy: text("fy").notNull(),
+    seq: integer("seq").notNull(),
+    date: date("date").notNull(),
+    currency: text("currency").notNull(),
+    amount: numeric("amount").notNull(),
+    description: text("description").notNull(),
+    sac: text("sac").notNull(),
+    recurrence: jsonb("recurrence"),
+    paypalInvoiceId: text("paypal_invoice_id").unique(),
+    paypalRecurringSeriesId: text("paypal_recurring_series_id").unique(),
+    pdfUrl: text("pdf_url"),
+    pdfToken: text("pdf_token").unique(),
+    status: text("status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    unique().on(table.userId, table.fy, table.seq),
+    unique().on(table.userId, table.number),
+  ],
+);
 export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
   invoiceId: uuid("invoice_id").references(() => invoices.id),
-  paypalTxnId: text("paypal_txn_id"),
-  kind: text("kind"),
-  gross: numeric("gross"),
+  paypalTxnId: text("paypal_txn_id").notNull().unique(),
+  kind: text("kind").notNull(),
+  gross: numeric("gross").notNull(),
   fee: numeric("fee"),
   net: numeric("net"),
-  currency: text("currency"),
+  currency: text("currency").notNull(),
   fxRate: numeric("fx_rate"),
   receivedAt: timestamp("received_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -114,11 +134,16 @@ export const matches = pgTable(
 );
 export const agentActions = pgTable("agent_actions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id),
-  paypalAction: text("paypal_action"),
-  payload: jsonb("payload"),
-  status: text("status"),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  invoiceId: uuid("invoice_id").references(() => invoices.id),
+  paypalAction: text("paypal_action").notNull(),
+  payload: jsonb("payload").notNull(),
+  status: text("status").notNull(),
+  error: text("error"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 export const tasks = pgTable("tasks", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -1,12 +1,16 @@
 import { type Client, clientSchema, type StoredExportCheck } from "@niryat/shared";
 import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "./client";
+import { decryptField, encryptField } from "./encryption";
 import { clients } from "./schema";
 
-function toClient(row: typeof clients.$inferSelect): Client {
+function toClient(row: typeof clients.$inferSelect, key: Buffer): Client {
   const result = clientSchema.safeParse({
     id: row.id,
     name: row.name,
+    email: row.email,
+    address:
+      row.address === null ? null : decryptField(row.address, key, `clients.address:${row.userId}`),
     country: row.country,
     exportCheck: row.exportCheckResult,
   });
@@ -16,7 +20,7 @@ function toClient(row: typeof clients.$inferSelect): Client {
   return result.data;
 }
 
-export async function listClients(db: Db, userId: string): Promise<Client[]> {
+export async function listClients(db: Db, userId: string, key: Buffer): Promise<Client[]> {
   const rows = await db
     .select()
     .from(clients)
@@ -25,13 +29,20 @@ export async function listClients(db: Db, userId: string): Promise<Client[]> {
     .catch(() => {
       throw new Error("Client lookup failed");
     });
-  return rows.map(toClient);
+  return rows.map((row) => toClient(row, key));
 }
 
 export async function createClient(
   db: Db,
   userId: string,
-  input: { name: string; country: string; exportCheck: StoredExportCheck },
+  key: Buffer,
+  input: {
+    name: string;
+    country: string;
+    email: string | null;
+    address: string | null;
+    exportCheck: StoredExportCheck;
+  },
 ): Promise<Client> {
   const [saved] = await db
     .insert(clients)
@@ -39,6 +50,11 @@ export async function createClient(
       userId,
       name: input.name,
       country: input.country,
+      email: input.email,
+      address:
+        input.address === null
+          ? null
+          : encryptField(input.address, key, `clients.address:${userId}`),
       exportCheckResult: input.exportCheck,
     })
     .returning()
@@ -48,22 +64,38 @@ export async function createClient(
   if (!saved) {
     throw new Error("Client save failed");
   }
-  return toClient(saved);
+  return toClient(saved, key);
 }
 
 export async function updateClient(
   db: Db,
   userId: string,
+  key: Buffer,
   clientId: string,
-  input: { name: string; country: string; exportCheck: StoredExportCheck },
+  input: {
+    name: string;
+    country: string;
+    email: string | null;
+    address: string | null;
+    exportCheck: StoredExportCheck;
+  },
 ): Promise<Client | undefined> {
   const [saved] = await db
     .update(clients)
-    .set({ name: input.name, country: input.country, exportCheckResult: input.exportCheck })
+    .set({
+      name: input.name,
+      country: input.country,
+      email: input.email,
+      address:
+        input.address === null
+          ? null
+          : encryptField(input.address, key, `clients.address:${userId}`),
+      exportCheckResult: input.exportCheck,
+    })
     .where(and(eq(clients.id, clientId), eq(clients.userId, userId)))
     .returning()
     .catch(() => {
       throw new Error("Client save failed");
     });
-  return saved ? toClient(saved) : undefined;
+  return saved ? toClient(saved, key) : undefined;
 }

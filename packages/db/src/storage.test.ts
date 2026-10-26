@@ -97,21 +97,43 @@ describe("storage query failures", () => {
     },
     {
       operation: "listClients",
-      run: (db: Db) => listClients(db, userId),
+      run: (db: Db) => listClients(db, userId, key),
       message: "Client lookup failed",
     },
     {
       operation: "createClient",
-      run: (db: Db) => createClient(db, userId, { name, country: "US", exportCheck }),
+      run: (db: Db) =>
+        createClient(db, userId, key, {
+          name,
+          country: "US",
+          email,
+          address: profile.address,
+          exportCheck,
+        }),
       message: "Client save failed",
     },
     {
       operation: "updateClient",
-      run: (db: Db) => updateClient(db, userId, randomUUID(), { name, country: "US", exportCheck }),
+      run: (db: Db) =>
+        updateClient(db, userId, key, randomUUID(), {
+          name,
+          country: "US",
+          email,
+          address: profile.address,
+          exportCheck,
+        }),
       message: "Client save failed",
     },
   ])("$operation does not expose query values or causes", async ({ run, message }) => {
-    const secrets = [email, passwordHash, userId, profile.gstin, profile.panLast4, name];
+    const secrets = [
+      email,
+      passwordHash,
+      userId,
+      profile.gstin,
+      profile.panLast4,
+      profile.address,
+      name,
+    ];
     const failure = new Error(`Database failure: ${secrets.join(", ")}`);
     const pool = new Pool();
     const query = vi.spyOn(pool, "query").mockImplementation(() => {
@@ -190,12 +212,19 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
     const user = await addUser();
     expect(await upsertProfile(t.db, user.id, profile, key)).toEqual(profile);
     expect(await getProfile(t.db, user.id, key)).toEqual(profile);
-    const updated = { ...profile, gstin: null, panLast4: null, workType: "Consulting" };
+    const updated = {
+      ...profile,
+      legalName: null,
+      address: null,
+      gstin: null,
+      panLast4: null,
+      workType: "Consulting",
+    };
     expect(await upsertProfile(t.db, user.id, updated, key)).toEqual(updated);
     expect(await getProfile(t.db, user.id, key)).toEqual(updated);
   });
 
-  it("stores GSTIN and PAN fragment as ciphertext", async () => {
+  it("stores GSTIN, PAN fragment and address as ciphertext", async () => {
     const user = await addUser();
     await upsertProfile(t.db, user.id, profile, key);
     const [row] = await t.db.select().from(profiles);
@@ -203,6 +232,8 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
     expect(row?.gstin).not.toBe(profile.gstin);
     expect(row?.panLast4).toMatch(/^v1:/);
     expect(row?.panLast4).not.toBe(profile.panLast4);
+    expect(row?.address).toMatch(/^v1:/);
+    expect(row?.address).not.toBe(profile.address);
   });
 
   it("isolates reads and updates by user ID and strips userId from input", async () => {
@@ -216,7 +247,7 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
     expect(await getProfile(t.db, b.id, key)).toEqual(bProfile);
   });
 
-  it.each(["gstin", "panLast4"] as const)(
+  it.each(["gstin", "panLast4", "address"] as const)(
     "rejects %s ciphertext copied from another user's row",
     async (field) => {
       const a = await addUser();
