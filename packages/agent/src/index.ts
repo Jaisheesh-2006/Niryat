@@ -1,22 +1,51 @@
+import type { ActionStatus, paypalActionNames } from "@niryat/shared";
 import { z } from "zod";
 
-// TODO: Claude Agent SDK + PayPal Agent Toolkit adapters; no SDK calls in scaffold.
-// All PayPal actions, including reads, must pass the user's approval queue.
-export const actionStatusSchema = z.enum(["proposed", "approved", "rejected", "done"]);
-export type ActionStatus = z.infer<typeof actionStatusSchema>;
+export { type ActionStatus, actionStatusSchema } from "@niryat/shared";
+
+// Agent-initiated PayPal calls, including reads, must pass the user's approval queue (spec 08).
+export type PayPalActionName = (typeof paypalActionNames)[number];
 
 export interface ProposedAction {
   readonly id: string;
   readonly userId: string;
-  readonly paypalAction: string;
+  readonly paypalAction: PayPalActionName;
   readonly payload: Readonly<Record<string, unknown>>;
   readonly status: ActionStatus;
 }
 
-export interface ApprovalQueue {
-  propose(action: Omit<ProposedAction, "id" | "status">): Promise<ProposedAction>;
-  approve(actionId: string, userId: string): Promise<void>;
-  reject(actionId: string, userId: string): Promise<void>;
-  // Implementations must atomically check user ownership and approval before execution.
-  executeApproved(actionId: string, userId: string): Promise<void>;
+export interface ActionStore {
+  claim(actionId: string, userId: string): Promise<ProposedAction | undefined>; // proposed|failed → approved, atomically
+  finish(
+    actionId: string,
+    outcome: { status: "done" } | { status: "failed"; error: string },
+  ): Promise<void>;
+}
+
+export type ActionHandler = (action: ProposedAction) => Promise<void>;
+
+export async function runApprovedAction(
+  store: ActionStore,
+  handlers: Readonly<Record<PayPalActionName, ActionHandler>>,
+  actionId: string,
+  userId: string,
+): Promise<
+  | { ok: true }
+  | { ok: false; reason: "not_pending" }
+  | { ok: false; reason: "failed"; error: string }
+> {
+  const action = await store.claim(actionId, userId);
+  if (!action) return { ok: false, reason: "not_pending" };
+
+  try {
+    await handlers[action.paypalAction](action);
+  } catch (error) {
+    const parsed = z.object({ code: z.string() }).safeParse(error);
+    const code = parsed.success ? parsed.data.code : "unexpected_error";
+    await store.finish(actionId, { status: "failed", error: code });
+    return { ok: false, reason: "failed", error: code };
+  }
+
+  await store.finish(actionId, { status: "done" });
+  return { ok: true };
 }
