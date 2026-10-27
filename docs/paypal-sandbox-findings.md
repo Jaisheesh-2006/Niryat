@@ -52,6 +52,90 @@ Not checked:
 - Whether sandbox sends dispute events only once an inquiry escalates to a claim.
 - Webhook signature verification.
 
+## Refund and dispute shapes (2026-10-27)
+
+P4-1, spec 06. Two individually user-approved, read-only sandbox MCP calls:
+`get_dispute({ dispute_id: "PP-R-TBU-10194472" })` and
+`list_disputes({ page_size: 50 })`. Only field names, formats, IDs and status/outcome
+codes are recorded here. No application code, PayPal writes or object-storage calls.
+
+### 1. Refund webhook (documented; actual sample unavailable)
+
+The user could not locate the earlier refund event. The historical note above did
+not record its exact type, so it does not establish `PAYMENT.CAPTURE.REFUNDED`.
+No saved `.tmp/paypal/refund-event.json` was available. On 2026-10-27, the user
+approved documented evidence for P4-1, with actual delivery verification deferred
+to P4-15 step 3.
+
+The official [Payments v2 schema](https://developer.paypal.com/api/payments/v2/schema.json),
+`components.callbacks.capture_refunded`, defines `event_type` as
+`PAYMENT.CAPTURE.REFUNDED` and `resource` as the refund schema. Its callback example
+has `resource_type` `refund` and `resource_version` `2.0`.
+
+| Path                  | Documented format or example                                                                              |
+| --------------------- | --------------------------------------------------------------------------------------------------------- |
+| `resource.id`         | String identifying the refund, distinct from the top-level webhook event ID                               |
+| `resource.links[]`    | Objects with `href`, `rel`, `method`; the example has a GET `up` link ending `/v2/payments/captures/<id>` |
+| `resource.invoice_id` | General string; the example does not have `INV2-…` format, so that format is not guaranteed               |
+
+These are documented fields, not observations from this seller's delivery.
+P4-15 step 3 must save an actual sandbox capture-refund event, verify the refund
+ID, check the capture link and invoice-ID presence/format, and resolve any mismatch
+before Phase 4 closes. P4-1's approved completion no longer requires the old event.
+
+### 2. Dispute detail (observed)
+
+`get_dispute` returned `PP-R-TBU-10194472`, status `WAITING_FOR_SELLER_RESPONSE`,
+stage `INQUIRY`. Observed top-level fields:
+`dispute_id`, `create_time`, `update_time`, `disputed_transactions`, `reason`,
+`status`, `dispute_amount`, `dispute_state`, `fund_movements`,
+`dispute_life_cycle_stage`, `dispute_channel`, `messages`, `extensions`, `evidences`,
+`seller_response_due_date`, `offer`, `refund_details`, `allowed_response_options`,
+`links`.
+
+| Path                                            | Observed format                                                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `disputed_transactions[].seller_transaction_id` | Alphanumeric string; capture ID                                                                        |
+| `disputed_transactions[].invoice_number`        | String with `INV2-…` format                                                                            |
+| `dispute_amount`                                | Object with `currency_code` (three uppercase letters) and `value` (decimal string, two decimal places) |
+| `reason`                                        | Uppercase underscore-separated code string                                                             |
+| `status`                                        | Code string; `WAITING_FOR_SELLER_RESPONSE`                                                             |
+| `dispute_life_cycle_stage`                      | Code string; `INQUIRY`                                                                                 |
+| `dispute_outcome.outcome_code`                  | Absent: no `dispute_outcome` object on this unresolved dispute; documented values below                |
+| `seller_response_due_date`                      | RFC 3339 UTC timestamp string, `YYYY-MM-DDTHH:mm:ss.SSSZ`                                              |
+| `update_time`                                   | RFC 3339 UTC timestamp string, `YYYY-MM-DDTHH:mm:ss.SSSZ`                                              |
+
+### 3. Dispute list and pagination (observed and documented)
+
+The response has top-level `items` and `links`. Its one item's fields are:
+`dispute_id`, `create_time`, `update_time`, `disputed_transactions`, `reason`,
+`status`, `dispute_state`, `dispute_amount`, `dispute_life_cycle_stage`,
+`dispute_channel`, `seller_response_due_date`, `links`. Both `dispute_id` and
+`update_time` are present; timestamps and money use the detail formats above.
+The summary's `disputed_transactions[]` has `buyer_transaction_id`,
+`buyer.payer_id` and `seller.merchant_id`, but no `seller_transaction_id`.
+Read each dispute's detail to obtain the capture ID.
+
+Response-level `links[]` entries have `href`, `rel` and `method`; the observed
+relations are `self` and `first`, with absolute URL hrefs. No `rel: "next"` or
+top-level `next_page_token` was returned, so multi-page traversal is unverified.
+The [list reference](https://developer.paypal.com/api/customer-disputes/v1/disputes-list)
+documents a HATEOAS next-page link when more results exist, `page` with
+`page_size`, and the deprecated `next_page_token` query parameter carried in links.
+The MCP tool exposes `page`, `page_size`, `dispute_state` and
+`disputed_transaction_id`, but not `update_time_after`:
+filter unverified; use the documented `update_time_after` query parameter.
+
+### 4. Outcome codes (documented)
+
+The [Disputes v1 outcome-code reference](https://developer.paypal.com/api/customer-disputes/v1/definitions/dispute_outcome_code)
+lists `RESOLVED_BUYER_FAVOUR`, `RESOLVED_SELLER_FAVOUR`, `RESOLVED_WITH_PAYOUT`,
+`CANCELED_BY_BUYER`, `ACCEPTED`, `DENIED` and `NONE` for
+`dispute_outcome.outcome_code`. `ACCEPTED` and `DENIED` are deprecated.
+The names in D8's `LOST_DISPUTE_OUTCOMES = ["RESOLVED_BUYER_FAVOUR", "ACCEPTED"]`
+match the reference; no plan change is needed. This confirms documented names,
+not a live lost-dispute response or its money movement.
+
 ## Invoicer tax ID (2026-10-26)
 
 Checked by hand with PowerShell REST calls. A draft carrying `invoicer.tax_id` `27ABCDE1234F1Z5` (a synthetic GSTIN) was accepted as `INV2-R497-9J3K-BYTU-YSQH`, and the read-back echoed `tax_id` unchanged. The draft was deleted and never sent. So the GSTIN can go in `invoicer.tax_id` as PLAN §5 maps it. How the buyer sees it was not checked.
