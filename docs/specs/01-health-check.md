@@ -28,7 +28,7 @@ Unregistered users; expired LUT; incomplete profile; refused OAuth consent; disc
 ## India sandbox limitations
 
 Confirmed on 2026-10-25 with two India business sandbox accounts ([findings](../paypal-sandbox-findings.md#log-in-with-paypal-separate-spike-2026-10-25)):
-- **Log in with PayPal cannot identify India sellers.** The code exchange succeeds, but the reply carries no `id_token`, and `userinfo` returns HTTP 400 "Unable to fetch details to serve the request". A US personal account works.
+- **Log in with PayPal cannot identify India sellers.** The code exchange succeeds, but the reply carries no `id_token`, and `userinfo` returns HTTP 400 "Unable to fetch details to serve the request". US and India personal accounts work, so the failure is specific to the business account type (rerun 2026-10-27).
 - **Decision (2026-10-25): Niryat uses its own email sign-in.** The "Sign in with PayPal" criterion stays open, documented as unavailable for India sellers.
 - **How the seller's PayPal account is connected:** through the India seller's sandbox REST app credentials, supplied server-side by the user (`PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET`). Invoicing, payments, refunds and disputes already work with these. This means one seller per deployment, which is enough for v1 and judge mode.
 - Onboarding several sellers would need PayPal [Partner Referrals](https://developer.paypal.com/api/partner-referrals/v2/) (platform onboarding), which is out of scope for v1.

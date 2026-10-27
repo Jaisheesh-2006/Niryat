@@ -1,7 +1,7 @@
 // Spike, not product code: Log in with PayPal on sandbox (build flow Phase 0).
 // Run from the repository root:
 //   1. node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env scripts/spikes/paypal-login-check.ts
-//      prints the sign-in URL. Open it and sign in as the India business sandbox account.
+//      prints the sign-in URL. Open it and sign in as the sandbox account under test.
 //   2. Copy the `code` value from the address bar PayPal redirects you to, then run:
 //      node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env scripts/spikes/paypal-login-check.ts <code>
 // The secret and tokens are never printed; the email is masked.
@@ -52,17 +52,22 @@ if (!code) {
     redirect_uri: RETURN_URL,
     state: crypto.randomUUID(),
   }).toString();
-  console.log(`Open this URL and sign in as the India business sandbox account:\n${url.href}`);
+  console.log(`Open this URL and sign in as the sandbox account under test:\n${url.href}`);
 } else {
-  const tokenReply = await fetch(`${API}/v1/oauth2/token`, {
-    method: "POST",
-    headers: { Authorization: `Basic ${Buffer.from(`${clientId}:${secret}`).toString("base64")}` },
-    body: new URLSearchParams({ grant_type: "authorization_code", code }),
-  });
+  const tokenRequest = (body: Record<string, string>) =>
+    fetch(`${API}/v1/oauth2/token`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${clientId}:${secret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams(body),
+    });
+  const tokenReply = await tokenRequest({ grant_type: "authorization_code", code });
   const tokenBody = await json(tokenReply);
   const token = z
     .object({
       access_token: z.string().min(1),
+      refresh_token: z.string().optional(),
       scope: z.string().optional(),
       id_token: z.string().optional(),
     })
@@ -84,18 +89,40 @@ if (!code) {
     `code exchange HTTP ${tokenReply.status}; scope="${token.data.scope ?? "?"}"; id_token=${token.data.id_token ? "present" : "absent"}; ` +
       `sub=${claims.success && claims.data.sub ? "present" : "absent"}; email claim=${claims.success && claims.data.email ? "present" : "absent"}`,
   );
-  const userinfo = (schema: string) =>
-    fetch(`${API}/v1/identity/oauth2/userinfo?schema=${schema}`, {
-      headers: { Authorization: `Bearer ${token.data.access_token}` },
+  // PayPal support (2026-10-27): refresh right before userinfo, and also try the Identity v1 reference path.
+  let accessToken = token.data.access_token;
+  if (token.data.refresh_token) {
+    const refreshReply = await tokenRequest({
+      grant_type: "refresh_token",
+      refresh_token: token.data.refresh_token,
     });
-  let infoReply = await userinfo("paypalv1.1");
-  if (!infoReply.ok) {
+    const refreshBody = await json(refreshReply);
+    const refreshed = z.object({ access_token: z.string().min(1) }).safeParse(refreshBody);
     console.log(
-      `userinfo schema=paypalv1.1: ${describe(infoReply.status, await json(infoReply))} | paypal-debug-id=${infoReply.headers.get("paypal-debug-id") ?? "?"}`,
+      `refresh: ${refreshReply.ok && refreshed.success ? `HTTP ${refreshReply.status}, new access token` : describe(refreshReply.status, refreshBody)}`,
     );
-    infoReply = await userinfo("openid");
+    if (refreshReply.ok && refreshed.success) accessToken = refreshed.data.access_token;
+  } else {
+    console.log("refresh: no refresh_token in the code exchange; using the original access token");
   }
-  const infoBody = await json(infoReply);
+  let infoBody: unknown;
+  for (const path of [
+    "oauth2/userinfo?schema=paypalv1.1",
+    "oauth2/userinfo?schema=openid",
+    "openidconnect/userinfo?schema=openid",
+  ]) {
+    const reply = await fetch(`${API}/v1/identity/${path}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const body = await json(reply);
+    console.log(
+      `userinfo ${path}: ${describe(reply.status, reply.ok ? undefined : body)} | paypal-debug-id=${reply.headers.get("paypal-debug-id") ?? "?"}`,
+    );
+    if (reply.ok) {
+      infoBody = body;
+      break;
+    }
+  }
   const info = z
     .looseObject({
       user_id: z.string().optional(),
@@ -108,10 +135,8 @@ if (!code) {
         .optional(),
     })
     .safeParse(infoBody);
-  if (!infoReply.ok || !info.success) {
-    console.log(
-      `PARTIAL  code exchanged, userinfo schema=openid also failed: ${describe(infoReply.status, infoBody)} | paypal-debug-id=${infoReply.headers.get("paypal-debug-id") ?? "?"}`,
-    );
+  if (infoBody === undefined || !info.success) {
+    console.log("PARTIAL  code exchanged, but every userinfo attempt failed (see lines above)");
     process.exit(0);
   }
   const email =

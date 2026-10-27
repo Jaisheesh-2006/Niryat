@@ -166,7 +166,24 @@ India business run in detail:
 - The reply had **no `id_token`**.
 - `userinfo` failed with HTTP 400 `invalid_request`, "Unable to fetch details to serve the request", for both `schema=paypalv1.1` and `schema=openid`.
 
-**Conclusion:** in sandbox, Log in with PayPal cannot identify an India business seller. Niryat therefore needs another sign-in method. The decision is recorded in [spec 01](specs/01-health-check.md#india-sandbox-limitations). Not compared: whether the US account's token reply includes an `id_token`.
+**Conclusion:** in sandbox, Log in with PayPal cannot identify an India business seller. Niryat therefore needs another sign-in method. The decision is recorded in [spec 01](specs/01-health-check.md#india-sandbox-limitations).
+
+### Rerun with PayPal support's isolation steps (2026-10-27)
+
+The script now refreshes the token before calling userinfo, and also tries `GET /v1/identity/openidconnect/userinfo?schema=openid`.
+
+| Account                    | Refresh  | `oauth2/userinfo`         | `openidconnect/userinfo` |
+| -------------------------- | -------- | ------------------------- | ------------------------ |
+| US personal                | HTTP 200 | HTTP 200 (`paypalv1.1`)   | not reached              |
+| India personal             | HTTP 200 | HTTP 200 (`paypalv1.1`)   | not reached              |
+| India business (both runs) | HTTP 200 | HTTP 400 for both schemas | HTTP 401                 |
+- **The cause is not region.** An India personal account works, so the failure belongs to the India business account type.
+- **A missing `id_token` is normal.** The two working accounts don't get one either, and their reply scopes match the business account's.
+- **A stale token is ruled out.** A freshly refreshed token still fails.
+- The `openidconnect` 401 shows nothing about business accounts on their own: the working accounts stopped at the first success and never reached that path.
+- Not tested: a US business account, which would show whether every business account fails or only India ones.
+
+Business-run debug IDs: `f708273beeed9` (`paypalv1.1`), `f95855074fd65` (`openid`), `f91405735dde4` (`openidconnect`).
 
 ## Setup gotchas (observed 2026-10-24)
 

@@ -46,7 +46,29 @@ Credential-free checks (2026-10-27), user-confirmed: `pnpm verify --force` with 
 
 ## V07 FIRA sample
 
-TODO(verify): Obtain the team's own consented, redacted PayPal India FIRA and inspect fields before parser implementation. [PayPal digital FIRA](https://newsroom.apac.paypal-corp.com/Digital-Foreign-Inward-Remittance-Advice).
+P4-2 result (2026-10-27): real-sample verification deferred. The user has no real PayPal India FIRA available and no contact who can supply a consented sample. A public search did not locate a verifiable issued PayPal India FIRA; PayPal's [download walkthrough](https://www.paypal.com/in/brc/article/paypal-monthly-digital-firc) shows dashboard screens, and its [sample request letter](https://www.paypalobjects.com/webstatic/en_IN/mktg/pdf/Sample-FIRC-Request-Letter.pdf) is an application form, not an issued advice. The user reports sending PayPal support a request for an anonymised specimen PDF and field/reference clarification; a response is pending.
+
+At the user's request, a synthetic PDF was created at the git-ignored `.tmp/fira/fira-sample.pdf`, and the user approved reading it. It contains invented data only and is visibly marked `SYNTHETIC TEST FIXTURE - NOT BANK ISSUED`. It is not a redacted real FIRA. Its one-page rendering and text extraction were checked; it has a selectable text layer and four table rows, one per invented remittance.
+
+The following describes **only the synthetic fixture**, not a verified PayPal format. No personal or transaction values are reproduced here.
+
+| Field            | Label and format                                               | Position                     |
+| ---------------- | -------------------------------------------------------------- | ---------------------------- |
+| Issuer           | `Issuer:` followed by a fictional bank name                    | Below the title              |
+| Title            | `Foreign Inward Remittance Advice (FIRA)`                      | Above the issuer             |
+| Statement period | `Statement period:`; `DD-Mmm-YYYY to DD-Mmm-YYYY`              | Below the issuer             |
+| Date             | `Date`; `DD-Mmm-YYYY`, English three-letter month              | Table column 2, after `Line` |
+| Foreign amount   | `Foreign amount`; comma grouping and two decimal places        | Table column 3               |
+| Currency         | `Currency`; three uppercase letters                            | Table column 4               |
+| Reference        | `Remittance reference`; `SYNTHETIC-REF-<three-digit sequence>` | Table column 5               |
+| Purpose code     | `Purpose code`; `P` followed by four digits                    | Table column 6               |
+| INR / FX         | `INR / FX`; `Not shown`, with no INR amount or exchange rate   | Table column 7               |
+
+The synthetic references are fixture identifiers, not PayPal transaction IDs or bank references. The real issuer/title, period format, line count/layout, field labels/formats/positions, reference semantics and INR/FX presence remain unverified. Neither the no-text-layer nor the INR-only stop condition can be assessed for a real FIRA yet. Do not use this fixture as evidence of real-document compatibility or as the verified layout for P4-11.
+
+The user confirmed on 2026-10-27 that this V07 entry contains no personal values. The documentation, privacy review and synthetic-fixture checks are complete.
+
+Deferred: inspect a consented real FIRA or an official anonymised specimen when available and record its layout separately. P4-2's original real-layout acceptance gate and spec 07's real-FIRA parser criterion remain open.
 
 ## V08 Purpose-code catalogue
 
