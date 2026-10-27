@@ -1,6 +1,6 @@
 # PayPal integration
 
-Sandbox only. Use one India business seller and one US personal buyer created in the [Developer Dashboard](https://developer.paypal.com/dashboard/). Do not put their passwords, client secrets or access tokens in the repository. No real calls are made by this scaffold.
+Sandbox only. Use one India business seller and one US personal buyer created in the [Developer Dashboard](https://developer.paypal.com/dashboard/). Do not put their passwords, client secrets or access tokens in the repository. Phase 3 implements approved invoice actions and deterministic payment ingestion; automated checks use fakes rather than contacting PayPal.
 
 | Feature                | API or tool                                            | Verify on India sandbox                                       |
 | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
@@ -18,7 +18,7 @@ Sandbox only. Use one India business seller and one US personal buyer created in
 | 12 Dashboard           | PayPal ledger; AG Studio later                         | Transaction coverage                                          |
 | 13 Advance tax         | Rules over receipts net of refunds                     | Receipt coverage; no filing API                               |
 
-The [Server SDK](https://github.com/paypal/PayPal-TypeScript-Server-SDK) does not cover Invoicing/Disputes. The [Agent Toolkit](https://github.com/paypal/agent-toolkit) supplies AI-facing actions; it is not the deterministic ledger adapter. The typed REST interface is a placeholder with no implementation. See [architecture](architecture.md).
+The [Server SDK](https://github.com/paypal/PayPal-TypeScript-Server-SDK) does not cover Invoicing/Disputes. The [Agent Toolkit](https://github.com/paypal/agent-toolkit) supplies future AI-facing actions; it is not the deterministic ledger adapter. The implemented REST client uses sandbox endpoints, caches OAuth tokens until five minutes before expiry, validates responses and retries transient failures once. Invoice create/send and series create/activate use stable per-action `PayPal-Request-Id` values and execute only after an owner-scoped approval claim. Created IDs survive retries. Disputes operations remain spec 06. See [architecture](architecture.md).
 
 Subscribe to the following documented [webhook event names](https://developer.paypal.com/api/rest/webhooks/event-names/), confirming emitted events for the account and product on India sandbox:
 - INVOICING.INVOICE.PAID
@@ -29,7 +29,9 @@ Subscribe to the following documented [webhook event names](https://developer.pa
 - CUSTOMER.DISPUTE.UPDATED
 - CUSTOMER.DISPUTE.RESOLVED
 
-Signature verification currently fails closed. Future ingestion must verify signatures before storage, deduplicate by event/transaction IDs, handle out-of-order events and reconcile nightly. An invoice notification and a capture notification can describe the same economic payment.
+`POST /webhooks/paypal` verifies signatures through PayPal's verify API before any payment write and rejects invalid signatures. Phase 3 handles `PAYMENT.CAPTURE.COMPLETED` and `INVOICING.INVOICE.PAID`; other verified events return `ignored` until their feature is implemented. Invoice-paid events contain `resource.invoice.payments.transactions[].payment_id`. Both paths call `recordCapture`, which reads the capture through the Server SDK and records only completed captures, copying gross, fee, net and available FX data. Capture `invoice_id` matches the stored PayPal invoice ID; unique transaction IDs prevent duplicate payments. Unmatched completed captures are retained without an invoice link. An invoice notification and a capture notification can describe the same economic payment.
+
+`pnpm --filter @niryat/api sync:payments` searches the last seven days and processes payment event codes beginning `T00`, skipping known transaction IDs. The `niryat-sync` cron is configured for 02:00 IST; hosted operation is not yet verified. The user's P3-15 run (2026-10-27) returned `{"seen":3,"alreadyRecorded":1,"recorded":0,"skipped":2,"failed":0}` and retained one payment row. Skipped rows were not found as captures or were not completed; the summary does not identify which. See [verification V06](verification.md#v06-events-refunds-disputes-and-history).
 
 For invoices, PLAN maps GSTIN to invoicer.tax_id, LUT text to detail.terms_and_conditions, notes to detail.note and numbering to detail.invoice_number. Verify attachments/partial-payment fields against [Invoicing v2](https://developer.paypal.com/docs/api/invoicing/v2/); link a PDF in the note when attachments are unavailable. Record India limitations in the relevant spec without dropping the whole feature.
 

@@ -1,6 +1,6 @@
 # Verification remaining outside the scaffold
 
-The scaffold's automated checks require no credentials. These items require accounts, external tools or source review; none is represented as implemented.
+Ordinary automated checks require no credentials; explicit database integration suites use a separate test database. The entries below distinguish user-confirmed sandbox evidence from remaining account, deployment and source-review checks.
 
 ## V01 PayPal documentation migration
 
@@ -16,13 +16,17 @@ Sandbox result (2026-10-25), from [paypal-login-check.ts](../scripts/spikes/payp
 
 TODO(verify): Create/send a one-time India sandbox invoice and reminder; confirm numbering and required field mappings. [Invoicing v2](https://developer.paypal.com/docs/api/invoicing/v2/).
 
-Sandbox result (2026-10-25): create, send, pay and remind all work for an India seller to a US buyer. `invoice_number`, `note` and `terms_and_conditions` were accepted; `invoicer.tax_id` was not exercised. See [findings](paypal-sandbox-findings.md).
+Sandbox result (2026-10-25): create, send, pay and remind all work for an India seller to a US buyer. `invoice_number`, `note` and `terms_and_conditions` were accepted. In the P3-1 follow-up (2026-10-26), a synthetic `invoicer.tax_id` was accepted and echoed on draft read-back; the draft was deleted without sending. See [findings](paypal-sandbox-findings.md#invoicer-tax-id-2026-10-26).
+
+P3-15 user verification (2026-10-27): the generated PDF opens, an India recipient is blocked with reasons, and the approved one-time invoice is sent from the India seller to the US buyer with the matching number, LUT terms and PDF link. The buyer paid and Niryat recorded one payment. Steps 3–5 were confirmed during P3-14 and steps 6–8 during close-out.
 
 ## V04 Recurring invoices
 
 TODO(verify): Confirm recurring-series creation/activation for India; document account limitations. [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit).
 
 Sandbox result (2026-10-25): `POST /v2/invoicing/recurring-invoices` plus `/activate` works; the series reads back `ACTIVE`. See [findings](paypal-sandbox-findings.md).
+
+P3-1 follow-up (2026-10-26): a series request accepted `recurring_info.detail.invoice_number` but omitted it on read-back. Generated-cycle numbering and a reliable generated-invoice ID link were not established. In the P3-15 user screenshot (2026-10-27), the monthly series is Active, its first listed invoice is `2026-27/0002` (Due), and its next occurrence is 2026-11-27. This is evidence for the first listed invoice only. Future-cycle numbering and adoption into Niryat remain unverified; the application currently stores the series ID without fetching generated invoice IDs. Leave the consecutive-numbering criterion open. See [spec 04 limitations](specs/04-export-invoicing.md#india-sandbox-limitations).
 
 ## V05 Partial payments and attachments
 
@@ -34,7 +38,11 @@ Sandbox result (2026-10-25): partial payments are rejected ("not available in yo
 
 TODO(verify): Exercise signed events, refund/dispute outcomes and transaction fee/net/FX coverage on India sandbox. [Webhook events](https://developer.paypal.com/api/rest/webhooks/event-names/), [Disputes testing](https://developer.paypal.com/docs/disputes/test-go-live/).
 
-Sandbox result (2026-10-25): fee and net are verified, from both the capture and transaction search, with no FX on a USD balance. A buyer-opened dispute (`PP-R-TBU-10194472`) is listed and readable through the Disputes API. A refund webhook was delivered. No `CUSTOMER.DISPUTE.CREATED` event appeared for that dispute, although the webhook is subscribed. Still open: webhook signature verification and the dispute event. See [findings](paypal-sandbox-findings.md#disputes-and-webhooks-2026-10-25).
+Sandbox result (2026-10-25): fee and net are verified, from both the capture and transaction search, with no FX on a USD balance. A buyer-opened dispute (`PP-R-TBU-10194472`) is listed and readable through the Disputes API. A refund webhook was delivered. No `CUSTOMER.DISPUTE.CREATED` event appeared for that dispute, although the webhook is subscribed. The dispute event remains open. See [findings](paypal-sandbox-findings.md#disputes-and-webhooks-2026-10-25).
+
+Webhook signature verification works via the verify API (2026-10-27). The user confirmed that the paid one-time invoice became Paid through the webhook, with gross, fee and net shown in one payment row. Later CLI reconciliation returned `{"seen":3,"alreadyRecorded":1,"recorded":0,"skipped":2,"failed":0}`. It found the recorded payment without inserting another, and the user screenshot shows the invoice still Paid with one payment row. The skipped counter combines captures not found and captures not completed; the two rows' individual reasons were not inspected. The optional scratch-database webhook-miss test was skipped; [sync integration tests](../apps/api/src/sync.test.ts) cover backfill and deduplication. Hosted cron execution remains a deployment check.
+
+Credential-free checks (2026-10-27), user-confirmed: `pnpm verify --force` with `.env` unavailable completed all 27 tasks with zero cached and exit code 0; `/health` returned `ok` and `/purpose-codes` returned the catalogue. The separate database integration runs passed DB 81/81 and API 136/136 with no skipped tests. Local production build also passed.
 
 ## V07 FIRA sample
 

@@ -6,15 +6,15 @@ This commit is a scaffold. Product scope and ordering live in [PLAN](docs/PLAN.m
 
 ## Map
 
-- apps/web: Next.js App Router; sign-in, profile, health check and clients pages.
-- apps/api: Hono on Node; health route, future REST/webhooks.
+- apps/web: Next.js App Router; sign-in, profile, health check, clients and invoices pages.
+- apps/api: Hono on Node; auth, profiles, clients, invoices, approvals, PDF serving, payment webhooks and sync.
 - apps/worker: Render Workflows monthlyClose stub.
 - packages/rules: pure, cited legal/numeric logic; YAML logic names the implementing function.
-- packages/paypal: SDK, REST and webhook boundaries.
-- packages/agent: future Claude + PayPal Toolkit; approval-queue contract.
+- packages/paypal: REST (Invoicing, webhook verify), Server SDK ledger (search, captures), webhook verification.
+- packages/agent: approval runner; future Claude + PayPal Toolkit.
 - packages/db: Drizzle schema, migrations, encrypted profile storage; packages/shared: shared zod request schemas.
 - packages/config: strict TypeScript base and safe zod environment parser.
-- docs/specs: thirteen ordered, unimplemented feature specs.
+- docs/specs: thirteen ordered feature specs; status and acceptance ticks record implemented scope.
 
 ## Commands
 
@@ -39,6 +39,22 @@ On restricted PowerShell, use corepack.cmd pnpm or pnpm.cmd instead of the ps1 s
 - No any, type-check bypasses, or unvalidated casts at boundaries.
 - State the reason before introducing a dependency. Sponsor/AI/payment SDK installs wait for the relevant spec.
 - No symlink instruction files. Keep Windows and Linux commands equivalent.
+
+## Design (LLD)
+
+Prefer the simplest code that meets the spec; use a pattern only to solve a problem that exists now, never "for later".
+- Single responsibility: routes parse, authorize and respond; packages/db persists; packages/rules computes; packages/paypal talks to PayPal. A module has one reason to change.
+- Dependency inversion: only composition roots (apps/api/src/server.ts, a job's main(), the worker entry) read env or build concrete clients; everything else receives them, as createApp(deps) does.
+- Interface segregation: small interfaces named by the caller's need (FileStore has put/get). Accept the narrowest type a function uses.
+- Open/closed: extend through registries keyed by a union, not new branches. A new PayPal action is a handler entry in the Record that runApprovedAction takes; the compiler flags a missing one.
+- Liskov: fakes and alternative adapters keep the contract, including failure semantics (FileStore.get returns undefined on a miss and throws on other errors).
+- Patterns already in use; reuse them before inventing new ones: Adapter (FileStore/createS3FileStore, PayPalLedger, PayPalRestClient), factory functions (createX returning an interface), Command plus handler registry (packages/agent), state machine with atomic transitions (agent_actions claim/finish), repository functions (packages/db), middleware as Decorator (Hono).
+- Avoid: classes with inheritance (compose functions and interfaces), Singletons or module-level mutable state, an interface with one implementation unless it marks an I/O boundary that tests fake, and Abstract Factory/Visitor/Mediator ceremony.
+- Functional core, imperative shell: pure logic takes time and data as arguments (syncPayments(deps, now)); I/O stays at the edges.
+- Make illegal states unrepresentable: discriminated unions, readonly data, exhaustive switches ending in a never check.
+- Errors: return typed results for expected outcomes ({ ok: false, reason }); throw for bugs and infrastructure faults. Never swallow an error without counting, logging or rethrowing it.
+- Side effects that can be retried (webhooks, PayPal POSTs, jobs) are idempotent: dedupe keys, PayPal-Request-Id, atomic status checks.
+- Duplicate twice before abstracting on the third use; delete dead code instead of commenting it out.
 
 ## PayPal layers
 

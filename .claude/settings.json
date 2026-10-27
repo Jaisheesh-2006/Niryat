@@ -18,7 +18,6 @@
     "deny": [
       "Read(**/.env*)",
       "Edit(**/.env*)",
-      "Read(**/node_modules/**)",
       "Read(**/.next/**)",
       "Read(**/dist/**)",
       "Read(**/build/**)",

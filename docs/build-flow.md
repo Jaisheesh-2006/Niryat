@@ -49,16 +49,16 @@ flowchart LR
 
 **Order:** build the spec 01 rows now (database, email sign-in and sessions, rules loader), proved by a profile API with no UI. Build the spec 04 and 05 rows in Phase 3, inside those specs. Prerequisite done 2026-10-25: `drizzle.config.ts` loads the root `.env` when present, and a separate `niryat_test` database exists for integration tests.
 
-| Foundation                                                                              | Built with | Notes from the spike                                                                                                                               |
-| --------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database: migrations, connection, encryption of GSTIN/PAN/addresses, per-user isolation | Spec 01    | **Done (2026-10-25)**: migrations, connection, encrypted GSTIN/PAN fragments and per-user isolation; client address encryption deferred to spec 04 |
-| Session + email sign-in                                                                 | Spec 01    | **Done (2026-10-25)**: email/password sign-in and signed-cookie sessions (API only)                                                                |
-| Rules loader + per-rule unit tests                                                      | Spec 01    | **Done (2026-10-25)**: loader and metadata tests; rules stay inert until implemented                                                               |
-| REST client for Invoicing v2 / Disputes v1 in `packages/paypal/src/rest`                | Spec 04    | Cache the OAuth token and refresh before expiry (PayPal reuses a token for ~9 h); `PayPal-Request-Id` on every POST; zod-validate responses        |
-| Approval queue persistence and execution (`agent_actions`)                              | Spec 04    | Sending an invoice is a PayPal action, so approval must exist **before** spec 08, not with it                                                      |
-| File storage with shareable links                                                       | Spec 04    | The invoice PDF is linked from `detail.note` (no attachment upload)                                                                                |
-| Webhook receiver with signature verification                                            | Spec 05    | Verify before storing; dedupe by event/transaction ID                                                                                              |
-| Server SDK install (transaction search, refunds)                                        | Spec 05    | State the reason in the PR, per AGENTS.md                                                                                                          |
+| Foundation                                                                              | Built with | Notes from the spike                                                                                                                                        |
+| --------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database: migrations, connection, encryption of GSTIN/PAN/addresses, per-user isolation | Spec 01    | **Done (2026-10-25)**: migrations, connection, encrypted GSTIN/PAN fragments and per-user isolation; client address encryption deferred to spec 04          |
+| Session + email sign-in                                                                 | Spec 01    | **Done (2026-10-25)**: email/password sign-in and signed-cookie sessions (API only)                                                                         |
+| Rules loader + per-rule unit tests                                                      | Spec 01    | **Done (2026-10-25)**: loader and metadata tests; rules stay inert until implemented                                                                        |
+| REST client for Invoicing v2 / Disputes v1 in `packages/paypal/src/rest`                | Spec 04    | **Done (2026-10-27)**: sandbox OAuth cache, POST request IDs, validated responses and retries; Invoicing is implemented, Disputes operations remain spec 06 |
+| Approval queue persistence and execution (`agent_actions`)                              | Spec 04    | **Done (2026-10-27)**: persistent proposals, owner-scoped atomic approval claim, rejection, execution and retry outcomes                                    |
+| File storage with shareable links                                                       | Spec 04    | **Done (2026-10-27)**: external S3-compatible storage (local SeaweedFS in development), served via `/api/files/:token`; PDF link in `detail.note`           |
+| Webhook receiver with signature verification                                            | Spec 05    | **Done (2026-10-27)**: verify via PayPal before writes; dedupe payments by capture ID                                                                       |
+| Server SDK install (transaction search, refunds)                                        | Spec 05    | **Done (2026-10-27)**: SDK capture reads and transaction-search reconciliation; refund operations remain spec 06                                            |
 
 **Exit gate:** each foundation has tests and is used by at least one passing spec checkbox.
 
@@ -75,9 +75,17 @@ flowchart LR
 
 ## Phase 3: Money in: specs 04–05 (Oct 28–30)
 
+**Status: complete (2026-10-27).** P3-15 steps 3–8 are user-confirmed: PDF and blocked-export checks, approved one-time send, webhook payment recording, active recurring series and reconciliation with `alreadyRecorded: 1`, `recorded: 0`, `failed: 0`. Extraction is deferred to Phase 5; recurring-cycle numbering and adoption remain open in spec 04.
+
 **Goal:** the core demo loop works: invoice sent from India, paid by the US buyer, payment recorded with fee and net.
 - [04 Export invoicing](specs/04-export-invoicing.md): extraction with user confirmation, GST PDF, consecutive numbering per financial year, one-time invoices and recurring series (both confirmed working). Milestone/partial payments: **unavailable for India sellers**; document it and do not build it. Any alternative, such as one invoice per milestone, is a product decision for the spec.
-- [05 Payment tracking](specs/05-payment-tracking.md): webhooks are the real-time source; transaction search is nightly reconciliation only, since it indexes with a delay. Store gross, fee and net from the capture's `seller_receivable_breakdown` (PayPal returns `net_amount`). Reconcile on `invoice_id`, which holds our invoice number.
+- [05 Payment tracking](specs/05-payment-tracking.md): webhooks are the real-time source; transaction search is nightly reconciliation only, since it indexes with a delay. Store gross, fee and net from the capture's `seller_receivable_breakdown` (PayPal returns `net_amount`). Match the capture's `invoice_id` to the stored PayPal invoice ID (`INV2-…`), rather than the Niryat invoice number.
+
+P3-15 exit evidence (2026-10-27):
+- The user ran verification without `.env` (27 successful tasks, zero cached, exit code 0), and confirmed `/health` and `/purpose-codes` work without credentials.
+- Database integration suites executed: DB 81/81 and API 136/136 passed in the user's close-out logs, with no skipped tests.
+- Invoice create/send/activate POST call sites are confined to the approval handlers; rejection, repeated approval and cross-user access are tested. YAML names six implemented functions, including `invoiceNumberFor` and `prepareExportInvoice`; six other rules remain `TODO`.
+- P3-15 ticks spec 03 criterion 2, three spec 04 criteria and all three spec 05 criteria, together with PLAN §5. The optional scratch-database webhook-miss run was skipped; automated reconciliation tests cover backfill.
 
 **Exit gate:** end-to-end sandbox run: approved invoice → sent → buyer pays → webhook records the payment → nightly sync agrees.
 

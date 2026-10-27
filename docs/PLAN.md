@@ -140,7 +140,7 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 **Done when:**
 - [x] Each condition shown as pass/fail with its legal reference
-- [ ] A failing check blocks the zero-rated export invoice path and explains why
+- [x] A failing check blocks the zero-rated export invoice path and explains why
 
 ### 4. PayPal export invoicing (one-time, recurring, milestone)
 
@@ -164,9 +164,9 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 **Done when:**
 - [ ] Extraction shows source text beside each extracted field; user confirms before saving
-- [ ] GST invoice PDF generated with all mandatory export fields
-- [ ] One-time PayPal invoice created and sent from the India sandbox account to a US sandbox buyer
-- [ ] Recurring series and partial-payment invoices work (or are documented as unavailable for India accounts)
+- [x] GST invoice PDF generated with all mandatory export fields
+- [x] One-time PayPal invoice created and sent from the India sandbox account to a US sandbox buyer
+- [x] Recurring series and partial-payment invoices work (or are documented as unavailable for India accounts)
 - [ ] Invoice numbers are unique and consecutive per financial year, including recurring cycles
 
 ### 5. Real-time payment tracking
@@ -176,9 +176,9 @@ Every feature below is **required for v1**. Build them in this order; each one l
 **How:** PayPal webhooks for real-time updates; PayPal transaction history for backfill and reconciliation.
 
 **Done when:**
-- [ ] Webhook receiver verifies PayPal signatures and records invoice-paid / capture events
-- [ ] Nightly sync via transaction history catches anything webhooks missed
-- [ ] Each payment shows gross, fee, net and linked invoice; partial payments roll up correctly
+- [x] Webhook receiver verifies PayPal signatures and records invoice-paid / capture events
+- [x] Nightly sync via transaction history catches anything webhooks missed
+- [x] Each payment shows gross, fee, net and linked invoice; partial payments roll up correctly
 
 ### 6. Refunds and disputes handling
 

@@ -44,7 +44,9 @@ Status key:
   - The number of HSN/SAC digits required depends on turnover. Not checked.
 - **INVOICE_NUMBERING**
   - Validate with `^[A-Za-z0-9/-]{1,16}$`. Characters such as `_` and `#` are not allowed.
+  - Niryat's format is `<FY>/<seq>` with a sequence padded to at least four digits, e.g. `2026-27/0001`; `invoiceNumberFor` implements the format and the database serializes allocation per user and financial year. This is the product's format within the rule's constraints.
   - Recurring PayPal invoices must take numbers from the same series.
+  - P3-1 found that PayPal accepted a series invoice number but omitted it on read-back. P3-15's user screenshot (2026-10-27) lists the first invoice as `2026-27/0002` under an active monthly series; future-cycle numbering and cycle adoption into Niryat remain pending. See [verification V04](verification.md#v04-recurring-invoices); the full recurring-cycle numbering acceptance criterion stays open.
 - **CREDIT_NOTE**
   - s. 34 says "may". Issuing a credit note keeps GSTR-1 export value and refund figures correct, so recommend it rather than state it is required.
 - **GST_THRESHOLD**

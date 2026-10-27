@@ -1,6 +1,6 @@
 # 3. Export eligibility check
 
-Status: check built (2026-10-26); the invoice route enforces it in spec 04.
+Status: built (2026-10-27); the invoice route's blocking behaviour is user-verified in the Phase 3 sandbox run.
 
 ## Goal
 
@@ -13,7 +13,7 @@ As an Indian freelancer paid through PayPal, I want to understand whether a job 
 ## Acceptance criteria
 
 - [x] Each condition shown as pass/fail with its legal reference
-- [ ] A failing check blocks the zero-rated export invoice path and explains why
+- [x] A failing check blocks the zero-rated export invoice path and explains why
 
 ## Data & APIs used
 
@@ -27,6 +27,7 @@ Unknown place of supply; related establishments; incomplete answers; failed cond
 
 - [Export-condition rules](../../packages/rules/src/export-conditions.test.ts) cover all five conditions, citations, India recipients, incomplete answers and unknown foreign-exchange permission.
 - [Clients API](../../apps/api/src/routes/clients.test.ts) and [client storage](../../packages/db/src/clients.test.ts) cover saved results, recomputation, validation and per-user isolation; [client form](../../apps/web/src/components/ClientForm.test.tsx) covers create and edit submission.
+- [Invoices API](../../apps/api/src/routes/invoices.test.ts) covers an India recipient being blocked with reasons, without storing an invoice, consuming a number or calling PayPal.
 
 ## Out of scope
 
