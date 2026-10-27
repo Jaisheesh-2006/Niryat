@@ -51,6 +51,16 @@ export function ProfileForm({
           required
         />
       </fieldset>
+      <label htmlFor="legalName">Legal name (as on your PAN or GST registration)</label>
+      <input
+        id="legalName"
+        name="legalName"
+        type="text"
+        maxLength={200}
+        defaultValue={initial?.legalName ?? ""}
+      />
+      <label htmlFor="address">Business address</label>
+      <textarea id="address" name="address" maxLength={500} defaultValue={initial?.address ?? ""} />
       <label htmlFor="gstin">GSTIN</label>
       <input
         id="gstin"

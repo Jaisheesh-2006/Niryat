@@ -20,6 +20,8 @@ export function wholeNumber(form: FormData, name: string): number | string | nul
 export function profileBody(form: FormData): Record<string, unknown> {
   return {
     gstRegistered: yesNo(form, "gstRegistered"),
+    legalName: text(form, "legalName"),
+    address: text(form, "address"),
     gstin: text(form, "gstin"),
     lutNumber: text(form, "lutNumber"),
     lutValidFrom: text(form, "lutValidFrom"),
@@ -35,6 +37,8 @@ export function clientBody(form: FormData): Record<string, unknown> {
   return {
     name: text(form, "name"),
     country: text(form, "country"),
+    email: text(form, "email"),
+    address: text(form, "address"),
     answers: {
       supplierInIndia: yesNo(form, "supplierInIndia"),
       clientPresentInIndia: yesNo(form, "clientPresentInIndia"),
@@ -44,8 +48,40 @@ export function clientBody(form: FormData): Record<string, unknown> {
   };
 }
 
+export function invoiceBody(form: FormData): Record<string, unknown> {
+  const type = text(form, "type");
+  return {
+    clientId: text(form, "clientId"),
+    type,
+    description: text(form, "description"),
+    sac: text(form, "sac"),
+    currency: text(form, "currency"),
+    amount: text(form, "amount"),
+    recurrence:
+      type === "recurring"
+        ? {
+            intervalUnit: text(form, "intervalUnit"),
+            intervalCount: wholeNumber(form, "intervalCount"),
+            totalCycles: wholeNumber(form, "totalCycles"),
+          }
+        : null,
+  };
+}
+
 const labels: Record<string, string> = {
-  email: "Email",
+  email: "Client email",
+  legalName: "Legal name",
+  address: "Address",
+  clientId: "Client",
+  type: "Invoice type",
+  description: "Description of service",
+  sac: "SAC code",
+  currency: "Currency",
+  amount: "Amount",
+  recurrence: "Repeat",
+  "recurrence.intervalUnit": "Repeat every",
+  "recurrence.intervalCount": "Interval count",
+  "recurrence.totalCycles": "Number of invoices",
   password: "Password (12–128 characters)",
   gstRegistered: "GST registered",
   gstin: "GSTIN",
@@ -68,7 +104,7 @@ export async function sendJson(
   url: string,
   method: "POST" | "PUT",
   body: unknown,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true } | { ok: false; message: string; reasons?: string[] }> {
   const fallback = { ok: false, message: "Something went wrong. Try again." } as const;
   try {
     const response = await fetch(url, {
@@ -78,10 +114,38 @@ export async function sendJson(
     });
     if (response.ok) return { ok: true };
     const parsed = z
-      .object({ error: z.string(), fields: z.array(z.string()).optional() })
+      .object({
+        error: z.string(),
+        fields: z.array(z.string()).optional(),
+        reasons: z.array(z.string()).optional(),
+        code: z
+          .string()
+          .regex(/^[A-Za-z][A-Za-z0-9_]*$/)
+          .optional(),
+      })
       .safeParse(await response.json().catch(() => undefined));
     if (!parsed.success) return fallback;
     switch (parsed.data.error) {
+      case "invoice_blocked":
+        return {
+          ok: false,
+          message: "This invoice cannot be issued yet:",
+          reasons: parsed.data.reasons ?? [],
+        };
+      case "action_not_pending":
+        return { ok: false, message: "This action was already handled. Refresh the page." };
+      case "paypal_failed":
+        if (!parsed.data.code) return fallback;
+        return {
+          ok: false,
+          message: `PayPal did not accept the request (${parsed.data.code}). Nothing else was sent. You can approve again to retry.`,
+        };
+      case "paypal_unavailable":
+        return { ok: false, message: "PayPal is not configured on this server." };
+      case "file_storage_unavailable":
+        return { ok: false, message: "File storage is not configured on this server." };
+      case "not_found":
+        return { ok: false, message: "Not found. Refresh the page." };
       case "invalid_request":
         return {
           ok: false,

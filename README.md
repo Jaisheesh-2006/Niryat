@@ -20,6 +20,9 @@ On PowerShell with blocked ps1 scripts, use corepack.cmd pnpm or pnpm.cmd.
 Web: http://localhost:3000. API: http://localhost:3001/health returns status ok.
 No credentials, database or environment file is needed for the skeleton.
 
+For invoice PDFs during development, use [local S3 storage in Docker](docs/local-storage.md).
+It works with the existing storage client and needs no AWS account.
+
 ## Commands
 
 ```sh

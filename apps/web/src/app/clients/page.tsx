@@ -28,6 +28,12 @@ export default async function Clients() {
             <h2>
               {client.name} ({countryName})
             </h2>
+            <dl>
+              <dt>Client email</dt>
+              <dd>{client.email ?? "Not provided"}</dd>
+              <dt>Client address</dt>
+              <dd>{client.address ?? "Not provided"}</dd>
+            </dl>
             <table>
               <thead>
                 <tr>

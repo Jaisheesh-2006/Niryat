@@ -62,6 +62,15 @@ export function ClientForm({ client }: { client?: Client }) {
         pattern="[A-Za-z]{2}"
         defaultValue={client?.country ?? ""}
       />
+      <label htmlFor={`${prefix}-email`}>Client email (PayPal sends the invoice here)</label>
+      <input id={`${prefix}-email`} name="email" type="email" defaultValue={client?.email ?? ""} />
+      <label htmlFor={`${prefix}-address`}>Client address</label>
+      <textarea
+        id={`${prefix}-address`}
+        name="address"
+        maxLength={500}
+        defaultValue={client?.address ?? ""}
+      />
       {questions.map(([name, legend]) => (
         <fieldset key={name}>
           <legend>{legend}</legend>
