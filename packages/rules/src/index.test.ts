@@ -10,6 +10,8 @@ const IMPLEMENTED: Record<string, string> = {
   GST_THRESHOLD: "checkGstThreshold",
   INVOICE_NUMBERING: "invoiceNumberFor",
   EXPORT_INVOICE_FIELDS: "prepareExportInvoice",
+  CREDIT_NOTE: "creditNoteFor",
+  REALISATION_ADJUSTMENT: "realisationFor",
 };
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {

@@ -31,7 +31,7 @@ rules:
     source: "CGST Act s. 34(1)-(2); CGST Rules r. 53(1A); FORM GSTR-1 Table 9B"
     effective_from: 2025-10-01
     review: source_checked
-    logic: TODO
+    logic: creditNoteFor
   - id: GST_THRESHOLD
     description: "Registration required once all-India aggregate turnover (exports included) exceeds Rs 20 lakh in a financial year (Rs 10 lakh in remaining special category States); services exporters at or below that are exempt from compulsory inter-State registration"
     source: "CGST Act s. 22(1), s. 2(6), s. 24(i); IGST Act s. 7(5)(a); Notfn 10/2017-IT as amended by Notfn 03/2019-IT"
@@ -61,7 +61,7 @@ rules:
     source: "FEMA 23(R)/2026-RB Reg 6 and Reg 4(2) proviso"
     effective_from: 2026-10-01
     review: source_checked
-    logic: TODO
+    logic: realisationFor
   - id: PRESUMPTIVE_TAX
     description: "Resident individual or non-LLP firm in a specified profession (includes information technology): deemed income is 50% of gross receipts, or actual profit if higher; gross receipts up to Rs 50 lakh, or Rs 75 lakh if cash receipts are at most 5%"
     source: "Income-tax Act 2025 s. 58(2) Table Sl. 3, s. 58(11)(b), s. 62(4); 1961 Act s. 44ADA for tax years before 2026-04-01"
