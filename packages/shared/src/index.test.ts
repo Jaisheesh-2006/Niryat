@@ -3,14 +3,22 @@ import {
   actionStatusSchema,
   clientInputSchema,
   credentialsSchema,
+  disputeSchema,
   exportCheckResultSchema,
   exportConditionIds,
+  firaDocumentSchema,
+  firaLineSchema,
+  firaMatchSchema,
   identifierSchema,
   invoiceBlockedSchema,
   invoiceInputSchema,
   invoiceSchema,
+  invoiceViewSchema,
   profileInputSchema,
   recurrenceSchema,
+  refundInputSchema,
+  refundSchema,
+  taskSchema,
 } from "./index";
 
 it("rejects empty identifiers at the boundary", () => {
@@ -255,11 +263,135 @@ it("validates invoice responses with payments and an action", () => {
     },
   };
   expect(invoiceSchema.parse(response)).toEqual(response);
+  for (const status of ["partially_refunded", "refunded"]) {
+    expect(invoiceSchema.parse({ ...response, status }).status).toBe(status);
+  }
+  const citation = { ruleId: "REALISATION_ADJUSTMENT", source: "Test source", effectiveFrom: null };
+  const compliance = {
+    realisation: {
+      exportValue: "100.00",
+      received: "60.00",
+      shortfall: "40.00",
+      adjustment: "pending_bank",
+      message: "Test realisation message",
+      citation,
+    },
+    creditNotes: [
+      {
+        refundId: "test-refund",
+        originalInvoice: response.number,
+        originalDate: response.date,
+        value: "USD 40.00",
+        igst: "USD 0.00",
+        declareBy: "2027-11-30",
+        late: false,
+        message: "Test credit-note message",
+        citation: { ...citation, ruleId: "CREDIT_NOTE" },
+      },
+    ],
+    disputeAlerts: [
+      { paypalDisputeId: "test-dispute", lost: false, message: "Test alert", citation },
+    ],
+  };
+  expect(invoiceViewSchema.parse({ ...response, compliance })).toEqual({ ...response, compliance });
+  expect(invoiceViewSchema.safeParse(response).success).toBe(false);
+  expect(
+    invoiceViewSchema.safeParse({
+      ...response,
+      compliance: { ...compliance, realisation: { ...compliance.realisation, received: "60" } },
+    }).success,
+  ).toBe(false);
   expect(invoiceSchema.safeParse({ ...response, status: "unknown" }).success).toBe(false);
   expect(
     invoiceSchema.safeParse({ ...response, payments: [{ ...response.payments[0], gross: 100 }] })
       .success,
   ).toBe(false);
+});
+
+it("accepts refund amounts as positive decimal strings only, without extra keys", () => {
+  expect(refundInputSchema.parse({ amount: "40" })).toEqual({ amount: "40" });
+  for (const input of [{ amount: "0" }, { amount: 40 }, { amount: "40", currency: "USD" }]) {
+    expect(refundInputSchema.safeParse(input).success).toBe(false);
+  }
+});
+
+it("validates refund and dispute responses with nullable PayPal fields", () => {
+  const refund = {
+    id: "30000000-0000-4000-8000-000000000001",
+    paypalTxnId: "test-refund",
+    captureId: null,
+    gross: "40.00",
+    fee: null,
+    net: null,
+    currency: "USD",
+    receivedAt: "2026-10-27T12:00:00Z",
+  };
+  expect(refundSchema.parse(refund)).toEqual(refund);
+  expect(refundSchema.safeParse({ ...refund, gross: 40 }).success).toBe(false);
+  const dispute = {
+    id: refund.id,
+    paypalDisputeId: "test-dispute",
+    amount: "40.00",
+    currency: "USD",
+    reason: "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+    status: "OPEN",
+    stage: null,
+    outcome: null,
+    responseDueDate: null,
+  };
+  expect(disputeSchema.parse(dispute)).toEqual(dispute);
+  expect(disputeSchema.safeParse({ ...dispute, responseDueDate: "tomorrow" }).success).toBe(false);
+});
+
+it("rejects unknown task types and statuses", () => {
+  const task = {
+    id: "40000000-0000-4000-8000-000000000001",
+    type: "refund_recorded",
+    status: "open",
+    message: "Test task",
+    dueDate: null,
+    invoiceId: null,
+    sourceRuleId: "CREDIT_NOTE",
+    createdAt: "2026-10-27T12:00:00Z",
+    doneAt: null,
+  };
+  expect(taskSchema.parse(task)).toEqual(task);
+  expect(taskSchema.safeParse({ ...task, type: "other" }).success).toBe(false);
+  expect(taskSchema.safeParse({ ...task, status: "closed" }).success).toBe(false);
+});
+
+it("accepts nullable FIRA fields and requires a supported match state", () => {
+  const line = {
+    id: "50000000-0000-4000-8000-000000000001",
+    position: 1,
+    date: "2026-10-26",
+    amount: "100.00",
+    currency: "USD",
+    reference: "test-reference",
+    purposeCode: null,
+    sourceText: "Synthetic FIRA line",
+    note: null,
+    match: null,
+  };
+  expect(firaLineSchema.parse(line)).toEqual(line);
+  const match = {
+    paymentId: "30000000-0000-4000-8000-000000000001",
+    paypalTxnId: "test-capture",
+    invoiceId: "20000000-0000-4000-8000-000000000001",
+    invoiceNumber: "2026-27/0001",
+    confidence: "0.70",
+    state: "needs_confirmation",
+  };
+  expect(firaLineSchema.parse({ ...line, match }).match).toEqual(match);
+  expect(firaMatchSchema.safeParse({ ...match, state: "auto" }).success).toBe(false);
+  const document = {
+    id: "60000000-0000-4000-8000-000000000001",
+    month: "2026-10-01",
+    uploadedAt: "2026-10-27T12:00:00Z",
+    lines: [line],
+  };
+  expect(firaDocumentSchema.parse(document)).toEqual(document);
+  expect(firaDocumentSchema.safeParse({ ...document, month: "2026-10-02" }).success).toBe(false);
 });
 
 it("requires at least one invoice-blocked reason", () => {

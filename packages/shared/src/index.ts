@@ -196,6 +196,9 @@ export const invoiceInputSchema = z
   });
 export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
 
+export const refundInputSchema = z.strictObject({ amount: invoiceInputSchema.shape.amount });
+export type RefundInput = z.infer<typeof refundInputSchema>;
+
 export const paymentSchema = z.object({
   id: z.uuid(),
   paypalTxnId: z.string(),
@@ -208,6 +211,69 @@ export const paymentSchema = z.object({
 });
 export type Payment = z.infer<typeof paymentSchema>;
 
+export const refundSchema = z.object({
+  id: z.uuid(),
+  paypalTxnId: z.string(),
+  captureId: z.string().nullable(),
+  gross: z.string(),
+  fee: z.string().nullable(),
+  net: z.string().nullable(),
+  currency: z.string(),
+  receivedAt: z.iso.datetime(),
+});
+export type Refund = z.infer<typeof refundSchema>;
+
+export const disputeSchema = z.object({
+  id: z.uuid(),
+  paypalDisputeId: z.string(),
+  amount: z.string(),
+  currency: z.string(),
+  reason: z.string(),
+  status: z.string(),
+  stage: z.string().nullable(),
+  outcome: z.string().nullable(),
+  responseDueDate: z.iso.date().nullable(),
+});
+export type Dispute = z.infer<typeof disputeSchema>;
+
+export const realisationSchema = z.object({
+  exportValue: z.string().regex(/^\d+\.\d{2}$/),
+  received: z.string().regex(/^\d+\.\d{2}$/),
+  shortfall: z.string().regex(/^\d+\.\d{2}$/),
+  adjustment: z.enum(["none", "pending_bank"]),
+  message: z.string().nullable(),
+  citation: ruleCitationSchema,
+});
+export type Realisation = z.infer<typeof realisationSchema>;
+
+export const creditNoteSchema = z.object({
+  refundId: z.string(),
+  originalInvoice: z.string(),
+  originalDate: z.iso.date(),
+  value: z.string(),
+  igst: z.string(),
+  declareBy: z.iso.date(),
+  late: z.boolean(),
+  message: z.string(),
+  citation: ruleCitationSchema,
+});
+export type CreditNote = z.infer<typeof creditNoteSchema>;
+
+export const disputeAlertSchema = z.object({
+  paypalDisputeId: z.string(),
+  lost: z.boolean(),
+  message: z.string(),
+  citation: ruleCitationSchema,
+});
+export type DisputeAlert = z.infer<typeof disputeAlertSchema>;
+
+export const complianceSchema = z.object({
+  realisation: realisationSchema,
+  creditNotes: z.array(creditNoteSchema),
+  disputeAlerts: z.array(disputeAlertSchema),
+});
+export type Compliance = z.infer<typeof complianceSchema>;
+
 export const actionSchema = z.object({
   id: z.uuid(),
   paypalAction: z.enum(paypalActionNames),
@@ -218,7 +284,14 @@ export const actionSchema = z.object({
 });
 export type Action = z.infer<typeof actionSchema>;
 
-export const invoiceStatuses = ["issued", "sent", "partially_paid", "paid"] as const;
+export const invoiceStatuses = [
+  "issued",
+  "sent",
+  "partially_paid",
+  "paid",
+  "partially_refunded",
+  "refunded",
+] as const;
 export const invoiceSchema = z.object({
   id: z.uuid(),
   clientId: z.uuid(),
@@ -241,6 +314,56 @@ export const invoiceSchema = z.object({
   action: actionSchema.nullable(),
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
+
+export const invoiceViewSchema = invoiceSchema.extend({ compliance: complianceSchema });
+export type InvoiceView = z.infer<typeof invoiceViewSchema>;
+
+export const taskTypes = ["refund_recorded", "dispute_opened", "dispute_lost"] as const;
+export const taskSchema = z.object({
+  id: z.uuid(),
+  type: z.enum(taskTypes),
+  status: z.enum(["open", "done"]),
+  message: z.string(),
+  dueDate: z.iso.date().nullable(),
+  invoiceId: z.uuid().nullable(),
+  sourceRuleId: z.string(),
+  createdAt: z.iso.datetime(),
+  doneAt: z.iso.datetime().nullable(),
+});
+export type Task = z.infer<typeof taskSchema>;
+
+export const firaStatuses = ["matched", "pending", "missing"] as const;
+export const firaMatchSchema = z.object({
+  paymentId: z.uuid(),
+  paypalTxnId: z.string(),
+  invoiceId: z.uuid(),
+  invoiceNumber: z.string(),
+  confidence: z.string(),
+  state: z.enum(["matched", "needs_confirmation"]),
+});
+export type FiraMatch = z.infer<typeof firaMatchSchema>;
+
+export const firaLineSchema = z.object({
+  id: z.uuid(),
+  position: z.number().int(),
+  date: z.iso.date(),
+  amount: z.string(),
+  currency: z.string(),
+  reference: z.string(),
+  purposeCode: z.string().nullable(),
+  sourceText: z.string(),
+  note: z.string().nullable(),
+  match: firaMatchSchema.nullable(),
+});
+export type FiraLine = z.infer<typeof firaLineSchema>;
+
+export const firaDocumentSchema = z.object({
+  id: z.uuid(),
+  month: z.iso.date().regex(/-01$/),
+  uploadedAt: z.iso.datetime(),
+  lines: z.array(firaLineSchema),
+});
+export type FiraDocument = z.infer<typeof firaDocumentSchema>;
 
 export const invoiceBlockedSchema = z.object({
   error: z.literal("invoice_blocked"),

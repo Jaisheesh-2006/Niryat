@@ -15,6 +15,8 @@ export default async function Invoices() {
     sent: "Sent through PayPal",
     partially_paid: "Partly paid",
     paid: "Paid",
+    partially_refunded: "Partly refunded",
+    refunded: "Refunded",
   };
 
   return (
