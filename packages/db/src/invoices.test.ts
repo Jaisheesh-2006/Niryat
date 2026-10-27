@@ -9,17 +9,21 @@ import {
   clients,
   createUser,
   findPdfByToken,
+  firaDocuments,
+  firaLines,
   getInvoiceForAction,
   invoices,
   issueInvoice,
   knownTransactionIds,
   listInvoices,
   markSent,
+  matches,
   payments,
   recordPayment,
   rejectAction,
   setPayPalInvoiceId,
   setPayPalSeriesId,
+  tasks,
 } from "./index";
 import { openTestDb, testDatabaseUrl } from "./testing";
 
@@ -250,7 +254,7 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       paypalTxnId: "REFUND",
       kind: "refund",
       gross: "100.00",
-      currency: "USD",
+      currency: "EUR",
     });
     await recordPayment(t.db, capture);
     expect((await listInvoices(t.db, userId))[0]).toMatchObject({
@@ -315,13 +319,115 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       paypalTxnId: "REFUND",
       kind: "refund",
       gross: "100.00",
-      currency: "USD",
+      currency: "EUR",
     });
     await markSent(t.db, a.userId, invoice.id);
     await markSent(t.db, a.userId, invoice.id);
     expect((await listInvoices(t.db, a.userId))[0]).toMatchObject({
       status: payment.status,
       paidTotal: payment.paidTotal,
+    });
+  });
+
+  it.each([
+    { refunded: "40.00", status: "partially_refunded" },
+    { refunded: "100.00", status: "refunded" },
+    { refunded: "120.00", status: "refunded" },
+  ])("rolls up $refunded in refunds to $status", async ({ refunded, status }) => {
+    const { userId, invoice } = await sentInvoice();
+    await recordPayment(t.db, { ...capture, gross: "100.00" });
+    await t.db.insert(payments).values({
+      invoiceId: invoice.id,
+      paypalTxnId: "REFUND",
+      captureId: capture.captureId,
+      kind: "refund",
+      gross: refunded,
+      currency: "USD",
+    });
+    await recordPayment(t.db, { ...capture, gross: "100.00" });
+    expect((await listInvoices(t.db, userId))[0]).toMatchObject({ status, paidTotal: "100.00" });
+    await recordPayment(t.db, { ...capture, gross: "100.00" });
+    expect((await listInvoices(t.db, userId))[0]?.status).toBe(status);
+  });
+
+  it("counts early refunds when marking an invoice sent", async () => {
+    const a = await seller();
+    const invoice = await issueInvoice(t.db, a.userId, a.input, finalize, numberFor);
+    await setPayPalInvoiceId(t.db, a.userId, invoice.id, "INV2-TEST");
+    await recordPayment(t.db, { ...capture, gross: "100.00" });
+    await t.db.insert(payments).values({
+      invoiceId: invoice.id,
+      paypalTxnId: "REFUND",
+      kind: "refund",
+      gross: "40.00",
+      currency: "USD",
+    });
+    expect((await listInvoices(t.db, a.userId))[0]?.status).toBe("issued");
+    await markSent(t.db, a.userId, invoice.id);
+    expect((await listInvoices(t.db, a.userId))[0]?.status).toBe("partially_refunded");
+  });
+
+  it("rejects duplicate task dedupe keys", async () => {
+    const { userId, invoice } = await sentInvoice();
+    const task = {
+      userId,
+      invoiceId: invoice.id,
+      type: "refund_recorded",
+      sourceRuleId: "REALISATION_ADJUSTMENT",
+      message: "Synthetic refund task",
+      dedupeKey: "refund:TEST",
+    };
+    await t.db.insert(tasks).values(task);
+    await expect(t.db.insert(tasks).values(task)).rejects.toMatchObject({
+      cause: { code: "23505", constraint: "tasks_dedupe_key_unique" },
+    });
+  });
+
+  it("allows each payment and FIRA line in only one match", async () => {
+    const { userId } = await sentInvoice();
+    await recordPayment(t.db, capture);
+    await recordPayment(t.db, { ...capture, captureId: "CAPTURE-2" });
+    const [payment, secondPayment] = await t.db.select().from(payments);
+    const [document] = await t.db
+      .insert(firaDocuments)
+      .values({
+        userId,
+        month: "2026-10-01",
+        fileUrl: "fira/synthetic.pdf",
+        parsedAt: new Date("2026-10-27T12:00:00Z"),
+        sha256: "synthetic-sha256",
+      })
+      .returning();
+    if (!document || !payment || !secondPayment) throw new Error("Test rows were not saved");
+    const [line, secondLine] = await t.db
+      .insert(firaLines)
+      .values(
+        [1, 2].map((position) => ({
+          firaDocumentId: document.id,
+          position,
+          date: "2026-10-26",
+          amount: "60.00",
+          currency: "USD",
+          reference: `SYNTHETIC-${position}`,
+          sourceText: "Synthetic FIRA line",
+        })),
+      )
+      .returning();
+    if (!line || !secondLine) throw new Error("Test lines were not saved");
+    await t.db
+      .insert(matches)
+      .values({ firaLineId: line.id, paymentId: payment.id, confidence: "1.00" });
+    await expect(
+      t.db
+        .insert(matches)
+        .values({ firaLineId: secondLine.id, paymentId: payment.id, confidence: "1.00" }),
+    ).rejects.toMatchObject({ cause: { code: "23505", constraint: "matches_payment_id_unique" } });
+    await expect(
+      t.db
+        .insert(matches)
+        .values({ firaLineId: line.id, paymentId: secondPayment.id, confidence: "1.00" }),
+    ).rejects.toMatchObject({
+      cause: { code: "23505", constraint: "matches_fira_line_id_unique" },
     });
   });
 

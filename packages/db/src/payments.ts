@@ -3,6 +3,45 @@ import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { Db } from "./client";
 import { invoices, payments } from "./schema";
 
+// A default export keeps this helper out of index.ts's wildcard exports.
+export default async function rollUpInvoice(
+  tx: Pick<Db, "select" | "update">,
+  invoiceId: string,
+): Promise<void> {
+  // Serialize roll-ups without conflicting with payment inserts' foreign-key locks.
+  await tx
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(eq(invoices.id, invoiceId))
+    .for("no key update");
+  const paid = sql`(select coalesce(sum(${payments.gross}), 0) from ${payments}
+    where ${payments.invoiceId} = ${invoices.id} and ${payments.kind} = 'payment'
+    and ${payments.currency} = ${invoices.currency})`;
+  const refunded = sql`(select coalesce(sum(${payments.gross}), 0) from ${payments}
+    where ${payments.invoiceId} = ${invoices.id} and ${payments.kind} = 'refund'
+    and ${payments.currency} = ${invoices.currency})`;
+  await tx
+    .update(invoices)
+    .set({
+      status: sql`case when ${refunded} > 0 and ${refunded} >= ${paid} then 'refunded'
+        when ${refunded} > 0 then 'partially_refunded'
+        when ${paid} >= ${invoices.amount} then 'paid'
+        when ${paid} > 0 then 'partially_paid' else ${invoices.status} end`,
+    })
+    .where(
+      and(
+        eq(invoices.id, invoiceId),
+        inArray(invoices.status, [
+          "sent",
+          "partially_paid",
+          "paid",
+          "partially_refunded",
+          "refunded",
+        ]),
+      ),
+    );
+}
+
 export async function recordPayment(
   db: Db,
   capture: CaptureRecord,
@@ -41,27 +80,7 @@ export async function recordPayment(
         .returning({ invoiceId: payments.invoiceId });
       if (!saved) throw new Error("Payment save failed");
       if (saved.invoiceId) {
-        // Serialize roll-ups without conflicting with payment inserts' foreign-key locks.
-        await tx
-          .select({ id: invoices.id })
-          .from(invoices)
-          .where(eq(invoices.id, saved.invoiceId))
-          .for("no key update");
-        const total = sql`(select coalesce(sum(${payments.gross}), 0) from ${payments}
-          where ${payments.invoiceId} = ${invoices.id} and ${payments.kind} = 'payment'
-          and ${payments.currency} = ${invoices.currency})`;
-        await tx
-          .update(invoices)
-          .set({
-            status: sql`case when ${total} >= ${invoices.amount} then 'paid'
-              when ${total} > 0 then 'partially_paid' else ${invoices.status} end`,
-          })
-          .where(
-            and(
-              eq(invoices.id, saved.invoiceId),
-              inArray(invoices.status, ["sent", "partially_paid", "paid"]),
-            ),
-          );
+        await rollUpInvoice(tx, saved.invoiceId);
       }
       return saved;
     })

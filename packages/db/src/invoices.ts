@@ -2,6 +2,7 @@ import type { PayPalActionName } from "@niryat/agent";
 import { type Invoice, type InvoiceInput, invoiceSchema } from "@niryat/shared";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "./client";
+import rollUpInvoice from "./payments";
 import { agentActions, clients, invoices, payments } from "./schema";
 
 async function readInvoices(
@@ -202,17 +203,9 @@ export async function markSent(db: Db, userId: string, invoiceId: string): Promi
         .where(ownIssuedInvoice)
         .for("no key update");
       if (!invoice) return;
+      await tx.update(invoices).set({ status: "sent" }).where(ownIssuedInvoice);
       // Read payments after acquiring the lock so a concurrent capture's commit is visible.
-      const total = sql`(select coalesce(sum(${payments.gross}), 0) from ${payments}
-        where ${payments.invoiceId} = ${invoices.id} and ${payments.kind} = 'payment'
-        and ${payments.currency} = ${invoices.currency})`;
-      await tx
-        .update(invoices)
-        .set({
-          status: sql`case when ${total} >= ${invoices.amount} then 'paid'
-            when ${total} > 0 then 'partially_paid' else 'sent' end`,
-        })
-        .where(ownIssuedInvoice);
+      await rollUpInvoice(tx, invoiceId);
     })
     .catch(() => {
       throw new Error("Invoice save failed");

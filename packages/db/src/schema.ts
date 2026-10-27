@@ -84,6 +84,7 @@ export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
   invoiceId: uuid("invoice_id").references(() => invoices.id),
   paypalTxnId: text("paypal_txn_id").notNull().unique(),
+  captureId: text("capture_id"),
   kind: text("kind").notNull(),
   gross: numeric("gross").notNull(),
   fee: numeric("fee"),
@@ -96,28 +97,51 @@ export const payments = pgTable("payments", {
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),
   invoiceId: uuid("invoice_id").references(() => invoices.id),
-  paypalDisputeId: text("paypal_dispute_id"),
-  amount: numeric("amount"),
-  status: text("status"),
-  reason: text("reason"),
+  paypalDisputeId: text("paypal_dispute_id").notNull().unique(),
+  amount: numeric("amount").notNull(),
+  currency: text("currency").notNull(),
+  captureId: text("capture_id"),
+  status: text("status").notNull(),
+  reason: text("reason").notNull(),
+  stage: text("stage"),
+  responseDueDate: date("response_due_date"),
+  paypalUpdatedAt: timestamp("paypal_updated_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   outcome: text("outcome"),
 });
-export const firaDocuments = pgTable("fira_documents", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id),
-  month: date("month"),
-  fileUrl: text("file_url"),
-  parsedAt: timestamp("parsed_at", { withTimezone: true }),
-});
-export const firaLines = pgTable("fira_lines", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  firaDocumentId: uuid("fira_document_id").references(() => firaDocuments.id),
-  date: date("date"),
-  amount: numeric("amount"),
-  currency: text("currency"),
-  reference: text("reference"),
-  purposeCode: text("purpose_code"),
-});
+export const firaDocuments = pgTable(
+  "fira_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    month: date("month").notNull(),
+    fileUrl: text("file_url").notNull(),
+    parsedAt: timestamp("parsed_at", { withTimezone: true }).notNull(),
+    sha256: text("sha256").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [unique().on(table.userId, table.sha256)],
+);
+export const firaLines = pgTable(
+  "fira_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    firaDocumentId: uuid("fira_document_id")
+      .notNull()
+      .references(() => firaDocuments.id),
+    date: date("date").notNull(),
+    amount: numeric("amount").notNull(),
+    currency: text("currency").notNull(),
+    reference: text("reference").notNull(),
+    purposeCode: text("purpose_code"),
+    position: integer("position").notNull(),
+    sourceText: text("source_text").notNull(),
+    note: text("note"),
+  },
+  (table) => [unique().on(table.firaDocumentId, table.position)],
+);
 export const matches = pgTable(
   "matches",
   {
@@ -127,10 +151,14 @@ export const matches = pgTable(
     paymentId: uuid("payment_id")
       .notNull()
       .references(() => payments.id),
-    confidence: numeric("confidence"),
+    confidence: numeric("confidence").notNull(),
     confirmedByUser: boolean("confirmed_by_user"),
   },
-  (table) => [primaryKey({ columns: [table.firaLineId, table.paymentId] })],
+  (table) => [
+    primaryKey({ columns: [table.firaLineId, table.paymentId] }),
+    unique().on(table.firaLineId),
+    unique().on(table.paymentId),
+  ],
 );
 export const agentActions = pgTable("agent_actions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -138,6 +166,7 @@ export const agentActions = pgTable("agent_actions", {
     .notNull()
     .references(() => users.id),
   invoiceId: uuid("invoice_id").references(() => invoices.id),
+  paymentId: uuid("payment_id").references(() => payments.id),
   paypalAction: text("paypal_action").notNull(),
   payload: jsonb("payload").notNull(),
   status: text("status").notNull(),
@@ -147,11 +176,18 @@ export const agentActions = pgTable("agent_actions", {
 });
 export const tasks = pgTable("tasks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id),
-  type: text("type"),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  invoiceId: uuid("invoice_id").references(() => invoices.id),
+  type: text("type").notNull(),
   dueDate: date("due_date"),
-  status: text("status"),
-  sourceRuleId: text("source_rule_id"),
+  status: text("status").notNull().default("open"),
+  sourceRuleId: text("source_rule_id").notNull(),
+  message: text("message").notNull(),
+  dedupeKey: text("dedupe_key").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  doneAt: timestamp("done_at", { withTimezone: true }),
 });
 export const ruleVersions = pgTable(
   "rule_versions",
