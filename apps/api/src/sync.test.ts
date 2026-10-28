@@ -55,6 +55,12 @@ describe("payment sync CLI", () => {
     vi.spyOn(paypalModule, "createPayPalLedger").mockReturnValue({
       getCapture,
       searchTransactions,
+      async getRefund() {
+        throw new Error("Unexpected refund read");
+      },
+      async refundCapture() {
+        throw new Error("Unexpected refund request");
+      },
     });
   });
   afterEach(async () => {
@@ -123,7 +129,16 @@ describe.skipIf(!testDatabaseUrl)("payment reconciliation", () => {
   let t: Awaited<ReturnType<typeof openTestDb>>;
   const getCapture = vi.fn<PayPalLedger["getCapture"]>();
   const searchTransactions = vi.fn<PayPalLedger["searchTransactions"]>();
-  const ledger: PayPalLedger = { getCapture, searchTransactions };
+  const ledger: PayPalLedger = {
+    getCapture,
+    searchTransactions,
+    async getRefund() {
+      throw new Error("Unexpected refund read");
+    },
+    async refundCapture() {
+      throw new Error("Unexpected refund request");
+    },
+  };
 
   beforeAll(async () => {
     t = await openTestDb();

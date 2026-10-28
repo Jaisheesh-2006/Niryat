@@ -55,6 +55,12 @@ function setup(db: Db) {
   };
   const ledger: PayPalLedger = {
     getCapture,
+    async getRefund() {
+      throw new Error("Unexpected refund read");
+    },
+    async refundCapture() {
+      throw new Error("Unexpected refund request");
+    },
     async searchTransactions() {
       throw new Error("Unexpected transaction search");
     },

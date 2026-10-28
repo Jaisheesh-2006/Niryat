@@ -26,9 +26,26 @@ export interface LedgerRow {
   eventCode: string;
 }
 
+export interface RefundRecord {
+  refundId: string;
+  status: string;
+  captureId: string | null;
+  paypalInvoiceId: string | null;
+  gross: string;
+  fee: string | null;
+  net: string | null;
+  currency: string;
+  createTime: string;
+}
+
 export interface PayPalLedger {
   getCapture(captureId: string): Promise<CaptureRecord | null>;
   searchTransactions(range: { start: string; end: string }): Promise<LedgerRow[]>;
+  getRefund(refundId: string): Promise<RefundRecord | null>;
+  refundCapture(
+    input: { captureId: string; amount: { value: string; currency: string }; noteToPayer: string },
+    requestId: string,
+  ): Promise<{ refundId: string; status: string }>;
 }
 
 const decimalSchema = z.string().regex(/^\d+(\.\d+)?$/);
@@ -50,6 +67,30 @@ const captureSchema = z.object({
     })
     .optional(),
   createTime: z.iso.datetime({ offset: true }),
+});
+const refundResultSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(["CANCELLED", "FAILED", "PENDING", "COMPLETED"]),
+});
+const refundMoneySchema = moneySchema.extend({ value: z.string().regex(/^\d+(\.\d{1,2})?$/) });
+const refundSchema = refundResultSchema.extend({
+  invoiceId: z.string().min(1).optional(),
+  amount: refundMoneySchema.optional(),
+  sellerPayableBreakdown: z
+    .object({
+      grossAmount: refundMoneySchema.optional(),
+      paypalFee: refundMoneySchema.optional(),
+      netAmount: refundMoneySchema.optional(),
+    })
+    .optional(),
+  links: z.array(z.object({ href: z.url(), rel: z.string().min(1) })).optional(),
+  createTime: z.iso.datetime({ offset: true }),
+});
+const ledgerErrorSchema = z.object({
+  name: z
+    .string()
+    .max(100)
+    .regex(/^[A-Za-z][A-Za-z0-9_]*$/),
 });
 const searchSchema = z.object({
   transactionDetails: z
@@ -81,6 +122,30 @@ export function toCaptureRecord(result: unknown): CaptureRecord {
     currency: gross.currencyCode,
     fxRate: breakdown?.exchangeRate?.value ?? null,
     createTime: capture.createTime,
+  };
+}
+
+export function toRefundRecord(result: unknown): RefundRecord {
+  const parsed = refundSchema.safeParse(result);
+  if (!parsed.success) throw new Error("Invalid refund");
+  const refund = parsed.data;
+  const breakdown = refund.sellerPayableBreakdown;
+  const gross = breakdown?.grossAmount ?? refund.amount;
+  if (!gross) throw new Error("Invalid refund");
+  const up = refund.links?.find((link) => link.rel === "up");
+  const captureId = up
+    ? new URL(up.href).pathname.match(/^\/v2\/payments\/captures\/([A-Za-z0-9-]+)$/)?.[1]
+    : undefined;
+  return {
+    refundId: refund.id,
+    status: refund.status,
+    captureId: captureId ?? null,
+    paypalInvoiceId: refund.invoiceId ?? null,
+    gross: gross.value,
+    fee: breakdown?.paypalFee?.value ?? null,
+    net: breakdown?.netAmount?.value ?? null,
+    currency: gross.currencyCode,
+    createTime: refund.createTime,
   };
 }
 
@@ -117,6 +182,59 @@ export function createPayPalLedger(options: {
   const transactions = new TransactionSearchController(client);
 
   return {
+    async getRefund(refundId) {
+      if (!z.string().min(1).safeParse(refundId).success) throw new Error("Invalid refundId");
+      let result: unknown;
+      try {
+        result = (await payments.getRefund({ refundId })).result;
+      } catch (error) {
+        if (error instanceof ApiError && error.statusCode === 404) return null;
+        const parsed = ledgerErrorSchema.safeParse(error instanceof ApiError ? error.result : null);
+        throw new PayPalApiError(
+          error instanceof ApiError ? error.statusCode : 0,
+          parsed.success ? parsed.data.name : "LEDGER_REQUEST_FAILED",
+        );
+      }
+      return toRefundRecord(result);
+    },
+    async refundCapture(input, requestId) {
+      const parsed = z
+        .object({
+          captureId: z.string().min(1),
+          amount: z.object({
+            value: refundMoneySchema.shape.value,
+            currency: moneySchema.shape.currencyCode,
+          }),
+          noteToPayer: z.string().min(1),
+          requestId: z.string().min(1),
+        })
+        .safeParse({ ...input, requestId });
+      if (!parsed.success) throw new Error("Invalid refund request");
+      const data = parsed.data;
+      let result: unknown;
+      try {
+        result = (
+          await payments.refundCapturedPayment({
+            captureId: data.captureId,
+            paypalRequestId: data.requestId,
+            prefer: "return=minimal",
+            body: {
+              amount: { currencyCode: data.amount.currency, value: data.amount.value },
+              noteToPayer: data.noteToPayer,
+            },
+          })
+        ).result;
+      } catch (error) {
+        const parsed = ledgerErrorSchema.safeParse(error instanceof ApiError ? error.result : null);
+        throw new PayPalApiError(
+          error instanceof ApiError ? error.statusCode : 0,
+          parsed.success ? parsed.data.name : "LEDGER_REQUEST_FAILED",
+        );
+      }
+      const refund = refundResultSchema.safeParse(result);
+      if (!refund.success) throw new Error("Invalid refund");
+      return { refundId: refund.data.id, status: refund.data.status };
+    },
     async getCapture(captureId) {
       if (!z.string().min(1).safeParse(captureId).success) throw new Error("Invalid captureId");
       let result: unknown;

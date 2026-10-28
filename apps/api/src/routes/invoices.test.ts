@@ -93,6 +93,12 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
       paypal: {
         rest,
         ledger: {
+          async getRefund() {
+            throw new Error("Unexpected refund read");
+          },
+          async refundCapture() {
+            throw new Error("Unexpected refund request");
+          },
           async getCapture() {
             throw new Error("Unexpected capture read");
           },
