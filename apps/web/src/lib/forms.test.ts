@@ -2,15 +2,20 @@ import type { Action } from "@niryat/shared";
 import { Children, createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
+import Fira from "../app/fira/page";
 import { ActionButtons } from "../components/ActionButtons";
+import { FiraLineButtons } from "../components/FiraLineButtons";
+import { FiraUpload } from "../components/FiraUpload";
 import { RefundForm } from "../components/RefundForm";
 import { TaskDoneButton } from "../components/TaskDoneButton";
+import { apiGet } from "./api";
 import {
   clientBody,
   invoiceBody,
   profileBody,
   refundBody,
   sendJson,
+  sendPdf,
   text,
   wholeNumber,
   yesNo,
@@ -19,6 +24,7 @@ import {
 const { refresh, setState } = vi.hoisted(() => ({ refresh: vi.fn(), setState: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+vi.mock("./api", () => ({ apiGet: vi.fn() }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useId: () => "refund-amount",
@@ -329,4 +335,198 @@ it("handles network failures without exposing the error", async () => {
     ok: false,
     message: "Something went wrong. Try again.",
   });
+});
+
+it("posts the PDF unchanged with content type and consent headers", async () => {
+  const file = new File(["synthetic PDF"], "fira.pdf", { type: "application/pdf" });
+  const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+  vi.stubGlobal("fetch", fetch);
+  expect(await sendPdf("/api/fira", file)).toEqual({ ok: true });
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/fira", {
+    method: "POST",
+    headers: { "Content-Type": "application/pdf", "X-Niryat-Consent": "own-fira" },
+    body: file,
+  });
+});
+
+it.each([
+  ["fira_duplicate", "This FIRA was already uploaded."],
+  [
+    "fira_unreadable",
+    "Niryat could not read FIRA lines from this PDF. Upload the digital FIRA PDF from PayPal, not a scan.",
+  ],
+  ["consent_required", "Confirm that this is your own FIRA before uploading."],
+  ["file_too_large", "The PDF is larger than 2 MB."],
+  ["no_suggestion", "This line has no suggested match to confirm or reject. Refresh the page."],
+])("maps %s for both PDF and JSON requests", async (error, message) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async () => Response.json({ error }, { status: 400 })),
+  );
+  expect(await sendPdf("/api/fira", new File([], "fira.pdf"))).toEqual({ ok: false, message });
+  expect(await sendJson("/api/fira/lines/line-id/confirm", "POST", {})).toEqual({
+    ok: false,
+    message,
+  });
+});
+
+it.each(["network", "malformed"])(
+  "handles a PDF %s failure without exposing details",
+  async (kind) => {
+    vi.stubGlobal(
+      "fetch",
+      kind === "network"
+        ? vi.fn().mockRejectedValue(new Error("private transport detail"))
+        : vi.fn().mockResolvedValue(new Response("private response", { status: 500 })),
+    );
+    expect(await sendPdf("/api/fira", new File([], "fira.pdf"))).toEqual({
+      ok: false,
+      message: "Something went wrong. Try again.",
+    });
+  },
+);
+
+it.each([true, false])("uploads a consented FIRA and handles success: %s", async (success) => {
+  const file = new File(["synthetic PDF"], "fira.pdf", { type: "application/pdf" });
+  vi.stubGlobal(
+    "FormData",
+    class extends FormData {
+      constructor() {
+        super();
+        this.set("file", file);
+        this.set("consent", "on");
+      }
+    },
+  );
+  const fetch = vi
+    .fn()
+    .mockResolvedValue(
+      success
+        ? new Response(null, { status: 201 })
+        : Response.json({ error: "fira_duplicate" }, { status: 409 }),
+    );
+  vi.stubGlobal("fetch", fetch);
+  const element = FiraUpload();
+  expect(fetch).not.toHaveBeenCalled();
+  await element.props.onSubmit({ preventDefault: vi.fn(), currentTarget: {} });
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/fira", {
+    method: "POST",
+    headers: { "Content-Type": "application/pdf", "X-Niryat-Consent": "own-fira" },
+    body: file,
+  });
+  expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
+  expect(setState).toHaveBeenCalledWith(false);
+  if (!success) expect(setState).toHaveBeenLastCalledWith("This FIRA was already uploaded.");
+});
+
+it.each(["consent", "file"])("does not upload when %s is missing", async (missing) => {
+  vi.stubGlobal(
+    "FormData",
+    class extends FormData {
+      constructor() {
+        super();
+        if (missing !== "file") this.set("file", new File(["PDF"], "fira.pdf"));
+        if (missing !== "consent") this.set("consent", "on");
+      }
+    },
+  );
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  await FiraUpload().props.onSubmit({ preventDefault: vi.fn(), currentTarget: {} });
+  expect(fetch).not.toHaveBeenCalled();
+  expect(refresh).not.toHaveBeenCalled();
+  expect(setState).toHaveBeenLastCalledWith(
+    missing === "consent"
+      ? "Confirm that this is your own FIRA before uploading."
+      : "Niryat could not read FIRA lines from this PDF. Upload the digital FIRA PDF from PayPal, not a scan.",
+  );
+});
+
+it.each([
+  ["confirm", true],
+  ["reject", true],
+  ["confirm", false],
+  ["reject", false],
+] as const)("submits %s match and handles success: %s", async (decision, success) => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValue(
+      success
+        ? new Response(null, { status: 200 })
+        : Response.json({ error: "no_suggestion" }, { status: 409 }),
+    );
+  vi.stubGlobal("fetch", fetch);
+  const element = FiraLineButtons({ lineId: "line-id" });
+  const buttons = Children.toArray(element.props.children).filter(
+    (child) => isValidElement(child) && child.type === "button",
+  );
+  const button = buttons[decision === "confirm" ? 0 : 1];
+  if (!isValidElement<{ onClick: () => Promise<void> }>(button))
+    throw new Error("Expected match button");
+  expect(fetch).not.toHaveBeenCalled();
+  await button.props.onClick();
+  expect(fetch).toHaveBeenCalledExactlyOnceWith(`/api/fira/lines/line-id/${decision}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
+  expect(setState).toHaveBeenCalledWith(false);
+  if (!success)
+    expect(setState).toHaveBeenLastCalledWith(
+      "This line has no suggested match to confirm or reject. Refresh the page.",
+    );
+});
+
+it("shows matched, uncertain and flagged FIRA lines beside their source text", async () => {
+  vi.mocked(apiGet).mockResolvedValueOnce([
+    {
+      id: "document-id",
+      month: "2026-10-01",
+      uploadedAt: "2026-10-29T20:00:00Z",
+      lines: ["matched", "needs_confirmation", null].map((state, position) => ({
+        id: `line-${position}`,
+        position,
+        date: "2026-10-20",
+        amount: "40.00",
+        currency: "USD",
+        reference: `reference-${position}`,
+        purposeCode: null,
+        sourceText: `source <text> ${position}`,
+        note: `note ${position}`,
+        match: state
+          ? {
+              paymentId: `payment-${position}`,
+              paypalTxnId: `transaction-${position}`,
+              invoiceId: `invoice-${position}`,
+              invoiceNumber: `DEMO-${position}`,
+              confidence: state === "matched" ? "1.00" : "0.70",
+              state,
+            }
+          : null,
+      })),
+    },
+  ]);
+  const html = renderToStaticMarkup(await Fira());
+  expect(apiGet).toHaveBeenCalledWith("/fira", expect.anything());
+  for (const expected of [
+    "FIRA matching",
+    "FIRA for October 2026",
+    "Uploaded 2026-10-30",
+    "USD 40.00",
+    "Not shown",
+    "Payment transaction-0 (invoice DEMO-0)",
+    "100%",
+    "70%",
+    "<strong>Flagged</strong> note 2",
+    "—",
+    "source &lt;text&gt; 0",
+    "note 1",
+    'accept="application/pdf"',
+    'type="checkbox" required=""',
+  ])
+    expect(html).toContain(expected);
+  expect(html.match(/Confirm match/g)).toHaveLength(1);
+  expect(html.match(/Reject match/g)).toHaveLength(1);
+  expect(html.match(/<summary>Source text<\/summary>/g)).toHaveLength(3);
 });

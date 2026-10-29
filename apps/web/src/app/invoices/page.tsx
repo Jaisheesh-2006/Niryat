@@ -19,6 +19,11 @@ export default async function Invoices() {
     partially_refunded: "Partly refunded",
     refunded: "Refunded",
   };
+  const firaLabels = {
+    matched: "Matched to FIRA",
+    pending: "Pending",
+    missing: "Missing from FIRA",
+  };
 
   return (
     <>
@@ -51,6 +56,8 @@ export default async function Invoices() {
             </dd>
             <dt>Status</dt>
             <dd>{statusLabels[invoice.status]}</dd>
+            <dt>FIRA status</dt>
+            <dd>{firaLabels[invoice.firaStatus]}</dd>
             <dt>Paid so far</dt>
             <dd>
               {invoice.currency} {invoice.paidTotal}
@@ -78,6 +85,7 @@ export default async function Invoices() {
                   <th scope="col">PayPal fee</th>
                   <th scope="col">Net</th>
                   <th scope="col">FX rate</th>
+                  <th scope="col">FIRA</th>
                   <th scope="col">Refund</th>
                 </tr>
               </thead>
@@ -92,6 +100,13 @@ export default async function Invoices() {
                     <td>{payment.fee ?? "Not provided by PayPal"}</td>
                     <td>{payment.net ?? "Not provided by PayPal"}</td>
                     <td>{payment.fxRate ?? "Not provided by PayPal"}</td>
+                    <td>
+                      {payment.fira?.state === "matched"
+                        ? "Matched"
+                        : payment.fira?.state === "needs_confirmation"
+                          ? "Needs your confirmation"
+                          : "Not matched"}
+                    </td>
                     <td>
                       {!invoice.refundActions.some(
                         (action) =>

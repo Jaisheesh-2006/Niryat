@@ -104,77 +104,113 @@ const labels: Record<string, string> = {
   "answers.sameEstablishment": "Own establishment",
 };
 
+type FormResult = { ok: true } | { ok: false; message: string; reasons?: string[] };
+const fallback = { ok: false, message: "Something went wrong. Try again." } as const;
+
 export async function sendJson(
   url: string,
   method: "POST" | "PUT",
   body: unknown,
-): Promise<{ ok: true } | { ok: false; message: string; reasons?: string[] }> {
-  const fallback = { ok: false, message: "Something went wrong. Try again." } as const;
+): Promise<FormResult> {
   try {
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (response.ok) return { ok: true };
-    const parsed = z
-      .object({
-        error: z.string(),
-        fields: z.array(z.string()).optional(),
-        reasons: z.array(z.string()).optional(),
-        code: z
-          .string()
-          .regex(/^[A-Za-z][A-Za-z0-9_]*$/)
-          .optional(),
-      })
-      .safeParse(await response.json().catch(() => undefined));
-    if (!parsed.success) return fallback;
-    switch (parsed.data.error) {
-      case "invoice_blocked":
-        return {
-          ok: false,
-          message: "This invoice cannot be issued yet:",
-          reasons: parsed.data.reasons ?? [],
-        };
-      case "action_not_pending":
-        return { ok: false, message: "This action was already handled. Refresh the page." };
-      case "refund_pending":
-        return {
-          ok: false,
-          message: "A refund for this payment is already waiting for your approval.",
-        };
-      case "refund_exceeds_payment":
-        return {
-          ok: false,
-          message: "The refund is more than what is left to refund on this payment.",
-        };
-      case "paypal_failed":
-        if (!parsed.data.code) return fallback;
-        return {
-          ok: false,
-          message: `PayPal did not accept the request (${parsed.data.code}). Nothing else was sent. You can approve again to retry.`,
-        };
-      case "paypal_unavailable":
-        return { ok: false, message: "PayPal is not configured on this server." };
-      case "file_storage_unavailable":
-        return { ok: false, message: "File storage is not configured on this server." };
-      case "not_found":
-        return { ok: false, message: "Not found. Refresh the page." };
-      case "invalid_request":
-        return {
-          ok: false,
-          message: `Check these fields: ${(parsed.data.fields ?? []).map((field) => labels[field] ?? field).join(", ")}.`,
-        };
-      case "email_taken":
-        return { ok: false, message: "That email is already registered. Sign in instead." };
-      case "invalid_credentials":
-        return { ok: false, message: "Email or password is incorrect." };
-      case "unauthenticated":
-        return { ok: false, message: "Your session has ended. Sign in again." };
-      default:
-        return fallback;
-    }
+    return await responseResult(response);
   } catch {
     return fallback;
+  }
+}
+
+export async function sendPdf(url: string, file: File): Promise<FormResult> {
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/pdf", "X-Niryat-Consent": "own-fira" },
+      body: file,
+    });
+    return await responseResult(response);
+  } catch {
+    return fallback;
+  }
+}
+
+async function responseResult(response: Response): Promise<FormResult> {
+  if (response.ok) return { ok: true };
+  const parsed = z
+    .object({
+      error: z.string(),
+      fields: z.array(z.string()).optional(),
+      reasons: z.array(z.string()).optional(),
+      code: z
+        .string()
+        .regex(/^[A-Za-z][A-Za-z0-9_]*$/)
+        .optional(),
+    })
+    .safeParse(await response.json().catch(() => undefined));
+  if (!parsed.success) return fallback;
+  switch (parsed.data.error) {
+    case "invoice_blocked":
+      return {
+        ok: false,
+        message: "This invoice cannot be issued yet:",
+        reasons: parsed.data.reasons ?? [],
+      };
+    case "action_not_pending":
+      return { ok: false, message: "This action was already handled. Refresh the page." };
+    case "refund_pending":
+      return {
+        ok: false,
+        message: "A refund for this payment is already waiting for your approval.",
+      };
+    case "refund_exceeds_payment":
+      return {
+        ok: false,
+        message: "The refund is more than what is left to refund on this payment.",
+      };
+    case "paypal_failed":
+      if (!parsed.data.code) return fallback;
+      return {
+        ok: false,
+        message: `PayPal did not accept the request (${parsed.data.code}). Nothing else was sent. You can approve again to retry.`,
+      };
+    case "paypal_unavailable":
+      return { ok: false, message: "PayPal is not configured on this server." };
+    case "file_storage_unavailable":
+      return { ok: false, message: "File storage is not configured on this server." };
+    case "fira_duplicate":
+      return { ok: false, message: "This FIRA was already uploaded." };
+    case "fira_unreadable":
+      return {
+        ok: false,
+        message:
+          "Niryat could not read FIRA lines from this PDF. Upload the digital FIRA PDF from PayPal, not a scan.",
+      };
+    case "consent_required":
+      return { ok: false, message: "Confirm that this is your own FIRA before uploading." };
+    case "file_too_large":
+      return { ok: false, message: "The PDF is larger than 2 MB." };
+    case "no_suggestion":
+      return {
+        ok: false,
+        message: "This line has no suggested match to confirm or reject. Refresh the page.",
+      };
+    case "not_found":
+      return { ok: false, message: "Not found. Refresh the page." };
+    case "invalid_request":
+      return {
+        ok: false,
+        message: `Check these fields: ${(parsed.data.fields ?? []).map((field) => labels[field] ?? field).join(", ")}.`,
+      };
+    case "email_taken":
+      return { ok: false, message: "That email is already registered. Sign in instead." };
+    case "invalid_credentials":
+      return { ok: false, message: "Email or password is incorrect." };
+    case "unauthenticated":
+      return { ok: false, message: "Your session has ended. Sign in again." };
+    default:
+      return fallback;
   }
 }
