@@ -1,6 +1,13 @@
 import { resolve } from "node:path";
 import { createDb, type Db, knownTransactionIds } from "@niryat/db";
-import { createPayPalLedger, type PayPalLedger } from "@niryat/paypal";
+import {
+  createPayPalLedger,
+  createPayPalRestClient,
+  listUpdatedDisputeIds,
+  type PayPalLedger,
+  type PayPalRestClient,
+} from "@niryat/paypal";
+import { recordDispute } from "./disputes";
 import { loadAuthEnv, loadEnv, loadPayPalEnv } from "./env";
 import { recordCapture } from "./payments";
 
@@ -11,6 +18,7 @@ export async function syncPayments(deps: { db: Db; ledger: PayPalLedger }, now: 
       end: now.toISOString(),
     })
   ).filter((row) => row.eventCode.startsWith("T00"));
+  // shortcut: refunds missed by webhooks are not reconciled; add T11xx rows to the sync if one is ever missed.
   const known = await knownTransactionIds(
     deps.db,
     rows.map((row) => row.transactionId),
@@ -28,6 +36,26 @@ export async function syncPayments(deps: { db: Db; ledger: PayPalLedger }, now: 
       } else {
         summary.skipped++;
       }
+    } catch {
+      summary.failed++;
+    }
+  }
+  return summary;
+}
+
+export async function syncDisputes(
+  deps: { db: Db; rest: Pick<PayPalRestClient, "get">; ledger: Pick<PayPalLedger, "getCapture"> },
+  now: Date,
+) {
+  const ids = await listUpdatedDisputeIds(
+    deps.rest,
+    new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  );
+  const summary = { seen: ids.length, recorded: 0, notFound: 0, failed: 0 };
+  for (const disputeId of ids) {
+    try {
+      const outcome = await recordDispute(deps, disputeId);
+      summary[outcome === "not_found" ? "notFound" : "recorded"]++;
     } catch {
       summary.failed++;
     }
@@ -65,9 +93,16 @@ export async function main() {
         clientId: paypalEnv.PAYPAL_CLIENT_ID,
         clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET,
       });
-      const summary = await syncPayments({ db: database.db, ledger }, new Date());
+      const rest = createPayPalRestClient({
+        clientId: paypalEnv.PAYPAL_CLIENT_ID,
+        clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET,
+      });
+      const now = new Date();
+      const payments = await syncPayments({ db: database.db, ledger }, now);
+      const disputes = await syncDisputes({ db: database.db, rest, ledger }, now);
+      const summary = { payments, disputes };
       console.log(JSON.stringify(summary));
-      if (summary.failed > 0) process.exitCode = 1;
+      if (payments.failed > 0 || disputes.failed > 0) process.exitCode = 1;
     } finally {
       await database.close();
     }

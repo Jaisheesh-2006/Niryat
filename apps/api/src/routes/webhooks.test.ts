@@ -1,5 +1,14 @@
 import { randomBytes } from "node:crypto";
-import { clients, createDb, createUser, type Db, invoices, payments } from "@niryat/db";
+import {
+  clients,
+  createDb,
+  createUser,
+  type Db,
+  disputes,
+  invoices,
+  payments,
+  tasks,
+} from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
 import type { CaptureRecord, PayPalLedger, PayPalRestClient } from "@niryat/paypal";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -83,7 +92,7 @@ function setup(db: Db) {
       body: JSON.stringify(event),
     });
   }
-  return { deps, app, ledger, verify, getCapture, deliver };
+  return { deps, app, ledger, rest, verify, getCapture, deliver };
 }
 
 beforeEach(() => {
@@ -163,10 +172,21 @@ describe("webhook boundaries without a database connection", () => {
     expect(t.db.transaction).not.toHaveBeenCalled();
   });
 
-  it("ignores refunds after signature verification", async () => {
+  it("records pending refunds after signature verification", async () => {
+    f.ledger.getRefund = vi.fn<PayPalLedger["getRefund"]>().mockResolvedValue({
+      refundId: "REFUND-TEST",
+      status: "PENDING",
+      captureId: null,
+      paypalInvoiceId: null,
+      gross: "100.00",
+      fee: null,
+      net: null,
+      currency: "USD",
+      createTime: "2026-10-26T12:00:00Z",
+    });
     const response = await f.deliver({ ...captureEvent, event_type: "PAYMENT.CAPTURE.REFUNDED" });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ignored" });
+    expect(await response.json()).toEqual({ status: "recorded" });
     expect(f.verify).toHaveBeenCalledOnce();
     expect(f.getCapture).not.toHaveBeenCalled();
     expect(t.db.transaction).not.toHaveBeenCalled();
@@ -240,6 +260,7 @@ describe.skipIf(!testDatabaseUrl)("webhook payment storage", () => {
         amount: "100.00",
         description: "Software development",
         sac: "998314",
+        pdfUrl: "https://niryat.example/invoices/test.pdf",
         paypalInvoiceId: capture.paypalInvoiceId,
         status: "sent",
       })
@@ -332,5 +353,119 @@ describe.skipIf(!testDatabaseUrl)("webhook payment storage", () => {
     expect(await t.db.select().from(invoices)).toEqual([
       expect.objectContaining({ status: "sent" }),
     ]);
+  });
+
+  it("records a completed refund and creates one refund task", async () => {
+    const invoice = await sentInvoice();
+    expect((await f.deliver()).status).toBe(200);
+    f.ledger.getRefund = vi.fn<PayPalLedger["getRefund"]>().mockResolvedValue({
+      refundId: "REFUND-TEST",
+      status: "COMPLETED",
+      captureId: capture.captureId,
+      paypalInvoiceId: capture.paypalInvoiceId,
+      gross: "40.00",
+      fee: "1.00",
+      net: "39.00",
+      currency: "USD",
+      createTime: "2026-10-27T12:00:00Z",
+    });
+
+    const response = await f.deliver({
+      id: "WH-REFUND",
+      event_type: "PAYMENT.CAPTURE.REFUNDED",
+      resource: { id: "REFUND-TEST" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await t.db.select().from(payments)).toEqual([
+      expect.objectContaining({ paypalTxnId: capture.captureId, kind: "payment" }),
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        paypalTxnId: "REFUND-TEST",
+        captureId: capture.captureId,
+        kind: "refund",
+        gross: "40.00",
+        fee: "1.00",
+        net: "39.00",
+      }),
+    ]);
+    expect(await t.db.select().from(invoices)).toEqual([
+      expect.objectContaining({ id: invoice.id, status: "partially_refunded" }),
+    ]);
+    expect(await t.db.select().from(tasks)).toEqual([
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        type: "refund_recorded",
+        dedupeKey: "refund:REFUND-TEST",
+      }),
+    ]);
+  });
+
+  it("records a linked dispute and creates one dispute task", async () => {
+    const invoice = await sentInvoice();
+    expect((await f.deliver()).status).toBe(200);
+    let disputeResponse: unknown = {
+      dispute_id: "PP-DISPUTE-1",
+      disputed_transactions: [{ seller_transaction_id: capture.captureId }],
+      dispute_amount: { value: "40.00", currency_code: "USD" },
+      reason: "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      status: "OPEN",
+      dispute_life_cycle_stage: "INQUIRY",
+      seller_response_due_date: "2026-10-28T01:00:00Z",
+      update_time: "2026-10-27T12:00:00Z",
+    };
+    f.rest.get = async (path, parse) => {
+      if (!path.endsWith("/PP-DISPUTE-1")) throw new Error("Unexpected PayPal read");
+      return parse(disputeResponse);
+    };
+
+    const response = await f.deliver({
+      id: "WH-DISPUTE",
+      event_type: "CUSTOMER.DISPUTE.CREATED",
+      resource: { dispute_id: "PP-DISPUTE-1" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await t.db.select().from(disputes)).toEqual([
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        paypalDisputeId: "PP-DISPUTE-1",
+        captureId: capture.captureId,
+        status: "OPEN",
+        responseDueDate: "2026-10-28",
+      }),
+    ]);
+    expect(await t.db.select().from(tasks)).toEqual([
+      expect.objectContaining({
+        invoiceId: invoice.id,
+        type: "dispute_opened",
+        dueDate: "2026-10-28",
+        dedupeKey: "dispute:PP-DISPUTE-1:opened",
+      }),
+    ]);
+
+    disputeResponse = {
+      dispute_id: "PP-DISPUTE-1",
+      disputed_transactions: [{ seller_transaction_id: capture.captureId }],
+      dispute_amount: { value: "40.00", currency_code: "USD" },
+      reason: "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      status: "RESOLVED",
+      dispute_life_cycle_stage: "CHARGEBACK",
+      dispute_outcome: { outcome_code: "RESOLVED_BUYER_FAVOUR" },
+      update_time: "2026-10-26T12:00:00Z",
+    };
+    expect(
+      (
+        await f.deliver({
+          id: "WH-DISPUTE-STALE",
+          event_type: "CUSTOMER.DISPUTE.UPDATED",
+          resource: { dispute_id: "PP-DISPUTE-1" },
+        })
+      ).status,
+    ).toBe(200);
+    expect(await t.db.select().from(disputes)).toEqual([
+      expect.objectContaining({ status: "OPEN", outcome: null }),
+    ]);
+    expect(await t.db.select().from(tasks)).toHaveLength(1);
   });
 });

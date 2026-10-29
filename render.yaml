@@ -57,7 +57,7 @@ services:
         fromDatabase:
           name: niryat-db
           property: connectionString
-  # Nightly sync (spec 05); webhooks are the real-time source.
+  # Nightly sync (specs 05–06): payments and disputes; webhooks are the real-time source.
   - type: cron
     name: niryat-sync
     runtime: node

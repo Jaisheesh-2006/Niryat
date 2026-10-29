@@ -195,6 +195,33 @@ Rerun with the same app, signing in as a different India business sandbox accoun
 
 **Conclusion:** Log in with PayPal works for India business sellers. It fails only when the signing-in account is the one whose client ID and secret make the call. A sign-in app must therefore belong to a different PayPal account from the seller's. An `id_token` is returned only when requested with `response_type=code+id_token`. Niryat doesn't need it.
 
+## Multi-seller (Partner Referrals): limitation and future work (2026-10-29)
+
+**Limitation (v1):** each deployment acts on one PayPal seller account, the account that owns `PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET`. Every Niryat user's invoices, payments, refunds and disputes go through that account. Niryat data such as profiles, clients and the approval queue is still per user. Log in with PayPal identifies the user. It does not connect their PayPal account.
+
+**Spike:** [paypal-partner-check.ts](../scripts/spikes/paypal-partner-check.ts) ran against the current Merchant-type app. Results:
+- The client-credentials token has no `partner-referrals` scope.
+- `POST /v2/customer/partner-referrals` returns HTTP 403 `NOT_AUTHORIZED` (paypal-debug-id `f360963d1b549`).
+
+**Platform-type app:**
+- A sandbox Platform app shows the multiparty settings: BN code, seller onboarding, platform fee and delayed disbursement.
+- Each of these applies only to sellers onboarded through Partner Referrals. Without onboarding, a Platform app's calls act on its owner, just like a Merchant app.
+
+**Decision:** keep the Merchant app for v1. Don't switch app type or build Partner Referrals. The reason is that partner access needs PayPal approval in production.
+
+**Future implementation:**
+1. Use a Platform app with partner access, which PayPal approves for production.
+2. Add a "Connect PayPal" step that calls `POST /v2/customer/partner-referrals` with third-party features: `INVOICE_READ_WRITE`, `ADVANCED_TRANSACTIONS_SEARCH`, `READ_SELLER_DISPUTE`, `UPDATE_SELLER_DISPUTE`, `REFUND`.
+3. Store each user's `merchantIdInPayPal` and consent status from the return URL.
+4. Send `PayPal-Auth-Assertion` (`iss` = platform client ID, `payer_id` = the seller) on every invoicing, search and dispute call.
+5. Route webhook events to the user by their merchant ID.
+
+Before any code, the spike's second step must pass with a non-owner seller. That step:
+- runs transaction search, lists disputes and creates a draft invoice, all as that seller;
+- then reads the draft as the app owner, which must return 404, proving the draft is in the seller's account.
+
+Webhooks need a separate check. The PayPal Agent Toolkit documents no on-behalf-of option, so AI-proposed actions would need the REST path.
+
 ## Setup gotchas (observed 2026-10-24)
 
 - **App features must be enabled on the sandbox REST app.** Without Invoicing and Transaction Search, every call returns HTTP 403 `NOT_AUTHORIZED`, which says nothing about India. The script detects a missing scope and marks the check blocked.

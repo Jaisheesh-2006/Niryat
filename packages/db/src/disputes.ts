@@ -17,9 +17,9 @@ export async function upsertDispute(
     responseDueDate: string | null;
     paypalUpdatedAt: string;
   },
-): Promise<void> {
+): Promise<boolean> {
   const values = { ...row, paypalUpdatedAt: new Date(row.paypalUpdatedAt) };
-  await db
+  const saved = await db
     .insert(disputes)
     .values(values)
     .onConflictDoUpdate({
@@ -27,7 +27,9 @@ export async function upsertDispute(
       set: { ...values, invoiceId: sql`coalesce(${disputes.invoiceId}, excluded.invoice_id)` },
       setWhere: sql`${disputes.paypalUpdatedAt} <= excluded.paypal_updated_at`,
     })
+    .returning({ id: disputes.id })
     .catch(() => {
       throw new Error("Dispute save failed");
     });
+  return saved.length > 0;
 }

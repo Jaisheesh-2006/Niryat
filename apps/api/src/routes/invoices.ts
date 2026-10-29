@@ -4,6 +4,7 @@ import {
   findPdfByToken,
   getInvoiceForAction,
   getProfile,
+  gstRegistration,
   issueInvoice,
   listClients,
   listInvoices,
@@ -21,6 +22,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { actionHandlers } from "../actions";
 import { readSession } from "../auth/session";
+import { toInvoiceView } from "../compliance";
 import { newFileToken, pdfKey } from "../files";
 import { renderInvoicePdf } from "../pdf";
 import { rules, todayInIndia } from "../rules";
@@ -32,7 +34,10 @@ export function invoiceRoutes(deps: AppDeps): Hono {
   routes.get("/invoices", async (c) => {
     const userId = await readSession(c, deps.sessionSecret);
     if (!userId) return c.json({ error: "unauthenticated" }, 401);
-    return c.json(await listInvoices(deps.db, userId));
+    const gstRegistered = await gstRegistration(deps.db, userId);
+    return c.json(
+      (await listInvoices(deps.db, userId)).map((invoice) => toInvoiceView(invoice, gstRegistered)),
+    );
   });
   routes.post("/invoices", async (c) => {
     const userId = await readSession(c, deps.sessionSecret);
@@ -127,7 +132,7 @@ export function invoiceRoutes(deps: AppDeps): Hono {
         },
         (seq) => invoiceNumberFor(date, seq).number,
       );
-      return c.json(invoice, 201);
+      return c.json(toInvoiceView(invoice, await gstRegistration(deps.db, userId)), 201);
     } catch (error) {
       if (storageFailed) return c.json({ error: "file_storage_unavailable" }, 503);
       throw error;
@@ -162,7 +167,10 @@ export function invoiceRoutes(deps: AppDeps): Hono {
             : c.json({ error: "paypal_failed", code: result.error }, 502);
         }
       }
-      return c.json(await getInvoiceForAction(deps.db, userId, id.data));
+      const result = await getInvoiceForAction(deps.db, userId, id.data);
+      return result
+        ? c.json(toInvoiceView(result, await gstRegistration(deps.db, userId)))
+        : c.json({ error: "not_found" }, 404);
     });
   }
 

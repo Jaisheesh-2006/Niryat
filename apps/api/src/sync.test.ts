@@ -1,10 +1,10 @@
 import * as dbModule from "@niryat/db";
 import { payments, recordPayment } from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
-import type { CaptureRecord, PayPalLedger } from "@niryat/paypal";
+import type { CaptureRecord, PayPalLedger, PayPalRestClient } from "@niryat/paypal";
 import * as paypalModule from "@niryat/paypal";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { main, syncPayments } from "./sync";
+import { main, syncDisputes, syncPayments } from "./sync";
 
 const now = new Date("2026-10-26T20:30:00.000Z");
 const capture: CaptureRecord = {
@@ -25,6 +25,8 @@ describe("payment sync CLI", () => {
   const close = vi.fn<() => Promise<void>>();
   const getCapture = vi.fn<PayPalLedger["getCapture"]>();
   const searchTransactions = vi.fn<PayPalLedger["searchTransactions"]>();
+  const getDisputes: PayPalRestClient["get"] = async (_path, parse) =>
+    parse({ items: [], links: [] });
 
   beforeEach(() => {
     exitCode = process.exitCode;
@@ -62,6 +64,12 @@ describe("payment sync CLI", () => {
         throw new Error("Unexpected refund request");
       },
     });
+    vi.spyOn(paypalModule, "createPayPalRestClient").mockReturnValue({
+      get: getDisputes,
+      async post() {
+        throw new Error("Unexpected PayPal post");
+      },
+    });
   });
   afterEach(async () => {
     process.exitCode = exitCode;
@@ -81,11 +89,14 @@ describe("payment sync CLI", () => {
       await main();
       expect(console.log).toHaveBeenCalledExactlyOnceWith(
         JSON.stringify({
-          seen: failed ? 1 : 0,
-          alreadyRecorded: 0,
-          recorded: 0,
-          skipped: 0,
-          failed: failed ? 1 : 0,
+          payments: {
+            seen: failed ? 1 : 0,
+            alreadyRecorded: 0,
+            recorded: 0,
+            skipped: 0,
+            failed: failed ? 1 : 0,
+          },
+          disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
         }),
       );
       expect(console.error).not.toHaveBeenCalled();
@@ -237,5 +248,44 @@ describe.skipIf(!testDatabaseUrl)("payment reconciliation", () => {
     );
     expect(getCapture).not.toHaveBeenCalled();
     expect(await t.db.select().from(payments)).toEqual([]);
+  });
+
+  it("continues dispute sync after one dispute fails", async () => {
+    const rest: PayPalRestClient = {
+      async get(path, parse) {
+        if (path.includes("update_time_after=")) {
+          return parse({
+            items: [{ dispute_id: "PP-DISPUTE-1" }, { dispute_id: "PP-DISPUTE-2" }],
+            links: [],
+          });
+        }
+        if (path.endsWith("/PP-DISPUTE-1")) {
+          return parse({
+            dispute_id: "PP-DISPUTE-1",
+            disputed_transactions: [{ seller_transaction_id: "CAPTURE-MISSING" }],
+            dispute_amount: { value: "40.00", currency_code: "USD" },
+            reason: "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+            status: "OPEN",
+            update_time: "2026-10-26T12:00:00Z",
+          });
+        }
+        throw new Error("dispute read failed");
+      },
+      async post() {
+        throw new Error("Unexpected PayPal post");
+      },
+    };
+    const ledger: Pick<PayPalLedger, "getCapture"> = {
+      async getCapture() {
+        return null;
+      },
+    };
+
+    expect(await syncDisputes({ db: t.db, rest, ledger }, now)).toEqual({
+      seen: 2,
+      recorded: 1,
+      notFound: 0,
+      failed: 1,
+    });
   });
 });

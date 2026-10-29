@@ -5,6 +5,7 @@ import { clientRoutes } from "./routes/clients";
 import { healthCheckRoutes } from "./routes/health-check";
 import { invoiceRoutes } from "./routes/invoices";
 import { profileRoutes } from "./routes/profile";
+import { taskRoutes } from "./routes/tasks";
 import { webhookRoutes } from "./routes/webhooks";
 import { rules } from "./rules";
 
@@ -18,6 +19,7 @@ export function createApp(deps?: AppDeps): Hono {
     if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", clientRoutes(deps));
     app.route("/", invoiceRoutes(deps));
+    app.route("/", taskRoutes(deps));
     app.route("/", authRoutes(deps));
     app.route("/", profileRoutes(deps));
     app.route("/", healthCheckRoutes(deps));

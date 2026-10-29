@@ -2,7 +2,8 @@ import { verifyWebhookSignature } from "@niryat/paypal";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
-import { recordCapture } from "../payments";
+import { recordDispute } from "../disputes";
+import { recordCapture, recordRefundById } from "../payments";
 import type { AppDeps } from "./auth";
 
 const envelopeSchema = z.object({
@@ -11,6 +12,8 @@ const envelopeSchema = z.object({
   resource: z.unknown(),
 });
 const captureSchema = z.object({ id: z.string().min(1) });
+const refundSchema = z.object({ id: z.string().min(1) });
+const disputeSchema = z.object({ dispute_id: z.string().min(1) });
 const invoicePaidSchema = z.object({
   invoice: z.object({
     payments: z.object({
@@ -39,6 +42,30 @@ export function webhookRoutes(deps: AppDeps): Hono {
       const envelope = envelopeSchema.safeParse(event);
       if (!envelope.success) return c.json({ error: "invalid_request" }, 400);
       const { event_type, resource } = envelope.data;
+      if (event_type === "PAYMENT.CAPTURE.REFUNDED" || event_type === "PAYMENT.CAPTURE.REVERSED") {
+        const refund = refundSchema.safeParse(resource);
+        if (!refund.success) return c.json({ error: "invalid_request" }, 400);
+        const outcome = await recordRefundById(
+          { db: deps.db, ledger: paypal.ledger },
+          refund.data.id,
+        );
+        console.log({ event_type, [outcome]: 1 });
+        return c.json({ status: "recorded" });
+      }
+      if (
+        event_type === "CUSTOMER.DISPUTE.CREATED" ||
+        event_type === "CUSTOMER.DISPUTE.UPDATED" ||
+        event_type === "CUSTOMER.DISPUTE.RESOLVED"
+      ) {
+        const dispute = disputeSchema.safeParse(resource);
+        if (!dispute.success) return c.json({ error: "invalid_request" }, 400);
+        const outcome = await recordDispute(
+          { db: deps.db, rest: paypal.rest, ledger: paypal.ledger },
+          dispute.data.dispute_id,
+        );
+        console.log({ event_type, [outcome]: 1 });
+        return c.json({ status: "recorded" });
+      }
       let captureIds: string[];
       if (event_type === "PAYMENT.CAPTURE.COMPLETED") {
         const capture = captureSchema.safeParse(resource);

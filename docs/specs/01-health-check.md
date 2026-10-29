@@ -31,7 +31,7 @@ Confirmed on 2026-10-25 with two India business sandbox accounts ([findings](../
 - **Log in with PayPal fails when the seller signs in to their own app.** `userinfo` returns HTTP 400 "Unable to fetch details to serve the request" when the signing-in account owns the client ID and secret. A different India business account signs in through the same app (2026-10-29), so sign-in needs an app owned by another PayPal account ([root cause](../paypal-sandbox-findings.md#root-cause-the-app-owner-cannot-sign-in-to-its-own-app-2026-10-29)).
 - **Decision (2026-10-29): keep email sign-in and add Log in with PayPal through the existing app.** The app owner uses email sign-in; other PayPal accounts can use the PayPal button once implemented. The "Sign in with PayPal" criterion stays open until implementation and user verification are complete.
 - **How the seller's PayPal account is connected:** through the India seller's sandbox REST app credentials, supplied server-side by the user (`PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET`). Invoicing, payments, refunds and disputes already work with these. This means one seller per deployment, which is enough for v1 and judge mode.
-- Onboarding several sellers would need PayPal [Partner Referrals](https://developer.paypal.com/api/partner-referrals/v2/) (platform onboarding), which is out of scope for v1.
+- Onboarding several sellers would need PayPal [Partner Referrals](https://developer.paypal.com/api/partner-referrals/v2/) (platform onboarding), which is out of scope for v1. The spike was blocked on 2026-10-29; the limitation and future plan are in [findings](../paypal-sandbox-findings.md#multi-seller-partner-referrals-limitation-and-future-work-2026-10-29).
 
 ## Test cases
 
