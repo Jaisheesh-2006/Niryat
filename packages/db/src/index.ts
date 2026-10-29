@@ -3,6 +3,7 @@ export * from "./client";
 export * from "./clients";
 export * from "./disputes";
 export * from "./encryption";
+export * from "./fira";
 export * from "./invoices";
 export * from "./payments";
 export * from "./profiles";

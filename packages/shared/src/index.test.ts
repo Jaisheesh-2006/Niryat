@@ -241,6 +241,7 @@ it("validates invoice responses with payments and an action", () => {
     paypalInvoiceId: "INV2-test",
     paypalRecurringSeriesId: null,
     paidTotal: "100.00",
+    firaStatus: "pending",
     refundedTotal: "0",
     refunds: [],
     disputes: [],
@@ -255,6 +256,7 @@ it("validates invoice responses with payments and an action", () => {
         currency: "USD",
         fxRate: null,
         receivedAt: "2026-10-26T12:00:00Z",
+        fira: null,
       },
     ],
     action: {

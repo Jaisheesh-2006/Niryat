@@ -2,11 +2,21 @@ import type { PayPalActionName } from "@niryat/agent";
 import { type Invoice, type InvoiceInput, invoiceSchema } from "@niryat/shared";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "./client";
+import { firaStatusFor } from "./fira";
 import rollUpInvoice from "./payments";
-import { agentActions, clients, disputes, invoices, payments } from "./schema";
+import {
+  agentActions,
+  clients,
+  disputes,
+  firaDocuments,
+  firaLines,
+  invoices,
+  matches,
+  payments,
+} from "./schema";
 
 async function readInvoices(
-  db: Pick<Db, "select">,
+  db: Pick<Db, "select" | "selectDistinct">,
   userId: string,
   invoiceId?: string,
 ): Promise<Invoice[]> {
@@ -31,12 +41,33 @@ async function readInvoices(
   if (!rows.length) return [];
   const ids = rows.map(({ invoice }) => invoice.id);
   const paymentRows = await db
-    .select()
+    .select({
+      payment: payments,
+      receivedMonth: sql<string>`to_char(${payments.receivedAt} at time zone 'Asia/Kolkata', 'YYYY-MM')`,
+      fira: {
+        lineId: firaLines.id,
+        confidence: matches.confidence,
+        state: sql<
+          "matched" | "needs_confirmation"
+        >`case when ${matches.confidence} >= 0.90 or ${matches.confirmedByUser} then 'matched' else 'needs_confirmation' end`,
+      },
+    })
     .from(payments)
+    .leftJoin(matches, eq(matches.paymentId, payments.id))
+    .leftJoin(firaLines, eq(firaLines.id, matches.firaLineId))
     .where(inArray(payments.invoiceId, ids))
     .catch(() => {
       throw new Error("Invoice lookup failed");
     });
+  const covered = await db
+    .selectDistinct({ month: sql<string>`to_char(${firaLines.date}, 'YYYY-MM')` })
+    .from(firaLines)
+    .innerJoin(firaDocuments, eq(firaDocuments.id, firaLines.firaDocumentId))
+    .where(eq(firaDocuments.userId, userId))
+    .catch(() => {
+      throw new Error("Invoice lookup failed");
+    });
+  const coveredMonths = new Set(covered.map(({ month }) => month));
   const actionRows = await db
     .select()
     .from(agentActions)
@@ -53,6 +84,14 @@ async function readInvoices(
       throw new Error("Invoice lookup failed");
     });
   return rows.map(({ invoice, clientName, paidTotal, refundedTotal }) => {
+    const invoicePayments = paymentRows
+      .filter(({ payment }) => payment.invoiceId === invoice.id && payment.kind === "payment")
+      .map(({ payment, receivedMonth, fira }) => ({
+        ...payment,
+        receivedMonth,
+        fira: fira?.lineId ? fira : null,
+        receivedAt: payment.receivedAt?.toISOString(),
+      }));
     const action = actionRows.find(
       (row) =>
         row.invoiceId === invoice.id &&
@@ -63,10 +102,10 @@ async function readInvoices(
       clientName,
       paidTotal,
       refundedTotal,
-      payments: paymentRows
-        .filter((row) => row.invoiceId === invoice.id && row.kind === "payment")
-        .map((row) => ({ ...row, receivedAt: row.receivedAt?.toISOString() })),
+      payments: invoicePayments,
+      firaStatus: firaStatusFor(invoicePayments, coveredMonths),
       refunds: paymentRows
+        .map(({ payment }) => payment)
         .filter((row) => row.invoiceId === invoice.id && row.kind === "refund")
         .sort((a, b) => (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0))
         .map((row) => ({ ...row, receivedAt: row.receivedAt?.toISOString() })),

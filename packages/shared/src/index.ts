@@ -203,6 +203,9 @@ export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
 export const refundInputSchema = z.strictObject({ amount: invoiceInputSchema.shape.amount });
 export type RefundInput = z.infer<typeof refundInputSchema>;
 
+export const firaStatuses = ["matched", "pending", "missing"] as const;
+export type FiraStatus = (typeof firaStatuses)[number];
+
 export const paymentSchema = z.object({
   id: z.uuid(),
   paypalTxnId: z.string(),
@@ -212,6 +215,13 @@ export const paymentSchema = z.object({
   currency: z.string(),
   fxRate: z.string().nullable(),
   receivedAt: z.iso.datetime(),
+  fira: z
+    .object({
+      lineId: z.uuid(),
+      confidence: z.string(),
+      state: z.enum(["matched", "needs_confirmation"]),
+    })
+    .nullable(),
 });
 export type Payment = z.infer<typeof paymentSchema>;
 
@@ -316,6 +326,7 @@ export const invoiceSchema = z.object({
   paypalRecurringSeriesId: z.string().nullable(),
   paidTotal: z.string(),
   payments: z.array(paymentSchema),
+  firaStatus: z.enum(firaStatuses),
   refundedTotal: z.string(),
   refunds: z.array(refundSchema),
   disputes: z.array(disputeSchema),
@@ -341,7 +352,6 @@ export const taskSchema = z.object({
 });
 export type Task = z.infer<typeof taskSchema>;
 
-export const firaStatuses = ["matched", "pending", "missing"] as const;
 export const firaMatchSchema = z.object({
   paymentId: z.uuid(),
   paypalTxnId: z.string(),
