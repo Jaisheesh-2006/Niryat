@@ -189,8 +189,8 @@ Every feature below is **required for v1**. Build them in this order; each one l
 **How:** PayPal webhooks (refund and dispute events) + Disputes API for details; rules engine decides the compliance impact.
 
 **Done when:**
-- [ ] A sandbox refund updates the invoice, GST data and realised amount
-- [ ] A sandbox dispute creates an alert and a task with its compliance impact
+- [x] A sandbox refund updates the invoice, GST data and realised amount
+- [x] A sandbox dispute creates an alert and a task with its compliance impact
 - [ ] Both appear in the dashboard and monthly close summary
 
 ### 7. FIRA matching
@@ -201,8 +201,8 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 **Done when:**
 - [ ] Parser extracts date, amount, currency, reference and purpose code from a real (redacted) PayPal FIRA
-- [ ] Matches show a confidence level; low-confidence matches need user confirmation
-- [ ] Every invoice shows FIRA status: matched / pending / missing
+- [x] Matches show a confidence level; low-confidence matches need user confirmation
+- [x] Every invoice shows FIRA status: matched / pending / missing
 
 ### 8. Monthly close agent (acts in PayPal)
 

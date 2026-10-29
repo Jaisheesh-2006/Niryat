@@ -49,6 +49,7 @@ Status key:
   - P3-1 found that PayPal accepted a series invoice number but omitted it on read-back. P3-15's user screenshot (2026-10-27) lists the first invoice as `2026-27/0002` under an active monthly series; future-cycle numbering and cycle adoption into Niryat remain pending. See [verification V04](verification.md#v04-recurring-invoices); the full recurring-cycle numbering acceptance criterion stays open.
 - **CREDIT_NOTE**
   - s. 34 says "may". Issuing a credit note keeps GSTR-1 export value and refund figures correct, so recommend it rather than state it is required.
+  - Implemented by `creditNoteFor` (Phase 4): `declareBy` is 30 November after the end of the **original invoice's** financial year, not the refund's year. The message retains the earlier-annual-return qualification. The deadline is inclusive; a later refund is marked `late`. Only GST-registered profiles receive credit-note data, with zero IGST for the LUT export. Phase 4 allocates no credit-note number or PDF; the reporting series belongs to spec 10. See [deadline tests](../packages/rules/src/credit-note.test.ts).
 - **GST_THRESHOLD**
   - Turnover counts every business under the same PAN, and includes exempt supplies.
   - Other s. 24 triggers can force registration regardless of turnover, for example reverse charge or e-commerce operators collecting TCS. Not checked for foreign freelance platforms.
@@ -60,6 +61,8 @@ Status key:
 
 ### RBI / FEMA
 
+- **REALISATION_ADJUSTMENT**
+  - Implemented by `realisationFor` (Phase 4) as `pending_bank` whenever refunds exist or a dispute is lost. Received through PayPal is payment gross less refunds, clamped at zero; shortfall is invoice value less that received amount, also clamped at zero. A lost dispute alone never subtracts money again. The bank-acceptance message stays visible; an adjustment does not assert that the AD bank has accepted a reduction or that proceeds reached India. FIRA status is separate. See [realisation and dispute tests](../packages/rules/src/realisation.test.ts). Refunds after repatriation remain unconfirmed in law.
 - **New regulations**
   - Notified 2026-01-13 and gazetted 2026-01-15, in force **2026-10-01**. They supersede FEMA 23(R)/2015-RB, except for things already done.
   - Amended before commencement on 2026-09-22 by FEMA 23(R)/(1)/2026-RB, which changed 15 months to 9 and 18 months to 12.

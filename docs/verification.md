@@ -36,13 +36,30 @@ Sandbox result (2026-10-25): partial payments are rejected ("not available in yo
 
 ## V06 Events, refunds, disputes and history
 
-TODO(verify): Exercise signed events, refund/dispute outcomes and transaction fee/net/FX coverage on India sandbox. [Webhook events](https://developer.paypal.com/api/rest/webhooks/event-names/), [Disputes testing](https://developer.paypal.com/docs/disputes/test-go-live/).
+Remaining: save the actual refund-delivery body and HTTP result, verify automatic dispute-event delivery and a PayPal-decided lost outcome, and check FX on a flow that converts currency. [Webhook events](https://developer.paypal.com/api/rest/webhooks/event-names/), [Disputes testing](https://developer.paypal.com/docs/disputes/test-go-live/).
 
 Sandbox result (2026-10-25): fee and net are verified, from both the capture and transaction search, with no FX on a USD balance. A buyer-opened dispute (`PP-R-TBU-10194472`) is listed and readable through the Disputes API. A refund webhook was delivered. No `CUSTOMER.DISPUTE.CREATED` event appeared for that dispute, although the webhook is subscribed. The dispute event remains open. See [findings](paypal-sandbox-findings.md#disputes-and-webhooks-2026-10-25).
 
 Webhook signature verification works via the verify API (2026-10-27). The user confirmed that the paid one-time invoice became Paid through the webhook, with gross, fee and net shown in one payment row. Later CLI reconciliation returned `{"seen":3,"alreadyRecorded":1,"recorded":0,"skipped":2,"failed":0}`. It found the recorded payment without inserting another, and the user screenshot shows the invoice still Paid with one payment row. The skipped counter combines captures not found and captures not completed; the two rows' individual reasons were not inspected. The optional scratch-database webhook-miss test was skipped; [sync integration tests](../apps/api/src/sync.test.ts) cover backfill and deduplication. Hosted cron execution remains a deployment check.
 
 Credential-free checks (2026-10-27), user-confirmed: `pnpm verify --force` with `.env` unavailable completed all 27 tasks with zero cached and exit code 0; `/health` returned `ok` and `/purpose-codes` returned the catalogue. The separate database integration runs passed DB 81/81 and API 136/136 with no skipped tests. Local production build also passed.
+
+P4-1 evidence (2026-10-27): [refund and dispute shapes](paypal-sandbox-findings.md#refund-and-dispute-shapes-2026-10-27) distinguishes the documented refund fallback from observed dispute detail/list responses. The invoice-refund follow-up (2026-10-29) records an actual `INVOICING.INVOICE.REFUNDED` API log with `recorded: 1`, `not_completed: 0`, `not_found: 0`, plus user-confirmed automatic ledger/task updates and replay deduplication. Its raw payload, exact resource-ID variant and HTTP delivery result have not been supplied; `.tmp/paypal/refund-event.json` was absent at close-out. The strict P4-15 payload-evidence gate remains open.
+
+P4-15 user verification (2026-10-30): steps 2 and 3 passed as specified. The Niryat-approved partial refund changed the invoice to Partly refunded, copied PayPal's fee/net, displayed the remaining received/shortfall values, bank message and credit-note deadline, and created a refund task. The remaining seller-dashboard refund changed it to Refunded and added the second refund/task. This confirmation establishes the visible results; it does not supply the missing webhook payload evidence.
+
+Steps 4 and 5 are also user-confirmed (2026-10-30). The buyer-opened dispute `PP-R-EWI-10195182` appeared after manual sync. A read-only local DB check found it linked through seller capture `3PM27068GN698204T` to invoice `2026-27/0005` / `INV2-GLN9-7FXM-5NMM-PZ7N`, status `WAITING_FOR_SELLER_RESPONSE`, stage `INQUIRY`, with one open `dispute_opened` task owned by the invoice's user. The dispute and task were inserted at approximately 01:12:38 IST. The buyer transaction ID in the screenshot differs from the seller capture ID; linking uses the latter.
+
+The two supplied sync summaries were:
+
+```jsonl
+{"payments":{"seen":11,"alreadyRecorded":9,"recorded":1,"skipped":1,"failed":0},"disputes":{"seen":1,"recorded":1,"notFound":0,"failed":0}}
+{"payments":{"seen":11,"alreadyRecorded":10,"recorded":0,"skipped":1,"failed":0},"disputes":{"seen":2,"recorded":2,"notFound":0,"failed":0}}
+```
+
+The user subsequently confirmed another sync and no duplicate dispute/task. `disputes.recorded` includes processed replays, so it need not become zero. The extra discovered dispute explains the changing count; automatic dispute-webhook delivery was not demonstrated. Local `pnpm dev` does not run the hosted cron. Lost-dispute outcomes remain covered by [rule tests](../packages/rules/src/realisation.test.ts) rather than an on-demand sandbox decision.
+
+P4-15 automated close-out (2026-10-30): `pnpm format`, `pnpm build` and `pnpm verify --force` passed; verification completed all 27 package tasks with zero cached. The separate DB and API `test:db` suites executed all 119 and 258 tests respectively, with none skipped. The credential-free API tests still passed for `/health` and `/purpose-codes`; the Phase 3 user-confirmed no-`.env` startup check above was not repeated with the file unavailable. The only application call to `refundCapture` remains the approved `refund_payment` handler. YAML names eight implemented rule functions, including `creditNoteFor` and `realisationFor`, with four remaining `TODO` rules. Spec/PLAN checkbox parity passes the scaffold check.
 
 ## V07 FIRA sample
 
@@ -68,7 +85,9 @@ The synthetic references are fixture identifiers, not PayPal transaction IDs or 
 
 The user confirmed on 2026-10-27 that this V07 entry contains no personal values. The documentation, privacy review and synthetic-fixture checks are complete.
 
-Deferred: inspect a consented real FIRA or an official anonymised specimen when available and record its layout separately. P4-2's original real-layout acceptance gate and spec 07's real-FIRA parser criterion remain open.
+Parsed by Niryat (2026-10-30), synthetic fixture only: the user confirmed P4-15 step 6 passed. The demo seed produced the expected exact matches, first-line suggestion and flagged final line. The FIRA page showed extracted fields beside source text, the user confirmed the uncertain match, invoice FIRA statuses updated and uploading the same PDF again produced the duplicate message. This verifies the synthetic UI/matching flow; it does not verify a real PayPal layout.
+
+Deferred: inspect a consented real FIRA or an official anonymised specimen when available and record its layout separately. P4-2's original real-layout acceptance gate, spec 07's real-FIRA parser criterion, PLAN section 21's own-redacted-FIRA item and the corresponding Phase 4 exit gate remain open.
 
 ## V08 Purpose-code catalogue
 
