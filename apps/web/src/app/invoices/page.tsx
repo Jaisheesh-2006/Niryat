@@ -57,7 +57,11 @@ export default async function Invoices() {
             </dd>
             <dt>GST invoice PDF</dt>
             <dd>
-              <a href={invoice.pdfUrl}>Open PDF</a>
+              {invoice.pdfUrl !== null ? (
+                <a href={invoice.pdfUrl}>Open PDF</a>
+              ) : (
+                "Not generated (demo invoice)"
+              )}
             </dd>
           </dl>
           {invoice.action && <ActionButtons action={invoice.action} />}

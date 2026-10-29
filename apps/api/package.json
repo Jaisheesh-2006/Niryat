@@ -14,7 +14,8 @@
     "test:db": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --no-file-parallelism",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "sync:payments": "tsx src/sync.ts"
+    "sync:payments": "tsx src/sync.ts",
+    "seed:fira-demo": "tsx src/seed-fira-demo.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",

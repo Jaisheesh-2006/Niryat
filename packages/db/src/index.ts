@@ -1,6 +1,7 @@
 export * from "./actions";
 export * from "./client";
 export * from "./clients";
+export * from "./demo";
 export * from "./disputes";
 export * from "./encryption";
 export * from "./fira";

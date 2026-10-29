@@ -321,7 +321,7 @@ export const invoiceSchema = z.object({
   sac: z.string(),
   recurrence: recurrenceSchema.nullable(),
   status: z.enum(invoiceStatuses),
-  pdfUrl: z.string(),
+  pdfUrl: z.string().nullable(),
   paypalInvoiceId: z.string().nullable(),
   paypalRecurringSeriesId: z.string().nullable(),
   paidTotal: z.string(),

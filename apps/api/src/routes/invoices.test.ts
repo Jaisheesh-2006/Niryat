@@ -205,6 +205,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
   }
 
   function filePath(invoice: Invoice) {
+    if (invoice.pdfUrl === null) throw new Error("Expected an invoice PDF");
     return new URL(invoice.pdfUrl).pathname.replace(/^\/api/, "");
   }
 
