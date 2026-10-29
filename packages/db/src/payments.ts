@@ -1,4 +1,4 @@
-import type { CaptureRecord } from "@niryat/paypal";
+import type { CaptureRecord, RefundRecord } from "@niryat/paypal";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { Db } from "./client";
 import { invoices, payments } from "./schema";
@@ -99,4 +99,71 @@ export async function knownTransactionIds(db: Db, ids: readonly string[]): Promi
       throw new Error("Payment lookup failed");
     });
   return new Set(rows.map((row) => row.id));
+}
+
+export async function paymentLink(
+  db: Pick<Db, "select">,
+  captureId: string,
+): Promise<{ invoiceId: string | null; userId: string | null } | undefined> {
+  const [row] = await db
+    .select({ invoiceId: payments.invoiceId, userId: invoices.userId })
+    .from(payments)
+    .leftJoin(invoices, eq(invoices.id, payments.invoiceId))
+    .where(and(eq(payments.paypalTxnId, captureId), eq(payments.kind, "payment")))
+    .catch(() => {
+      throw new Error("Payment lookup failed");
+    });
+  return row;
+}
+
+export async function recordRefund(
+  db: Db,
+  refund: RefundRecord,
+): Promise<{ invoiceId: string | null; userId: string | null }> {
+  return db
+    .transaction(async (tx) => {
+      const payment = refund.captureId ? await paymentLink(tx, refund.captureId) : undefined;
+      const [invoice] =
+        !payment?.invoiceId && refund.paypalInvoiceId
+          ? await tx
+              .select({ id: invoices.id })
+              .from(invoices)
+              .where(eq(invoices.paypalInvoiceId, refund.paypalInvoiceId))
+          : [];
+      const values = {
+        invoiceId: payment?.invoiceId ?? invoice?.id ?? null,
+        paypalTxnId: refund.refundId,
+        captureId: refund.captureId,
+        kind: "refund",
+        gross: refund.gross,
+        fee: refund.fee,
+        net: refund.net,
+        currency: refund.currency,
+        receivedAt: new Date(refund.createTime),
+      };
+      const [saved] = await tx
+        .insert(payments)
+        .values(values)
+        .onConflictDoUpdate({
+          target: payments.paypalTxnId,
+          set: {
+            ...values,
+            invoiceId: sql`coalesce(${payments.invoiceId}, excluded.invoice_id)`,
+            captureId: sql`coalesce(${payments.captureId}, excluded.capture_id)`,
+          },
+        })
+        .returning({ invoiceId: payments.invoiceId });
+      if (!saved) throw new Error("Refund save failed");
+      if (!saved.invoiceId) return { invoiceId: null, userId: null };
+      await rollUpInvoice(tx, saved.invoiceId);
+      const [owner] = await tx
+        .select({ userId: invoices.userId })
+        .from(invoices)
+        .where(eq(invoices.id, saved.invoiceId));
+      if (!owner) throw new Error("Refund save failed");
+      return { ...saved, userId: owner.userId };
+    })
+    .catch(() => {
+      throw new Error("Refund save failed");
+    });
 }

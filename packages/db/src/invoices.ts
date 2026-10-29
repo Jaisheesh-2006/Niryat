@@ -3,7 +3,7 @@ import { type Invoice, type InvoiceInput, invoiceSchema } from "@niryat/shared";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "./client";
 import rollUpInvoice from "./payments";
-import { agentActions, clients, invoices, payments } from "./schema";
+import { agentActions, clients, disputes, invoices, payments } from "./schema";
 
 async function readInvoices(
   db: Pick<Db, "select">,
@@ -17,6 +17,9 @@ async function readInvoices(
       paidTotal: sql<string>`(select coalesce(sum(${payments.gross}), 0)::text
         from ${payments} where ${payments.invoiceId} = ${invoices.id}
         and ${payments.kind} = 'payment' and ${payments.currency} = ${invoices.currency})`,
+      refundedTotal: sql<string>`(select coalesce(sum(${payments.gross}), 0)::text
+        from ${payments} where ${payments.invoiceId} = ${invoices.id}
+        and ${payments.kind} = 'refund' and ${payments.currency} = ${invoices.currency})`,
     })
     .from(invoices)
     .innerJoin(clients, and(eq(clients.id, invoices.clientId), eq(clients.userId, userId)))
@@ -41,15 +44,28 @@ async function readInvoices(
     .catch(() => {
       throw new Error("Invoice lookup failed");
     });
-  return rows.map(({ invoice, clientName, paidTotal }) => {
+  const disputeRows = await db
+    .select()
+    .from(disputes)
+    .where(inArray(disputes.invoiceId, ids))
+    .catch(() => {
+      throw new Error("Invoice lookup failed");
+    });
+  return rows.map(({ invoice, clientName, paidTotal, refundedTotal }) => {
     const action = actionRows.find((row) => row.invoiceId === invoice.id);
     const result = invoiceSchema.safeParse({
       ...invoice,
       clientName,
       paidTotal,
+      refundedTotal,
       payments: paymentRows
         .filter((row) => row.invoiceId === invoice.id && row.kind === "payment")
         .map((row) => ({ ...row, receivedAt: row.receivedAt?.toISOString() })),
+      refunds: paymentRows
+        .filter((row) => row.invoiceId === invoice.id && row.kind === "refund")
+        .sort((a, b) => (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0))
+        .map((row) => ({ ...row, receivedAt: row.receivedAt?.toISOString() })),
+      disputes: disputeRows.filter((row) => row.invoiceId === invoice.id),
       action: action ? { ...action, createdAt: action.createdAt?.toISOString() } : null,
     });
     if (!result.success) throw new Error("Stored invoice is invalid");
@@ -126,6 +142,15 @@ export async function issueInvoice(
 
 export async function listInvoices(db: Db, userId: string): Promise<Invoice[]> {
   return readInvoices(db, userId);
+}
+
+export async function getInvoice(
+  db: Db,
+  userId: string,
+  invoiceId: string,
+): Promise<Invoice | undefined> {
+  const [invoice] = await readInvoices(db, userId, invoiceId);
+  return invoice;
 }
 
 export async function getInvoiceForAction(

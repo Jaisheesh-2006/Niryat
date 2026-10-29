@@ -13,24 +13,32 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import type { Db } from "./client";
 import {
   actionStore,
+  completeTask,
   createClient,
   createUser,
+  ensureTask,
   findPdfByToken,
   findUserByEmail,
   findUserById,
+  getInvoice,
   getInvoiceForAction,
   getProfile,
+  gstRegistration,
   issueInvoice,
   knownTransactionIds,
   listClients,
   listInvoices,
+  listTasks,
   markSent,
+  paymentLink,
   profiles,
   recordPayment,
+  recordRefund,
   rejectAction,
   setPayPalInvoiceId,
   setPayPalSeriesId,
   updateClient,
+  upsertDispute,
   upsertProfile,
 } from "./index";
 import * as schema from "./schema";
@@ -227,6 +235,79 @@ describe("storage query failures", () => {
       run: (db: Db) => knownTransactionIds(db, ["CAPTURE-SYNTHETIC"]),
       message: "Payment lookup failed",
     },
+    {
+      operation: "recordRefund",
+      run: (db: Db) =>
+        recordRefund(db, {
+          refundId: "REFUND-SYNTHETIC",
+          status: "COMPLETED",
+          captureId: "CAPTURE-SYNTHETIC",
+          paypalInvoiceId: "INV2-SYNTHETIC",
+          gross: "100.00",
+          fee: null,
+          net: null,
+          currency: "USD",
+          createTime: "2026-10-27T12:00:00Z",
+        }),
+      message: "Refund save failed",
+    },
+    {
+      operation: "paymentLink",
+      run: (db: Db) => paymentLink(db, "CAPTURE-SYNTHETIC"),
+      message: "Payment lookup failed",
+    },
+    {
+      operation: "upsertDispute",
+      run: (db: Db) =>
+        upsertDispute(db, {
+          paypalDisputeId: "DISPUTE-SYNTHETIC",
+          captureId: "CAPTURE-SYNTHETIC",
+          invoiceId: userId,
+          amount: "100.00",
+          currency: "USD",
+          reason: "SYNTHETIC",
+          status: "OPEN",
+          stage: null,
+          outcome: null,
+          responseDueDate: null,
+          paypalUpdatedAt: "2026-10-27T12:00:00Z",
+        }),
+      message: "Dispute save failed",
+    },
+    {
+      operation: "ensureTask",
+      run: (db: Db) =>
+        ensureTask(db, {
+          userId,
+          invoiceId: userId,
+          type: "refund_recorded",
+          dueDate: null,
+          message: "Synthetic task",
+          sourceRuleId: "CREDIT_NOTE",
+          dedupeKey: "refund:REFUND-SYNTHETIC",
+        }),
+      message: "Task save failed",
+    },
+    {
+      operation: "listTasks",
+      run: (db: Db) => listTasks(db, userId),
+      message: "Task lookup failed",
+    },
+    {
+      operation: "completeTask",
+      run: (db: Db) => completeTask(db, userId, userId),
+      message: "Task save failed",
+    },
+    {
+      operation: "getInvoice",
+      run: (db: Db) => getInvoice(db, userId, userId),
+      message: "Invoice lookup failed",
+    },
+    {
+      operation: "gstRegistration",
+      run: (db: Db) => gstRegistration(db, userId),
+      message: "Profile lookup failed",
+    },
   ])("$operation does not expose query values or causes", async ({ run, message }) => {
     const secrets = [
       email,
@@ -240,6 +321,9 @@ describe("storage query failures", () => {
       "INV2-SYNTHETIC",
       "SERIES-SYNTHETIC",
       "CAPTURE-SYNTHETIC",
+      "REFUND-SYNTHETIC",
+      "DISPUTE-SYNTHETIC",
+      "Synthetic task",
       "100.00",
     ];
     const failure = new Error(`Database failure: ${secrets.join(", ")}`);

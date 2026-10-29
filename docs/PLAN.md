@@ -577,7 +577,7 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 ## 21. Day-1 verification checklist
 
 **PayPal (India sandbox seller → US sandbox buyer):**
-- [ ] Log in with PayPal works: **not for India business sellers** ([findings](paypal-sandbox-findings.md#log-in-with-paypal-separate-spike-2026-10-25))
+- [ ] Log in with PayPal works: **yes for India business sellers, through an app the seller does not own** ([findings](paypal-sandbox-findings.md#root-cause-the-app-owner-cannot-sign-in-to-its-own-app-2026-10-29))
 - [x] Invoices can be created and sent to a US buyer
 - [x] Recurring invoice series can be created and activated
 - [ ] Partial payments on invoices are supported: **not for India sellers** ([findings](paypal-sandbox-findings.md))

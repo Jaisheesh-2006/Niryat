@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import type { CaptureRecord } from "@niryat/paypal";
+import type { CaptureRecord, RefundRecord } from "@niryat/paypal";
 import type { InvoiceInput } from "@niryat/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,23 +7,32 @@ import {
   actionStore,
   agentActions,
   clients,
+  completeTask,
   createUser,
+  ensureTask,
   findPdfByToken,
   firaDocuments,
   firaLines,
+  getInvoice,
   getInvoiceForAction,
+  gstRegistration,
   invoices,
   issueInvoice,
   knownTransactionIds,
   listInvoices,
+  listTasks,
   markSent,
   matches,
+  paymentLink,
   payments,
+  profiles,
   recordPayment,
+  recordRefund,
   rejectAction,
   setPayPalInvoiceId,
   setPayPalSeriesId,
   tasks,
+  upsertDispute,
 } from "./index";
 import { openTestDb, testDatabaseUrl } from "./testing";
 
@@ -43,6 +52,17 @@ const capture: CaptureRecord = {
   currency: "USD",
   fxRate: null,
   createTime: "2026-10-26T12:00:00Z",
+};
+const refund: RefundRecord = {
+  refundId: "REFUND-1",
+  status: "COMPLETED",
+  captureId: capture.captureId,
+  paypalInvoiceId: capture.paypalInvoiceId,
+  gross: "40.00",
+  fee: "1.00",
+  net: "39.00",
+  currency: "USD",
+  createTime: "2026-10-27T12:00:00Z",
 };
 
 describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
@@ -101,6 +121,9 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       clientName: "Synthetic Client",
       paidTotal: "0",
       payments: [],
+      refundedTotal: "0",
+      refunds: [],
+      disputes: [],
       status: "issued",
       action: { status: "proposed", payload: { detail: { note: "Test PDF" } } },
     });
@@ -253,6 +276,7 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       invoiceId: invoice.id,
       paypalTxnId: "REFUND",
       kind: "refund",
+      receivedAt: new Date(refund.createTime),
       gross: "100.00",
       currency: "EUR",
     });
@@ -260,6 +284,7 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
     expect((await listInvoices(t.db, userId))[0]).toMatchObject({
       status: "partially_paid",
       paidTotal: "60.00",
+      refundedTotal: "0",
     });
     expect((await listInvoices(t.db, userId))[0]?.payments).toHaveLength(2);
     expect(
@@ -318,6 +343,7 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       invoiceId: invoice.id,
       paypalTxnId: "REFUND",
       kind: "refund",
+      receivedAt: new Date(refund.createTime),
       gross: "100.00",
       currency: "EUR",
     });
@@ -341,6 +367,7 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       paypalTxnId: "REFUND",
       captureId: capture.captureId,
       kind: "refund",
+      receivedAt: new Date(refund.createTime),
       gross: refunded,
       currency: "USD",
     });
@@ -359,12 +386,236 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       invoiceId: invoice.id,
       paypalTxnId: "REFUND",
       kind: "refund",
+      receivedAt: new Date(refund.createTime),
       gross: "40.00",
       currency: "USD",
     });
     expect((await listInvoices(t.db, a.userId))[0]?.status).toBe("issued");
     await markSent(t.db, a.userId, invoice.id);
     expect((await listInvoices(t.db, a.userId))[0]?.status).toBe("partially_refunded");
+  });
+
+  it("records partial and full refunds once, preserving paid totals and PayPal figures", async () => {
+    const { userId, invoice } = await sentInvoice();
+    await recordPayment(t.db, { ...capture, gross: "100.00" });
+    expect(await paymentLink(t.db, capture.captureId)).toEqual({ invoiceId: invoice.id, userId });
+    expect(await recordRefund(t.db, refund)).toEqual({ invoiceId: invoice.id, userId });
+    await recordRefund(t.db, refund);
+    expect(await getInvoice(t.db, userId, invoice.id)).toMatchObject({
+      status: "partially_refunded",
+      paidTotal: "100.00",
+      refundedTotal: "40.00",
+      payments: [{ paypalTxnId: capture.captureId }],
+      refunds: [
+        {
+          paypalTxnId: refund.refundId,
+          captureId: capture.captureId,
+          gross: "40.00",
+          fee: "1.00",
+          net: "39.00",
+          receivedAt: refund.createTime.replace("Z", ".000Z"),
+        },
+      ],
+    });
+    await recordRefund(t.db, {
+      ...refund,
+      refundId: "REFUND-2",
+      gross: "60.00",
+      fee: null,
+      net: null,
+      createTime: "2026-10-28T12:00:00Z",
+    });
+    const saved = await getInvoice(t.db, userId, invoice.id);
+    expect(saved).toMatchObject({
+      status: "refunded",
+      paidTotal: "100.00",
+      refundedTotal: "100.00",
+    });
+    expect(saved?.refunds.map((row) => row.paypalTxnId)).toEqual(["REFUND-2", "REFUND-1"]);
+    expect(await paymentLink(t.db, refund.refundId)).toBeUndefined();
+    const b = await seller("b@example.com");
+    expect(await getInvoice(t.db, b.userId, invoice.id)).toBeUndefined();
+    expect(await getInvoice(t.db, userId, randomUUID())).toBeUndefined();
+  });
+
+  it("stores unlinked refunds, falls back to invoice IDs, and preserves links on replay", async () => {
+    const { userId, invoice } = await sentInvoice();
+    const unknown = { ...refund, captureId: "UNKNOWN", paypalInvoiceId: "INV2-UNKNOWN" };
+    expect(await recordRefund(t.db, unknown)).toEqual({ invoiceId: null, userId: null });
+    expect(await paymentLink(t.db, "UNKNOWN")).toBeUndefined();
+    expect(await t.db.select().from(payments)).toMatchObject([{ invoiceId: null, kind: "refund" }]);
+    expect(await recordRefund(t.db, { ...unknown, paypalInvoiceId: "INV2-TEST" })).toEqual({
+      invoiceId: invoice.id,
+      userId,
+    });
+    expect(await recordRefund(t.db, unknown)).toEqual({ invoiceId: invoice.id, userId });
+    expect((await getInvoice(t.db, userId, invoice.id))?.refunds).toHaveLength(1);
+  });
+
+  it("prefers the capture link over an invoice fallback and retains it without either on replay", async () => {
+    const { userId, invoice, input } = await sentInvoice();
+    const other = await issueInvoice(t.db, userId, input, finalize, numberFor);
+    await setPayPalInvoiceId(t.db, userId, other.id, "INV2-OTHER");
+    await recordPayment(t.db, capture);
+    expect(await recordRefund(t.db, { ...refund, paypalInvoiceId: "INV2-OTHER" })).toEqual({
+      invoiceId: invoice.id,
+      userId,
+    });
+    expect(await recordRefund(t.db, { ...refund, captureId: null, paypalInvoiceId: null })).toEqual(
+      { invoiceId: invoice.id, userId },
+    );
+    expect((await getInvoice(t.db, userId, invoice.id))?.refunds).toMatchObject([
+      { paypalTxnId: refund.refundId, captureId: capture.captureId },
+    ]);
+    expect((await getInvoice(t.db, userId, other.id))?.refunds).toEqual([]);
+  });
+
+  it("marks a partly paid invoice refunded when all received money is refunded", async () => {
+    const { userId, invoice } = await sentInvoice();
+    await recordPayment(t.db, capture);
+    expect((await getInvoice(t.db, userId, invoice.id))?.status).toBe("partially_paid");
+    await recordRefund(t.db, { ...refund, gross: "60.00" });
+    expect(await getInvoice(t.db, userId, invoice.id)).toMatchObject({
+      status: "refunded",
+      paidTotal: "60.00",
+      refundedTotal: "60.00",
+    });
+  });
+
+  it("ignores stale disputes and preserves their invoice link on newer and equal updates", async () => {
+    const { userId, invoice } = await sentInvoice();
+    const row = {
+      paypalDisputeId: "DISPUTE-1",
+      captureId: capture.captureId,
+      invoiceId: invoice.id,
+      amount: "100.00",
+      currency: "USD",
+      reason: "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      status: "RESOLVED",
+      stage: "CHARGEBACK",
+      outcome: "RESOLVED_SELLER_FAVOUR",
+      responseDueDate: "2026-11-05",
+      paypalUpdatedAt: "2026-10-28T12:00:00Z",
+    };
+    await upsertDispute(t.db, row);
+    await upsertDispute(t.db, {
+      ...row,
+      status: "OPEN",
+      paypalUpdatedAt: "2026-10-27T12:00:00Z",
+    });
+    expect((await getInvoice(t.db, userId, invoice.id))?.disputes).toMatchObject([
+      { status: "RESOLVED", outcome: "RESOLVED_SELLER_FAVOUR" },
+    ]);
+    await upsertDispute(t.db, {
+      ...row,
+      invoiceId: null,
+      status: "WAITING_FOR_BUYER_RESPONSE",
+      paypalUpdatedAt: "2026-10-29T12:00:00Z",
+    });
+    expect((await getInvoice(t.db, userId, invoice.id))?.disputes).toMatchObject([
+      { status: "WAITING_FOR_BUYER_RESPONSE" },
+    ]);
+    await upsertDispute(t.db, {
+      ...row,
+      invoiceId: null,
+      paypalUpdatedAt: "2026-10-29T12:00:00Z",
+    });
+    expect((await getInvoice(t.db, userId, invoice.id))?.disputes).toMatchObject([
+      { paypalDisputeId: row.paypalDisputeId, status: "RESOLVED" },
+    ]);
+  });
+
+  it("deduplicates tasks, isolates users and completes tasks idempotently", async () => {
+    const { userId, invoice } = await sentInvoice();
+    const task = {
+      userId,
+      invoiceId: invoice.id,
+      type: "refund_recorded" as const,
+      dueDate: null,
+      message: "Synthetic refund task",
+      sourceRuleId: "CREDIT_NOTE",
+      dedupeKey: "refund:REFUND-1",
+    };
+    await ensureTask(t.db, task);
+    await ensureTask(t.db, task);
+    const [saved] = await listTasks(t.db, userId);
+    if (!saved) throw new Error("Test task was not saved");
+    expect(await listTasks(t.db, userId)).toHaveLength(1);
+    const b = await seller("b@example.com");
+    expect(await listTasks(t.db, b.userId)).toEqual([]);
+    expect(await completeTask(t.db, b.userId, saved.id)).toBeUndefined();
+    expect(await completeTask(t.db, userId, randomUUID())).toBeUndefined();
+    const completed = await completeTask(t.db, userId, saved.id);
+    expect(completed).toMatchObject({ status: "done", doneAt: expect.any(String) });
+    expect(await completeTask(t.db, userId, saved.id)).toEqual(completed);
+  });
+
+  it("lists open tasks by due date then creation, followed by most recently completed", async () => {
+    const { userId } = await sentInvoice();
+    await t.db.insert(tasks).values(
+      [
+        { dedupeKey: "undated", dueDate: null, createdAt: new Date("2026-10-26T10:00:00Z") },
+        { dedupeKey: "later", dueDate: "2026-11-02", createdAt: new Date("2026-10-26T10:00:00Z") },
+        { dedupeKey: "second", dueDate: "2026-11-01", createdAt: new Date("2026-10-26T12:00:00Z") },
+        { dedupeKey: "first", dueDate: "2026-11-01", createdAt: new Date("2026-10-26T11:00:00Z") },
+        {
+          dedupeKey: "old-done",
+          status: "done",
+          doneAt: new Date("2026-10-27T12:00:00Z"),
+          dueDate: "2026-11-01",
+        },
+        {
+          dedupeKey: "new-done",
+          status: "done",
+          doneAt: new Date("2026-10-28T12:00:00Z"),
+          dueDate: "2026-11-02",
+        },
+      ].map((row) => ({
+        ...row,
+        userId,
+        type: "refund_recorded",
+        sourceRuleId: "CREDIT_NOTE",
+        message: row.dedupeKey,
+      })),
+    );
+    expect((await listTasks(t.db, userId)).map((row) => row.message)).toEqual([
+      "first",
+      "second",
+      "later",
+      "undated",
+      "new-done",
+      "old-done",
+    ]);
+  });
+
+  it("rejects invalid stored tasks without exposing their fields", async () => {
+    const { userId } = await sentInvoice();
+    const [row] = await t.db
+      .insert(tasks)
+      .values({
+        userId,
+        type: "sensitive-invalid-type",
+        message: "Sensitive message",
+        sourceRuleId: "CREDIT_NOTE",
+        dedupeKey: "invalid",
+      })
+      .returning();
+    if (!row) throw new Error("Test task was not saved");
+    await expect(listTasks(t.db, userId)).rejects.toThrow("Stored task is invalid");
+    await expect(completeTask(t.db, userId, row.id)).rejects.toThrow("Stored task is invalid");
+  });
+
+  it("reads GST registration without decrypting profile fields", async () => {
+    const { userId } = await sentInvoice();
+    expect(await gstRegistration(t.db, userId)).toBeNull();
+    await t.db
+      .insert(profiles)
+      .values({ userId, gstRegistered: true, gstin: "unreadable-ciphertext" });
+    expect(await gstRegistration(t.db, userId)).toBe(true);
+    await t.db.update(profiles).set({ gstRegistered: false }).where(eq(profiles.userId, userId));
+    expect(await gstRegistration(t.db, userId)).toBe(false);
+    const b = await seller("b@example.com");
+    expect(await gstRegistration(t.db, b.userId)).toBeNull();
   });
 
   it("rejects duplicate task dedupe keys", async () => {

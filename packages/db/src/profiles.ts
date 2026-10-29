@@ -77,3 +77,14 @@ export async function getProfile(
     });
   return profile ? decryptProfile(profile, key) : undefined;
 }
+
+export async function gstRegistration(db: Db, userId: string): Promise<boolean | null> {
+  const [profile] = await db
+    .select({ gstRegistered: profiles.gstRegistered })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .catch(() => {
+      throw new Error("Profile lookup failed");
+    });
+  return profile?.gstRegistered ?? null;
+}

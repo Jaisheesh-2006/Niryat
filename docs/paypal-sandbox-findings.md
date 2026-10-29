@@ -166,7 +166,7 @@ India business run in detail:
 - The reply had **no `id_token`**.
 - `userinfo` failed with HTTP 400 `invalid_request`, "Unable to fetch details to serve the request", for both `schema=paypalv1.1` and `schema=openid`.
 
-**Conclusion:** in sandbox, Log in with PayPal cannot identify an India business seller. Niryat therefore needs another sign-in method. The decision is recorded in [spec 01](specs/01-health-check.md#india-sandbox-limitations).
+**Conclusion (superseded 2026-10-29, see below):** in sandbox, Log in with PayPal cannot identify an India business seller. Niryat therefore needs another sign-in method. The decision is recorded in [spec 01](specs/01-health-check.md#india-sandbox-limitations).
 
 ### Rerun with PayPal support's isolation steps (2026-10-27)
 
@@ -177,13 +177,23 @@ The script now refreshes the token before calling userinfo, and also tries `GET 
 | US personal                | HTTP 200 | HTTP 200 (`paypalv1.1`)   | not reached              |
 | India personal             | HTTP 200 | HTTP 200 (`paypalv1.1`)   | not reached              |
 | India business (both runs) | HTTP 200 | HTTP 400 for both schemas | HTTP 401                 |
-- **The cause is not region.** An India personal account works, so the failure belongs to the India business account type.
+- **The cause is not region.** An India personal account works. (The business-account-type explanation drawn here was wrong; see the next section.)
 - **A missing `id_token` is normal.** The two working accounts don't get one either, and their reply scopes match the business account's.
 - **A stale token is ruled out.** A freshly refreshed token still fails.
 - The `openidconnect` 401 shows nothing about business accounts on their own: the working accounts stopped at the first success and never reached that path.
 - Not tested: a US business account, which would show whether every business account fails or only India ones.
 
 Business-run debug IDs: `f708273beeed9` (`paypalv1.1`), `f95855074fd65` (`openid`), `f91405735dde4` (`openidconnect`).
+
+### Root cause: the app owner cannot sign in to its own app (2026-10-29)
+
+PayPal support: "We've seen that error before when API Caller is same as authenticating user." The failing India business runs signed in as the sandbox account that owns the REST app.
+
+Rerun with the same app, signing in as a different India business sandbox account (one that does not own the app):
+- Code exchange HTTP 200, refresh HTTP 200, `oauth2/userinfo?schema=paypalv1.1` HTTP 200 (paypal-debug-id `f60639618c4a7`).
+- `user_id` present, email present (a `business.example.com` address), no `id_token`.
+
+**Conclusion:** Log in with PayPal works for India business sellers. It fails only when the signing-in account is the one whose client ID and secret make the call. A sign-in app must therefore belong to a different PayPal account from the seller's. An `id_token` is returned only when requested with `response_type=code+id_token`. Niryat doesn't need it.
 
 ## Setup gotchas (observed 2026-10-24)
 

@@ -241,6 +241,9 @@ it("validates invoice responses with payments and an action", () => {
     paypalInvoiceId: "INV2-test",
     paypalRecurringSeriesId: null,
     paidTotal: "100.00",
+    refundedTotal: "0",
+    refunds: [],
+    disputes: [],
     payments: [
       {
         id: "30000000-0000-4000-8000-000000000001",

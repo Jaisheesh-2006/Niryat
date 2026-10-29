@@ -311,6 +311,9 @@ export const invoiceSchema = z.object({
   paypalRecurringSeriesId: z.string().nullable(),
   paidTotal: z.string(),
   payments: z.array(paymentSchema),
+  refundedTotal: z.string(),
+  refunds: z.array(refundSchema),
+  disputes: z.array(disputeSchema),
   action: actionSchema.nullable(),
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
