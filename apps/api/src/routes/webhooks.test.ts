@@ -47,6 +47,11 @@ const invoiceEvent = {
     invoice: { payments: { transactions: [{ payment_id: capture.captureId }] } },
   },
 };
+const invoiceRefundEvent = {
+  id: "WH-INVOICE-REFUND",
+  event_type: "INVOICING.INVOICE.REFUNDED",
+  resource: { invoice: { id: "INV2-TEST" } },
+};
 
 function setup(db: Db) {
   const verify = vi
@@ -172,7 +177,7 @@ describe("webhook boundaries without a database connection", () => {
     expect(t.db.transaction).not.toHaveBeenCalled();
   });
 
-  it("records pending refunds after signature verification", async () => {
+  it("requests redelivery of pending refunds after signature verification", async () => {
     f.ledger.getRefund = vi.fn<PayPalLedger["getRefund"]>().mockResolvedValue({
       refundId: "REFUND-TEST",
       status: "PENDING",
@@ -185,10 +190,77 @@ describe("webhook boundaries without a database connection", () => {
       createTime: "2026-10-26T12:00:00Z",
     });
     const response = await f.deliver({ ...captureEvent, event_type: "PAYMENT.CAPTURE.REFUNDED" });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "recorded" });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "refund_not_ready" });
     expect(f.verify).toHaveBeenCalledOnce();
     expect(f.getCapture).not.toHaveBeenCalled();
+    expect(t.db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid signature before reading invoice refunds", async () => {
+    const read = vi.spyOn(f.rest, "get");
+    const getRefund = vi.spyOn(f.ledger, "getRefund");
+    f.verify.mockResolvedValue({ verification_status: "FAILURE" });
+    expect((await f.deliver(invoiceRefundEvent)).status).toBe(400);
+    expect(read).not.toHaveBeenCalled();
+    expect(getRefund).not.toHaveBeenCalled();
+    expect(t.db.transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([{}, { id: "../private" }, { invoice: { id: 42 } }])(
+    "rejects malformed invoice refund notifications before invoice reads",
+    async (resource) => {
+      const read = vi.spyOn(f.rest, "get");
+      expect((await f.deliver({ ...invoiceRefundEvent, resource })).status).toBe(400);
+      expect(read).not.toHaveBeenCalled();
+      expect(t.db.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([{ id: "INV2-TEST" }, { invoice: { id: "INV2-TEST" } }])(
+    "reads invoice refunds rather than treating the invoice ID or event amount as a refund",
+    async (resource) => {
+      f.rest.get = async (path, parse) => {
+        expect(path).toBe("/v2/invoicing/invoices/INV2-TEST");
+        return parse({
+          id: "INV2-TEST",
+          refunds: {
+            transactions: [{ type: "PAYPAL", recipient_transaction_id: "REFUND-PENDING" }],
+          },
+        });
+      };
+      const getRefund = vi.fn<PayPalLedger["getRefund"]>().mockResolvedValue(null);
+      f.ledger.getRefund = getRefund;
+      const response = await f.deliver({ ...invoiceRefundEvent, resource });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: "refund_not_ready" });
+      expect(getRefund).toHaveBeenCalledExactlyOnceWith("REFUND-PENDING");
+      expect(t.db.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["read", "payload"])(
+    "returns a safe retryable failure for invoice %s errors",
+    async (step) => {
+      f.rest.get = async (_path, parse) => {
+        if (step === "read") throw new Error("private PayPal response");
+        return parse({ id: "INV2-TEST", refunds: { transactions: [{ type: "PAYPAL" }] } });
+      };
+      const response = await f.deliver(invoiceRefundEvent);
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: "internal_error" });
+      expect(t.db.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it("acknowledges external refund notices and unrelated all-event subscriptions without ledger writes", async () => {
+    const getRefund = vi.spyOn(f.ledger, "getRefund");
+    f.rest.get = async (_path, parse) =>
+      parse({ id: "INV2-TEST", refunds: { transactions: [{ type: "EXTERNAL" }] } });
+    expect((await f.deliver(invoiceRefundEvent)).status).toBe(200);
+    const response = await f.deliver({ ...captureEvent, event_type: "INVOICING.INVOICE.CREATED" });
+    expect(await response.json()).toEqual({ status: "ignored" });
+    expect(getRefund).not.toHaveBeenCalled();
     expect(t.db.transaction).not.toHaveBeenCalled();
   });
 
@@ -400,6 +472,78 @@ describe.skipIf(!testDatabaseUrl)("webhook payment storage", () => {
       }),
     ]);
   });
+
+  it.each([false, true])(
+    "records invoice refunds before payment events and dedupes retries and overlapping capture events (failure: %s)",
+    async (failRead) => {
+      const invoice = await sentInvoice();
+      let refundIds = ["REFUND-FIRST"];
+      let failSecond = failRead;
+      f.rest.get = async (path, parse) => {
+        expect(path).toBe("/v2/invoicing/invoices/INV2-TEST");
+        return parse({
+          id: "INV2-TEST",
+          refunds: {
+            transactions: refundIds.map((id) => ({ type: "PAYPAL", recipient_transaction_id: id })),
+          },
+        });
+      };
+      f.ledger.getRefund = vi.fn<PayPalLedger["getRefund"]>().mockImplementation(async (id) => {
+        if (id === "REFUND-SECOND" && failSecond) {
+          failSecond = false;
+          throw new Error("private refund read failure");
+        }
+        return {
+          refundId: id,
+          status: "COMPLETED",
+          captureId: capture.captureId,
+          paypalInvoiceId: capture.paypalInvoiceId,
+          gross: id === "REFUND-FIRST" ? "40.00" : "60.00",
+          fee: "0.00",
+          net: id === "REFUND-FIRST" ? "40.00" : "60.00",
+          currency: "USD",
+          createTime: "2026-10-29T12:00:00Z",
+        };
+      });
+
+      expect((await f.deliver(invoiceRefundEvent)).status).toBe(200);
+      expect(await t.db.select().from(invoices)).toEqual([
+        expect.objectContaining({ id: invoice.id, status: "partially_refunded" }),
+      ]);
+      expect(await t.db.select().from(tasks)).toHaveLength(1);
+      expect(f.getCapture).toHaveBeenCalledExactlyOnceWith(capture.captureId);
+
+      refundIds = ["REFUND-FIRST", "REFUND-SECOND"];
+      expect((await f.deliver(invoiceRefundEvent)).status).toBe(failRead ? 500 : 200);
+      expect(await t.db.select().from(payments)).toHaveLength(failRead ? 2 : 3);
+      expect((await f.deliver(invoiceRefundEvent)).status).toBe(200);
+      expect(
+        (
+          await f.deliver({
+            id: "WH-CAPTURE-REFUND",
+            event_type: "PAYMENT.CAPTURE.REFUNDED",
+            resource: { id: "REFUND-SECOND" },
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (await f.deliver({ ...invoiceRefundEvent, resource: { invoice: { id: "INV2-TEST" } } }))
+          .status,
+      ).toBe(200);
+
+      expect(await t.db.select().from(payments)).toHaveLength(3);
+      expect(await t.db.select().from(invoices)).toEqual([
+        expect.objectContaining({ id: invoice.id, status: "refunded" }),
+      ]);
+      expect(await t.db.select().from(tasks)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ invoiceId: invoice.id, dedupeKey: "refund:REFUND-FIRST" }),
+          expect.objectContaining({ invoiceId: invoice.id, dedupeKey: "refund:REFUND-SECOND" }),
+        ]),
+      );
+      expect(await t.db.select().from(tasks)).toHaveLength(2);
+    },
+  );
 
   it("records a linked dispute and creates one dispute task", async () => {
     const invoice = await sentInvoice();

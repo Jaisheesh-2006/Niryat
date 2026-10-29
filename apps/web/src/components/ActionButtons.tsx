@@ -5,13 +5,25 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { sendJson } from "../lib/forms";
 
+const labels: Record<Action["paypalAction"], { approve: string; done: string }> = {
+  send_invoice: { approve: "Approve and send to PayPal", done: "Sent through PayPal." },
+  create_recurring_series: {
+    approve: "Approve and start the PayPal series",
+    done: "Sent through PayPal.",
+  },
+  refund_payment: {
+    approve: "Approve and refund through PayPal",
+    done: "Refund sent to PayPal.",
+  },
+};
+
 export function ActionButtons({ action }: { action: Action }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
   if (action.status === "approved") return <p>Sending to PayPal…</p>;
-  if (action.status === "done") return <p>Sent through PayPal.</p>;
+  if (action.status === "done") return <p>{labels[action.paypalAction].done}</p>;
   if (action.status === "rejected") return <p>Rejected. Nothing was sent to PayPal.</p>;
 
   async function submit(decision: "approve" | "reject") {
@@ -37,9 +49,7 @@ export function ActionButtons({ action }: { action: Action }) {
         </p>
       )}
       <button type="button" disabled={submitting} onClick={() => submit("approve")}>
-        {action.paypalAction === "send_invoice"
-          ? "Approve and send to PayPal"
-          : "Approve and start the PayPal series"}
+        {labels[action.paypalAction].approve}
       </button>
       <button type="button" disabled={submitting} onClick={() => submit("reject")}>
         Reject

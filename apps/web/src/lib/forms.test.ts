@@ -1,7 +1,125 @@
+import type { Action } from "@niryat/shared";
+import { Children, createElement, isValidElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
-import { clientBody, invoiceBody, profileBody, sendJson, text, wholeNumber, yesNo } from "./forms";
+import { ActionButtons } from "../components/ActionButtons";
+import { RefundForm } from "../components/RefundForm";
+import { TaskDoneButton } from "../components/TaskDoneButton";
+import {
+  clientBody,
+  invoiceBody,
+  profileBody,
+  refundBody,
+  sendJson,
+  text,
+  wholeNumber,
+  yesNo,
+} from "./forms";
 
-afterEach(() => vi.unstubAllGlobals());
+const { refresh, setState } = vi.hoisted(() => ({ refresh: vi.fn(), setState: vi.fn() }));
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+vi.mock("react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react")>()),
+  useId: () => "refund-amount",
+  useState: (initial: unknown) => [initial, setState],
+}));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
+
+it("keeps the refund amount as a decimal string", () => {
+  const form = new FormData();
+  form.set("amount", " 40.00 ");
+  expect(refundBody(form)).toEqual({ amount: "40.00" });
+});
+
+it.each([true, false])("proposes a refund and handles success: %s", async (success) => {
+  vi.stubGlobal(
+    "FormData",
+    class extends FormData {
+      constructor() {
+        super();
+        this.set("amount", "40.00");
+      }
+    },
+  );
+  const fetch = vi
+    .fn()
+    .mockResolvedValue(
+      success
+        ? new Response(null, { status: 201 })
+        : Response.json({ error: "refund_pending" }, { status: 409 }),
+    );
+  vi.stubGlobal("fetch", fetch);
+  const element = RefundForm({ paymentId: "payment-id", currency: "USD" });
+  const event = { preventDefault: vi.fn(), currentTarget: {} };
+  if (!isValidElement<{ onSubmit: (submitEvent: typeof event) => Promise<void> }>(element))
+    throw new Error("Expected refund form");
+  expect(fetch).not.toHaveBeenCalled();
+  await element.props.onSubmit(event);
+  expect(event.preventDefault).toHaveBeenCalledOnce();
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/payments/payment-id/refunds", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: '{"amount":"40.00"}',
+  });
+  expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
+  expect(setState).toHaveBeenCalledWith(false);
+  if (!success)
+    expect(setState).toHaveBeenLastCalledWith(
+      "A refund for this payment is already waiting for your approval.",
+    );
+});
+
+it.each([true, false])("marks a task done and handles success: %s", async (success) => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValue(
+      success
+        ? new Response(null, { status: 200 })
+        : Response.json({ error: "not_found" }, { status: 404 }),
+    );
+  vi.stubGlobal("fetch", fetch);
+  const element = TaskDoneButton({ taskId: "task-id" });
+  const button = Children.toArray(element.props.children).find(
+    (child) => isValidElement(child) && child.type === "button",
+  );
+  if (!isValidElement<{ onClick: () => Promise<void> }>(button))
+    throw new Error("Expected task button");
+  expect(fetch).not.toHaveBeenCalled();
+  await button.props.onClick();
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/tasks/task-id/done", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
+  expect(setState).toHaveBeenCalledWith(false);
+  if (!success) expect(setState).toHaveBeenLastCalledWith("Not found. Refresh the page.");
+});
+
+it("labels refund approval and completion without sending a request", () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  const action: Action = {
+    id: "10000000-0000-4000-8000-000000000001",
+    paymentId: "10000000-0000-4000-8000-000000000002",
+    paypalAction: "refund_payment",
+    status: "proposed",
+    payload: {},
+    error: null,
+    createdAt: "2026-10-29T00:00:00Z",
+  };
+  const html = renderToStaticMarkup(createElement(ActionButtons, { action }));
+  expect(html).toContain("Approve and refund through PayPal");
+  expect(
+    renderToStaticMarkup(createElement(ActionButtons, { action: { ...action, status: "done" } })),
+  ).toContain("Refund sent to PayPal.");
+  expect(fetch).not.toHaveBeenCalled();
+});
 
 it("converts profile form fields to their request values", () => {
   const form = new FormData();
@@ -183,6 +301,8 @@ it.each([
   ["paypal_unavailable", "PayPal is not configured on this server."],
   ["file_storage_unavailable", "File storage is not configured on this server."],
   ["not_found", "Not found. Refresh the page."],
+  ["refund_pending", "A refund for this payment is already waiting for your approval."],
+  ["refund_exceeds_payment", "The refund is more than what is left to refund on this payment."],
   ["other", "Something went wrong. Try again."],
 ])("maps the %s error", async (error, message) => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error }, { status: 400 })));

@@ -10,6 +10,8 @@ const apiUrl = z
 
 const config: NextConfig = {
   transpilePackages: ["@niryat/shared"],
+  // Avoid missing SST files in the persistent Windows development cache.
+  experimental: { turbopackFileSystemCacheForDev: false },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiUrl}/:path*` }];
   },

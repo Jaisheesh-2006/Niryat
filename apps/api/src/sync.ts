@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { parseArgs } from "node:util";
 import { createDb, type Db, knownTransactionIds } from "@niryat/db";
 import {
   createPayPalLedger,
@@ -7,31 +8,40 @@ import {
   type PayPalLedger,
   type PayPalRestClient,
 } from "@niryat/paypal";
+import { z } from "zod";
 import { recordDispute } from "./disputes";
 import { loadAuthEnv, loadEnv, loadPayPalEnv } from "./env";
-import { recordCapture } from "./payments";
+import { recordCapture, recordRefundById } from "./payments";
 
-export async function syncPayments(deps: { db: Db; ledger: PayPalLedger }, now: Date) {
+export async function syncPayments(
+  deps: { db: Db; ledger: Pick<PayPalLedger, "searchTransactions" | "getCapture" | "getRefund"> },
+  now: Date,
+) {
   const rows = (
     await deps.ledger.searchTransactions({
       start: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       end: now.toISOString(),
     })
-  ).filter((row) => row.eventCode.startsWith("T00"));
-  // shortcut: refunds missed by webhooks are not reconciled; add T11xx rows to the sync if one is ever missed.
+  ).filter((row) => row.eventCode.startsWith("T00") || row.eventCode === "T1107");
   const known = await knownTransactionIds(
     deps.db,
     rows.map((row) => row.transactionId),
   );
   const summary = { seen: rows.length, alreadyRecorded: 0, recorded: 0, skipped: 0, failed: 0 };
   for (const row of rows) {
-    if (known.has(row.transactionId)) {
+    const refund = row.eventCode === "T1107";
+    if (!refund && known.has(row.transactionId)) {
       summary.alreadyRecorded++;
       continue;
     }
     try {
-      if ((await recordCapture(deps, row.transactionId)) === "recorded") {
-        summary.recorded++;
+      // Retry known refunds too: the row may have saved before its task failed.
+      const outcome = refund
+        ? await recordRefundById(deps, row.transactionId)
+        : await recordCapture(deps, row.transactionId);
+      if (outcome === "recorded") {
+        if (known.has(row.transactionId)) summary.alreadyRecorded++;
+        else summary.recorded++;
         known.add(row.transactionId);
       } else {
         summary.skipped++;
@@ -63,7 +73,24 @@ export async function syncDisputes(
   return summary;
 }
 
-export async function main() {
+export async function main(args: string[] = []) {
+  let refundId: string | undefined;
+  try {
+    const { values } = parseArgs({
+      args,
+      options: { "refund-id": { type: "string" } },
+      allowPositionals: false,
+    });
+    refundId = z
+      .string()
+      .regex(/^[A-Za-z0-9-]+$/)
+      .optional()
+      .parse(values["refund-id"]);
+  } catch {
+    console.error("Invalid arguments: refund-id. Use --refund-id <PayPal refund ID>.");
+    process.exitCode = 1;
+    return;
+  }
   try {
     try {
       process.loadEnvFile(resolve("../../.env"));
@@ -93,6 +120,12 @@ export async function main() {
         clientId: paypalEnv.PAYPAL_CLIENT_ID,
         clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET,
       });
+      if (refundId) {
+        const status = await recordRefundById({ db: database.db, ledger }, refundId);
+        console.log(JSON.stringify({ refund: { status } }));
+        if (status !== "recorded") process.exitCode = 1;
+        return;
+      }
       const rest = createPayPalRestClient({
         clientId: paypalEnv.PAYPAL_CLIENT_ID,
         clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET,
@@ -112,4 +145,4 @@ export async function main() {
   }
 }
 
-if (import.meta.main) void main();
+if (import.meta.main) void main(process.argv.slice(2));

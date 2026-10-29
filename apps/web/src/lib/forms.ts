@@ -68,6 +68,10 @@ export function invoiceBody(form: FormData): Record<string, unknown> {
   };
 }
 
+export function refundBody(form: FormData): Record<string, unknown> {
+  return { amount: text(form, "amount") };
+}
+
 const labels: Record<string, string> = {
   email: "Client email",
   legalName: "Legal name",
@@ -134,6 +138,16 @@ export async function sendJson(
         };
       case "action_not_pending":
         return { ok: false, message: "This action was already handled. Refresh the page." };
+      case "refund_pending":
+        return {
+          ok: false,
+          message: "A refund for this payment is already waiting for your approval.",
+        };
+      case "refund_exceeds_payment":
+        return {
+          ok: false,
+          message: "The refund is more than what is left to refund on this payment.",
+        };
       case "paypal_failed":
         if (!parsed.data.code) return fallback;
         return {

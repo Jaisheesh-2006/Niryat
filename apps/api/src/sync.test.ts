@@ -1,9 +1,18 @@
 import * as dbModule from "@niryat/db";
-import { payments, recordPayment } from "@niryat/db";
+import {
+  clients,
+  createUser,
+  getInvoice,
+  invoices,
+  payments,
+  recordPayment,
+  tasks,
+} from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
 import type { CaptureRecord, PayPalLedger, PayPalRestClient } from "@niryat/paypal";
 import * as paypalModule from "@niryat/paypal";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import * as paymentModule from "./payments";
 import { main, syncDisputes, syncPayments } from "./sync";
 
 const now = new Date("2026-10-26T20:30:00.000Z");
@@ -114,6 +123,143 @@ describe("payment sync CLI", () => {
     expect(close).toHaveBeenCalledExactlyOnceWith();
   });
 
+  it.each(["recorded", "not_found", "not_completed"] as const)(
+    "recovers an explicit refund without transaction search (status: %s)",
+    async (status) => {
+      const recordRefund = vi.spyOn(paymentModule, "recordRefundById").mockResolvedValue(status);
+
+      await main(["--refund-id", "REFUND-MISSED"]);
+
+      expect(recordRefund).toHaveBeenCalledExactlyOnceWith(
+        { db: database.db, ledger: expect.objectContaining({ getCapture }) },
+        "REFUND-MISSED",
+      );
+      expect(searchTransactions).not.toHaveBeenCalled();
+      expect(paypalModule.createPayPalRestClient).not.toHaveBeenCalled();
+      expect(console.log).toHaveBeenCalledExactlyOnceWith(JSON.stringify({ refund: { status } }));
+      expect(console.error).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(status === "recorded" ? 0 : 1);
+      expect(close).toHaveBeenCalledExactlyOnceWith();
+    },
+  );
+
+  it("reports an explicit refund failure safely and closes the database", async () => {
+    vi.spyOn(paymentModule, "recordRefundById").mockRejectedValue(
+      new Error("private refund detail"),
+    );
+
+    await main(["--refund-id", "REFUND-FAILED"]);
+
+    expect(searchTransactions).not.toHaveBeenCalled();
+    expect(console.log).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledExactlyOnceWith("Payment sync failed");
+    expect(process.exitCode).toBe(1);
+    expect(close).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it.each([
+    ["--refund-id"],
+    ["--refund-id", ""],
+    ["--refund-id", "../private"],
+    ["--unknown", "private"],
+    ["private"],
+  ])(
+    "rejects invalid recovery arguments before loading environment or clients: %j",
+    async (...args) => {
+      await main(args);
+
+      expect(process.loadEnvFile).not.toHaveBeenCalled();
+      expect(dbModule.createDb).not.toHaveBeenCalled();
+      expect(paypalModule.createPayPalLedger).not.toHaveBeenCalled();
+      expect(console.log).not.toHaveBeenCalled();
+      expect(console.error).toHaveBeenCalledExactlyOnceWith(
+        "Invalid arguments: refund-id. Use --refund-id <PayPal refund ID>.",
+      );
+      expect(process.exitCode).toBe(1);
+    },
+  );
+
+  it("reconciles payment refunds without treating fee refunds or other reversals as refunds", async () => {
+    searchTransactions.mockResolvedValue([
+      { transactionId: "REFUND-KNOWN", eventCode: "T1107" },
+      { transactionId: "REFUND-MISSED", eventCode: "T1107" },
+      { transactionId: "REFUND-MISSED", eventCode: "T1107" },
+      { transactionId: "FEE-REVERSAL", eventCode: "T1108" },
+      { transactionId: "FEE-REFUND", eventCode: "T1109" },
+      { transactionId: "DISPUTE-HOLD", eventCode: "T1110" },
+      { transactionId: "PAYMENT-REVERSAL", eventCode: "T1106" },
+    ]);
+    vi.mocked(dbModule.knownTransactionIds).mockResolvedValue(new Set(["REFUND-KNOWN"]));
+    const recordRefund = vi.spyOn(paymentModule, "recordRefundById").mockResolvedValue("recorded");
+
+    await main();
+
+    expect(recordRefund.mock.calls.map(([, id]) => id)).toEqual([
+      "REFUND-KNOWN",
+      "REFUND-MISSED",
+      "REFUND-MISSED",
+    ]);
+    expect(getCapture).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledExactlyOnceWith(
+      JSON.stringify({
+        payments: { seen: 3, alreadyRecorded: 2, recorded: 1, skipped: 0, failed: 0 },
+        disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+      }),
+    );
+    expect(process.exitCode).toBe(0);
+  });
+
+  it.each(["not_found", "not_completed"] as const)("skips a %s refund", async (outcome) => {
+    searchTransactions.mockResolvedValue([{ transactionId: "REFUND-SKIPPED", eventCode: "T1107" }]);
+    vi.spyOn(paymentModule, "recordRefundById").mockResolvedValue(outcome);
+
+    await main();
+
+    expect(console.log).toHaveBeenCalledExactlyOnceWith(
+      JSON.stringify({
+        payments: { seen: 1, alreadyRecorded: 0, recorded: 0, skipped: 1, failed: 0 },
+        disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+      }),
+    );
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("counts a refund failure, continues, and retries even when the refund row is already saved", async () => {
+    searchTransactions.mockResolvedValue([
+      { transactionId: "REFUND-TASK-FAILED", eventCode: "T1107" },
+      { transactionId: "REFUND-NEXT", eventCode: "T1107" },
+    ]);
+    vi.mocked(dbModule.knownTransactionIds).mockResolvedValue(new Set(["REFUND-TASK-FAILED"]));
+    const recordRefund = vi
+      .spyOn(paymentModule, "recordRefundById")
+      .mockRejectedValueOnce(new Error("private task failure"))
+      .mockResolvedValue("recorded");
+
+    await main();
+    expect(console.log).toHaveBeenLastCalledWith(
+      JSON.stringify({
+        payments: { seen: 2, alreadyRecorded: 0, recorded: 1, skipped: 0, failed: 1 },
+        disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+      }),
+    );
+    expect(process.exitCode).toBe(1);
+    expect(console.error).not.toHaveBeenCalled();
+
+    vi.mocked(dbModule.knownTransactionIds).mockResolvedValue(
+      new Set(["REFUND-TASK-FAILED", "REFUND-NEXT"]),
+    );
+    process.exitCode = 0;
+    await main();
+    expect(recordRefund).toHaveBeenCalledTimes(4);
+    expect(console.log).toHaveBeenLastCalledWith(
+      JSON.stringify({
+        payments: { seen: 2, alreadyRecorded: 2, recorded: 0, skipped: 0, failed: 0 },
+        disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+      }),
+    );
+    expect(process.exitCode).toBe(0);
+  });
+
   it("reports a cleanup failure safely and exits unsuccessfully", async () => {
     close.mockRejectedValue(new Error("private database detail"));
     await main();
@@ -140,12 +286,11 @@ describe.skipIf(!testDatabaseUrl)("payment reconciliation", () => {
   let t: Awaited<ReturnType<typeof openTestDb>>;
   const getCapture = vi.fn<PayPalLedger["getCapture"]>();
   const searchTransactions = vi.fn<PayPalLedger["searchTransactions"]>();
+  const getRefund = vi.fn<PayPalLedger["getRefund"]>();
   const ledger: PayPalLedger = {
     getCapture,
     searchTransactions,
-    async getRefund() {
-      throw new Error("Unexpected refund read");
-    },
+    getRefund,
     async refundCapture() {
       throw new Error("Unexpected refund request");
     },
@@ -157,6 +302,7 @@ describe.skipIf(!testDatabaseUrl)("payment reconciliation", () => {
   beforeEach(async () => {
     await t.reset();
     getCapture.mockReset().mockResolvedValue(capture);
+    getRefund.mockReset().mockRejectedValue(new Error("Unexpected refund read"));
     searchTransactions.mockReset().mockResolvedValue([
       { transactionId: "CAPTURE-KNOWN", eventCode: "T0006" },
       { transactionId: capture.captureId, eventCode: "T0006" },
@@ -164,6 +310,7 @@ describe.skipIf(!testDatabaseUrl)("payment reconciliation", () => {
     ]);
   });
   afterAll(async () => t?.close());
+  afterEach(() => vi.restoreAllMocks());
 
   it("searches seven days, filters events, skips known payments and dedupes the next run", async () => {
     await recordPayment(t.db, { ...capture, captureId: "CAPTURE-KNOWN" });
@@ -201,6 +348,99 @@ describe.skipIf(!testDatabaseUrl)("payment reconciliation", () => {
     expect(getCapture).not.toHaveBeenCalled();
     expect(await t.db.select().from(payments)).toHaveLength(2);
   });
+
+  it.each([false, true])(
+    "recovers missed refunds and tasks without duplicates (task write fails: %s)",
+    async (taskFails) => {
+      const user = await createUser(t.db, { email: "sync@example.com", passwordHash: "test-hash" });
+      if (!user) throw new Error("Test user was not created");
+      const [client] = await t.db
+        .insert(clients)
+        .values({ userId: user.id, name: "Test Client", country: "US" })
+        .returning();
+      if (!client) throw new Error("Test client was not created");
+      const linkedCapture = { ...capture, paypalInvoiceId: "INV2-REFUND-SYNC" };
+      const [invoice] = await t.db
+        .insert(invoices)
+        .values({
+          userId: user.id,
+          clientId: client.id,
+          type: "one_time",
+          number: "2026-27/0001",
+          fy: "2026-27",
+          seq: 1,
+          date: "2026-10-26",
+          currency: "USD",
+          amount: "100.00",
+          description: "Software development",
+          sac: "998314",
+          pdfUrl: "https://example.invalid/api/files/test",
+          paypalInvoiceId: linkedCapture.paypalInvoiceId,
+          status: "sent",
+        })
+        .returning();
+      if (!invoice) throw new Error("Test invoice was not created");
+      getCapture.mockResolvedValue(linkedCapture);
+      getRefund.mockImplementation(async (id) => ({
+        refundId: id,
+        status: "COMPLETED",
+        captureId: linkedCapture.captureId,
+        paypalInvoiceId: linkedCapture.paypalInvoiceId,
+        gross: id === "REFUND-APPROVED" ? "40.00" : "60.00",
+        fee: "0.00",
+        net: id === "REFUND-APPROVED" ? "40.00" : "60.00",
+        currency: "USD",
+        createTime: "2026-10-26T13:00:00Z",
+      }));
+      await recordPayment(t.db, linkedCapture);
+      await paymentModule.recordRefundById({ db: t.db, ledger }, "REFUND-APPROVED");
+      expect((await getInvoice(t.db, user.id, invoice.id))?.status).toBe("partially_refunded");
+      const [approvedTask] = await dbModule.listTasks(t.db, user.id);
+      if (!approvedTask) throw new Error("Test refund task was not created");
+      const completedTask = await dbModule.completeTask(t.db, user.id, approvedTask.id);
+      searchTransactions.mockResolvedValue([
+        { transactionId: "REFUND-MISSED", eventCode: "T1107" },
+        { transactionId: linkedCapture.captureId, eventCode: "T0006" },
+        { transactionId: "REFUND-APPROVED", eventCode: "T1107" },
+      ]);
+      if (taskFails)
+        vi.spyOn(dbModule, "ensureTask").mockRejectedValueOnce(new Error("Task save failed"));
+
+      expect(await syncPayments({ db: t.db, ledger }, now)).toEqual({
+        seen: 3,
+        alreadyRecorded: 2,
+        recorded: taskFails ? 0 : 1,
+        skipped: 0,
+        failed: taskFails ? 1 : 0,
+      });
+      expect(await getInvoice(t.db, user.id, invoice.id)).toMatchObject({
+        status: "refunded",
+        paidTotal: "100.00",
+        refundedTotal: "100.00",
+        refunds: expect.arrayContaining([
+          expect.objectContaining({
+            paypalTxnId: "REFUND-MISSED",
+            gross: "60.00",
+            fee: "0.00",
+            net: "60.00",
+          }),
+        ]),
+      });
+      expect(await t.db.select().from(tasks)).toHaveLength(taskFails ? 1 : 2);
+      expect(await syncPayments({ db: t.db, ledger }, now)).toEqual({
+        seen: 3,
+        alreadyRecorded: 3,
+        recorded: 0,
+        skipped: 0,
+        failed: 0,
+      });
+      expect(await t.db.select().from(payments)).toHaveLength(3);
+      expect(await t.db.select().from(tasks)).toHaveLength(2);
+      expect(
+        (await dbModule.listTasks(t.db, user.id)).find((task) => task.id === approvedTask.id),
+      ).toEqual(completedTask);
+    },
+  );
 
   it("counts a failed capture and continues recording later rows", async () => {
     getCapture.mockRejectedValueOnce(new Error("Capture read failed"));

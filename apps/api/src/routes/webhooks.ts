@@ -1,4 +1,4 @@
-import { verifyWebhookSignature } from "@niryat/paypal";
+import { getInvoiceRefundIds, verifyWebhookSignature } from "@niryat/paypal";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
@@ -14,6 +14,13 @@ const envelopeSchema = z.object({
 const captureSchema = z.object({ id: z.string().min(1) });
 const refundSchema = z.object({ id: z.string().min(1) });
 const disputeSchema = z.object({ dispute_id: z.string().min(1) });
+const invoiceIdSchema = z.string().regex(/^INV2-[A-Z0-9-]+$/);
+const invoiceRefundedSchema = z.union([
+  z.object({ id: invoiceIdSchema }).transform((invoice) => invoice.id),
+  z
+    .object({ invoice: z.object({ id: invoiceIdSchema }) })
+    .transform((resource) => resource.invoice.id),
+]);
 const invoicePaidSchema = z.object({
   invoice: z.object({
     payments: z.object({
@@ -42,14 +49,30 @@ export function webhookRoutes(deps: AppDeps): Hono {
       const envelope = envelopeSchema.safeParse(event);
       if (!envelope.success) return c.json({ error: "invalid_request" }, 400);
       const { event_type, resource } = envelope.data;
-      if (event_type === "PAYMENT.CAPTURE.REFUNDED" || event_type === "PAYMENT.CAPTURE.REVERSED") {
-        const refund = refundSchema.safeParse(resource);
-        if (!refund.success) return c.json({ error: "invalid_request" }, 400);
-        const outcome = await recordRefundById(
-          { db: deps.db, ledger: paypal.ledger },
-          refund.data.id,
-        );
-        console.log({ event_type, [outcome]: 1 });
+      if (
+        event_type === "PAYMENT.CAPTURE.REFUNDED" ||
+        event_type === "PAYMENT.CAPTURE.REVERSED" ||
+        event_type === "INVOICING.INVOICE.REFUNDED"
+      ) {
+        let refundIds: string[];
+        if (event_type === "INVOICING.INVOICE.REFUNDED") {
+          const invoice = invoiceRefundedSchema.safeParse(resource);
+          if (!invoice.success) return c.json({ error: "invalid_request" }, 400);
+          refundIds = await getInvoiceRefundIds(paypal.rest, invoice.data);
+        } else {
+          const refund = refundSchema.safeParse(resource);
+          if (!refund.success) return c.json({ error: "invalid_request" }, 400);
+          refundIds = [refund.data.id];
+        }
+        const counts = { recorded: 0, not_completed: 0, not_found: 0 };
+        for (const refundId of refundIds) {
+          const outcome = await recordRefundById({ db: deps.db, ledger: paypal.ledger }, refundId);
+          counts[outcome]++;
+        }
+        console.log({ event_type, ...counts });
+        if (counts.not_completed > 0 || counts.not_found > 0) {
+          return c.json({ error: "refund_not_ready" }, 503);
+        }
         return c.json({ status: "recorded" });
       }
       if (

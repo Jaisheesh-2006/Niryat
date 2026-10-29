@@ -79,9 +79,79 @@ has `resource_type` `refund` and `resource_version` `2.0`.
 | `resource.invoice_id` | General string; the example does not have `INV2-…` format, so that format is not guaranteed               |
 
 These are documented fields, not observations from this seller's delivery.
-P4-15 step 3 must save an actual sandbox capture-refund event, verify the refund
-ID, check the capture link and invoice-ID presence/format, and resolve any mismatch
-before Phase 4 closes. P4-1's approved completion no longer requires the old event.
+P4-15 step 3 must save an actual supported sandbox refund event and verify its
+identifying fields before Phase 4 closes. The later user-approved invoice-refund
+follow-up also accepts an invoice-level delivery; capture-link checks apply only
+when the observed event is a capture refund. P4-1's approved completion no longer
+requires the old event.
+
+### Approved invoice and refund lookups (2026-10-29)
+
+Two individually user-approved, read-only sandbox MCP calls inspected
+`get_invoice({ invoice_id: "INV2-GRMM-2BY2-HAM5-8BLG" })` and
+`get_refund({ refund_id: "8VP949100U083135X" })` after the user reported a
+dashboard refund missing from Niryat. No PayPal writes were made.
+- The invoice status was `REFUNDED`. `payments.transactions[].payment_id` was
+  `9T808661KT7143514`, with `transaction_type: SALE` and `transaction_status: SUCCESS`.
+- `refunds.transactions[].recipient_transaction_id` identified refunds
+  `0WB706292P986490M` and `8VP949100U083135X`. Each entry also carried `type`,
+  `refund_date` (ISO date) and `amount` (`currency_code`, decimal-string `value`).
+- The inspected refund status was `COMPLETED`; `invoice_id` matched the invoice.
+  Its GET `links[rel=up]` ended `/v2/payments/captures/9T808661KT7143514`.
+  The invoice's `SALE` label therefore does not prevent reading this refund
+  through Payments v2 or using the existing capture-link parser.
+- Refund fields included `id`, `amount`, `seller_payable_breakdown`, `invoice_id`,
+  `status`, `create_time`, `update_time`, `payer` and `links`. The breakdown carried
+  `gross_amount`, `paypal_fee`, `net_amount` and `total_refunded_amount`.
+
+At the time of these API lookups, the webhook event type and delivery remained
+unverified. These API reads did not establish that `PAYMENT.CAPTURE.REFUNDED` or
+`INVOICING.INVOICE.REFUNDED` was emitted. The user approved a follow-up to reconcile missed refunds through
+the existing sync. It selects documented `T1107` payment-refund rows, not all
+`T11` reversals; [PayPal's T-code reference](https://developer.paypal.com/reports/reference/t-codes/)
+distinguishes refunds from fee adjustments and dispute holds. This seller's
+refund search rows still need user verification. The normal sync completed with
+zero failures, but the user reported that the latest refund remained absent.
+The user then ran the explicit recovery command for `8VP949100U083135X` on
+2026-10-29: it returned `{"refund":{"status":"recorded"}}`, and the user
+confirmed that the change appeared in the Niryat frontend. This verifies direct
+refund recovery, not transaction-search indexing or webhook delivery.
+
+### Invoice-refund notification support (2026-10-29)
+
+The user added `INVOICING.INVOICE.REFUNDED`, then subscribed the existing webhook
+to all events for diagnosis. At the start of this follow-up, the user still saw
+no actual refund event. After the new handler was implemented, the user's fresh
+seller-dashboard refund emitted `INVOICING.INVOICE.REFUNDED` and was recorded
+automatically, without sync or direct refund-ID recovery.
+
+The handler now accepts invoice-refund notifications, validates the invoice ID,
+fetches the current invoice through REST and passes each PayPal refund ID to the
+existing Server SDK reader/recorder. It supports `resource.id` from PayPal's
+[webhook documentation](https://developer.paypal.com/api/invoicing/webhooks/)
+and the nested `resource.invoice.id` form consistent with the existing invoice-paid
+handler. The actual event body was not supplied, so the exact resource-ID variant
+used by the observed delivery has not been recorded.
+The invoice reader uses the previously observed `recipient_transaction_id`, or
+the `refund_id` documented by the
+[Invoicing v2 schema](https://developer.paypal.com/api/invoicing/v2/schema.json).
+It skips `EXTERNAL` transactions and never uses a notification amount as a refund.
+
+Not-ready refund reads return a retryable HTTP 503. On 2026-10-29, the user
+reported the actual API log: event type `INVOICING.INVOICE.REFUNDED`, `recorded: 1`,
+`not_completed: 0`, `not_found: 0`. Niryat showed the invoice as `refunded` and
+created a refund task. The user also confirmed resending the same event left
+exactly one refund row and one task for the new invoice. This verifies the
+automatic signed invoice-refund path and replay deduplication. The raw event
+body is still unavailable; exact payload-field evidence remains a documentation
+follow-up, rather than evidence that the older capture-refund event was emitted.
+
+Automated checks passed: [Invoicing reader tests](../packages/paypal/src/rest/invoicing.test.ts),
+all 92 PayPal tests, all 38 [webhook tests](../apps/api/src/routes/webhooks.test.ts)
+executed against isolated Postgres with fake PayPal replies, and `pnpm verify`
+(27 successful tasks). These cover signature rejection before reads, malformed
+payloads, partial/full refunds, refund-before-payment ordering, failed reads and
+overlapping invoice/capture event replay without duplicate rows or tasks.
 
 ### 2. Dispute detail (observed)
 

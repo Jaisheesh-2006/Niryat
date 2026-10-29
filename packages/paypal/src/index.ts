@@ -13,7 +13,12 @@ export {
   type PayPalRestClient,
   type PayPalRestPath,
 } from "./rest/index";
-export { buildInvoiceRequest, buildSendRequest, buildSeriesRequest } from "./rest/invoicing";
+export {
+  buildInvoiceRequest,
+  buildSendRequest,
+  buildSeriesRequest,
+  getInvoiceRefundIds,
+} from "./rest/invoicing";
 export {
   type CaptureRecord,
   createPayPalLedger,
