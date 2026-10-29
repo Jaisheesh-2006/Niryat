@@ -2,6 +2,7 @@ import type { ActionHandler, PayPalActionName } from "@niryat/agent";
 import { getInvoiceForAction, markSent, setPayPalInvoiceId, setPayPalSeriesId } from "@niryat/db";
 import { invoiceInputSchema, recurrenceSchema } from "@niryat/shared";
 import { z } from "zod";
+import { recordRefundById } from "./payments";
 import type { AppDeps } from "./routes/auth";
 
 const sendInvoicePayloadSchema = z.strictObject({
@@ -73,9 +74,62 @@ const createSeriesPayloadSchema = z.strictObject({
 const paypalSeriesIdSchema = z.string().regex(/^RI-[A-Z0-9]+$/);
 const createdSeriesSchema = z.object({ id: paypalSeriesIdSchema });
 const parseAny = z.json().optional().parse;
+const refundPayloadSchema = z.strictObject({
+  invoiceId: z.uuid(),
+  paymentId: z.uuid(),
+  captureId: z.string().min(1),
+  refund: z.strictObject({
+    amount: z.strictObject({
+      currency_code: invoiceInputSchema.shape.currency,
+      value: invoiceInputSchema.shape.amount,
+    }),
+    note_to_payer: z.string().min(1),
+  }),
+});
 
 export function actionHandlers(deps: AppDeps): Readonly<Record<PayPalActionName, ActionHandler>> {
   return {
+    async refund_payment(action) {
+      const parsed = refundPayloadSchema.safeParse(action.payload);
+      const invoice = await getInvoiceForAction(deps.db, action.userId, action.id);
+      const storedAction = invoice?.refundActions.find((row) => row.id === action.id);
+      const payment = parsed.success
+        ? invoice?.payments.find((row) => row.id === parsed.data.paymentId)
+        : undefined;
+      if (
+        !parsed.success ||
+        !invoice ||
+        !storedAction ||
+        !payment ||
+        parsed.data.invoiceId !== invoice.id ||
+        parsed.data.paymentId !== storedAction.paymentId ||
+        parsed.data.captureId !== payment.paypalTxnId ||
+        parsed.data.refund.amount.currency_code !== payment.currency ||
+        parsed.data.refund.note_to_payer !== `Refund for invoice ${invoice.number}`
+      ) {
+        throw Object.assign(new Error("invalid_payload"), { code: "invalid_payload" });
+      }
+      const paypal = deps.paypal;
+      if (!paypal) throw new Error("PayPal unavailable");
+      const { captureId, refund } = parsed.data;
+      const result = await paypal.ledger.refundCapture(
+        {
+          captureId,
+          amount: { value: refund.amount.value, currency: refund.amount.currency_code },
+          noteToPayer: refund.note_to_payer,
+        },
+        `${action.id}-refund`,
+      );
+      if (result.status === "COMPLETED") {
+        const outcome = await recordRefundById(
+          { db: deps.db, ledger: paypal.ledger },
+          result.refundId,
+        );
+        if (outcome !== "recorded") {
+          throw Object.assign(new Error("refund_not_recorded"), { code: "refund_not_recorded" });
+        }
+      }
+    },
     async send_invoice(action) {
       const parsed = sendInvoicePayloadSchema.safeParse(action.payload);
       const invoice = await getInvoiceForAction(deps.db, action.userId, action.id);

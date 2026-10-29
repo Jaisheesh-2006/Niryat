@@ -167,7 +167,11 @@ export type Client = z.infer<typeof clientSchema>;
 
 export const actionStatusSchema = z.enum(["proposed", "approved", "rejected", "done", "failed"]);
 export type ActionStatus = z.infer<typeof actionStatusSchema>;
-export const paypalActionNames = ["send_invoice", "create_recurring_series"] as const;
+export const paypalActionNames = [
+  "send_invoice",
+  "create_recurring_series",
+  "refund_payment",
+] as const;
 export const invoiceCurrencies = ["USD", "EUR", "GBP", "AUD", "CAD"] as const;
 
 export const recurrenceSchema = z.object({
@@ -276,6 +280,7 @@ export type Compliance = z.infer<typeof complianceSchema>;
 
 export const actionSchema = z.object({
   id: z.uuid(),
+  paymentId: z.uuid().nullable(),
   paypalAction: z.enum(paypalActionNames),
   status: actionStatusSchema,
   payload: z.record(z.string(), z.unknown()),
@@ -315,6 +320,7 @@ export const invoiceSchema = z.object({
   refunds: z.array(refundSchema),
   disputes: z.array(disputeSchema),
   action: actionSchema.nullable(),
+  refundActions: z.array(actionSchema),
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
 

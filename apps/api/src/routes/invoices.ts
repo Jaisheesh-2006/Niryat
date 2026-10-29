@@ -2,12 +2,14 @@ import { runApprovedAction } from "@niryat/agent";
 import {
   actionStore,
   findPdfByToken,
+  getInvoice,
   getInvoiceForAction,
   getProfile,
   gstRegistration,
   issueInvoice,
   listClients,
   listInvoices,
+  proposeRefund,
   rejectAction,
 } from "@niryat/db";
 import { buildInvoiceRequest, buildSendRequest, buildSeriesRequest } from "@niryat/paypal";
@@ -17,7 +19,7 @@ import {
   LUT_ENDORSEMENT,
   prepareExportInvoice,
 } from "@niryat/rules";
-import { invoiceInputSchema } from "@niryat/shared";
+import { invoiceInputSchema, refundInputSchema } from "@niryat/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 import { actionHandlers } from "../actions";
@@ -137,6 +139,32 @@ export function invoiceRoutes(deps: AppDeps): Hono {
       if (storageFailed) return c.json({ error: "file_storage_unavailable" }, 503);
       throw error;
     }
+  });
+
+  routes.post("/payments/:id/refunds", async (c) => {
+    const userId = await readSession(c, deps.sessionSecret);
+    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const id = z.uuid().safeParse(c.req.param("id"));
+    if (!id.success) return c.json({ error: "not_found" }, 404);
+    const body = await parseJsonBody(c, refundInputSchema);
+    if (!body.ok) return body.response;
+    const result = await proposeRefund(deps.db, userId, id.data, body.data.amount, (p) => ({
+      invoiceId: p.invoiceId,
+      paymentId: id.data,
+      captureId: p.captureId,
+      refund: {
+        amount: { currency_code: p.currency, value: body.data.amount },
+        note_to_payer: `Refund for invoice ${p.invoiceNumber}`,
+      },
+    }));
+    if (!result.ok) {
+      const status =
+        result.reason === "not_found" ? 404 : result.reason === "refund_pending" ? 409 : 422;
+      return c.json({ error: result.reason }, status);
+    }
+    const invoice = await getInvoice(deps.db, userId, result.invoiceId);
+    if (!invoice) throw new Error("Invoice lookup failed");
+    return c.json(toInvoiceView(invoice, await gstRegistration(deps.db, userId)), 201);
   });
 
   for (const operation of ["approve", "reject"] as const) {

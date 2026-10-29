@@ -15,6 +15,7 @@
   },
   "formatter": {
     "enabled": true,
+    "includes": ["**", "!.github/skills/**/SKILL.md"],
     "indentStyle": "space",
     "indentWidth": 2,
     "lineWidth": 100,

@@ -41,6 +41,7 @@ async function readInvoices(
     .select()
     .from(agentActions)
     .where(and(eq(agentActions.userId, userId), inArray(agentActions.invoiceId, ids)))
+    .orderBy(desc(agentActions.createdAt), desc(agentActions.id))
     .catch(() => {
       throw new Error("Invoice lookup failed");
     });
@@ -52,7 +53,11 @@ async function readInvoices(
       throw new Error("Invoice lookup failed");
     });
   return rows.map(({ invoice, clientName, paidTotal, refundedTotal }) => {
-    const action = actionRows.find((row) => row.invoiceId === invoice.id);
+    const action = actionRows.find(
+      (row) =>
+        row.invoiceId === invoice.id &&
+        (row.paypalAction === "send_invoice" || row.paypalAction === "create_recurring_series"),
+    );
     const result = invoiceSchema.safeParse({
       ...invoice,
       clientName,
@@ -67,6 +72,9 @@ async function readInvoices(
         .map((row) => ({ ...row, receivedAt: row.receivedAt?.toISOString() })),
       disputes: disputeRows.filter((row) => row.invoiceId === invoice.id),
       action: action ? { ...action, createdAt: action.createdAt?.toISOString() } : null,
+      refundActions: actionRows
+        .filter((row) => row.invoiceId === invoice.id && row.paypalAction === "refund_payment")
+        .map((row) => ({ ...row, createdAt: row.createdAt?.toISOString() })),
     });
     if (!result.success) throw new Error("Stored invoice is invalid");
     return result.data;

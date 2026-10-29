@@ -26,6 +26,7 @@ import {
   paymentLink,
   payments,
   profiles,
+  proposeRefund,
   recordPayment,
   recordRefund,
   rejectAction,
@@ -107,6 +108,89 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
     await markSent(t.db, s.userId, invoice.id);
     return { ...s, invoice };
   }
+
+  it("serializes concurrent refund proposals and blocks each open action status", async () => {
+    const { userId, invoice } = await sentInvoice();
+    await recordPayment(t.db, capture);
+    const payment = (await getInvoice(t.db, userId, invoice.id))?.payments[0];
+    if (!payment) throw new Error("Expected a payment");
+    const payloadFor = vi.fn(
+      (p: { invoiceId: string; invoiceNumber: string; captureId: string; currency: string }) => ({
+        ...p,
+      }),
+    );
+    const results = await Promise.all([
+      proposeRefund(t.db, userId, payment.id, "20", payloadFor),
+      proposeRefund(t.db, userId, payment.id, "20", payloadFor),
+    ]);
+    expect(results).toEqual(
+      expect.arrayContaining([
+        { ok: true, invoiceId: invoice.id },
+        { ok: false, reason: "refund_pending" },
+      ]),
+    );
+    expect(payloadFor).toHaveBeenCalledExactlyOnceWith({
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      captureId: capture.captureId,
+      currency: capture.currency,
+    });
+    const action = (await getInvoice(t.db, userId, invoice.id))?.refundActions[0];
+    if (!action) throw new Error("Expected a refund action");
+    for (const status of ["approved", "failed"]) {
+      await t.db.update(agentActions).set({ status }).where(eq(agentActions.id, action.id));
+      expect(await proposeRefund(t.db, userId, payment.id, "20", payloadFor)).toEqual({
+        ok: false,
+        reason: "refund_pending",
+      });
+    }
+  });
+
+  it("subtracts only refunds for the capture in its currency and keeps decimal precision", async () => {
+    const { userId, invoice } = await sentInvoice();
+    await recordPayment(t.db, { ...capture, gross: "0.30" });
+    const payment = (await getInvoice(t.db, userId, invoice.id))?.payments[0];
+    if (!payment) throw new Error("Expected a payment");
+    await recordRefund(t.db, { ...refund, gross: "0.10" });
+    await recordRefund(t.db, {
+      ...refund,
+      refundId: "OTHER-CURRENCY",
+      currency: "EUR",
+      gross: "60",
+    });
+    await recordRefund(t.db, {
+      ...refund,
+      refundId: "OTHER-CAPTURE",
+      captureId: "OTHER",
+      gross: "60",
+    });
+    const payloadFor = () => ({});
+    expect(await proposeRefund(t.db, userId, payment.id, "0.21", payloadFor)).toEqual({
+      ok: false,
+      reason: "refund_exceeds_payment",
+    });
+    expect(await proposeRefund(t.db, userId, payment.id, "0.20", payloadFor)).toEqual({
+      ok: true,
+      invoiceId: invoice.id,
+    });
+  });
+
+  it("rolls back a refund proposal if its immutable payload cannot be built", async () => {
+    const { userId, invoice } = await sentInvoice();
+    await recordPayment(t.db, capture);
+    const payment = (await getInvoice(t.db, userId, invoice.id))?.payments[0];
+    if (!payment) throw new Error("Expected a payment");
+    await expect(
+      proposeRefund(t.db, userId, payment.id, "20", () => {
+        throw new Error("private detail");
+      }),
+    ).rejects.toThrow("Refund proposal save failed");
+    expect((await getInvoice(t.db, userId, invoice.id))?.refundActions).toEqual([]);
+    expect(await proposeRefund(t.db, userId, payment.id, "20", () => ({}))).toEqual({
+      ok: true,
+      invoiceId: invoice.id,
+    });
+  });
 
   it("allocates consecutive numbers per user and financial year and lists newest first", async () => {
     const a = await seller();

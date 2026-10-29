@@ -244,6 +244,7 @@ it("validates invoice responses with payments and an action", () => {
     refundedTotal: "0",
     refunds: [],
     disputes: [],
+    refundActions: [],
     payments: [
       {
         id: "30000000-0000-4000-8000-000000000001",
@@ -259,6 +260,7 @@ it("validates invoice responses with payments and an action", () => {
     action: {
       id: "40000000-0000-4000-8000-000000000001",
       paypalAction: "send_invoice",
+      paymentId: null,
       status: "done",
       payload: { detail: { invoice_number: "2026-27/0001" } },
       error: null,

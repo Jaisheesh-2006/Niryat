@@ -21,6 +21,7 @@ function fakeHandlers() {
   return {
     send_invoice: vi.fn(async (_action: ProposedAction) => {}),
     create_recurring_series: vi.fn(async (_action: ProposedAction) => {}),
+    refund_payment: vi.fn(async (_action: ProposedAction) => {}),
   };
 }
 
@@ -41,6 +42,7 @@ it("does not execute or finish an action the store refuses to claim", async () =
   expect(store.claim).toHaveBeenCalledExactlyOnceWith(action.id, action.userId);
   expect(handlers.send_invoice).not.toHaveBeenCalled();
   expect(handlers.create_recurring_series).not.toHaveBeenCalled();
+  expect(handlers.refund_payment).not.toHaveBeenCalled();
   expect(store.finish).not.toHaveBeenCalled();
 });
 
@@ -57,7 +59,7 @@ it.each(paypalActionNames)(
     expect(store.claim).toHaveBeenCalledExactlyOnceWith(action.id, action.userId);
     expect(handlers[paypalAction]).toHaveBeenCalledExactlyOnceWith(claimed);
     expect(
-      handlers.send_invoice.mock.calls.length + handlers.create_recurring_series.mock.calls.length,
+      Object.values(handlers).reduce((count, handler) => count + handler.mock.calls.length, 0),
     ).toBe(1);
     expect(store.finish).toHaveBeenCalledExactlyOnceWith(action.id, { status: "done" });
   },

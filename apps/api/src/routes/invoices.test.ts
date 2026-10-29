@@ -1,7 +1,19 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { actionStore, getInvoiceForAction } from "@niryat/db";
+import {
+  actionStore,
+  getInvoiceForAction,
+  payments,
+  recordPayment,
+  recordRefund,
+} from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
-import { PayPalApiError, type PayPalRestClient, type PayPalRestPath } from "@niryat/paypal";
+import {
+  PayPalApiError,
+  type PayPalLedger,
+  type PayPalRestClient,
+  type PayPalRestPath,
+  type RefundRecord,
+} from "@niryat/paypal";
 import { financialYear, LUT_ENDORSEMENT } from "@niryat/rules";
 import {
   type ClientInput,
@@ -31,6 +43,19 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
   let objects: Map<string, Uint8Array>;
   let calls: { path: PayPalRestPath; body: unknown; requestId: string }[];
   let replies: unknown[];
+  const refund: RefundRecord = {
+    refundId: "REFUND-TEST",
+    status: "COMPLETED",
+    captureId: "CAPTURE-TEST",
+    paypalInvoiceId: "INV2-TEST",
+    gross: "40.00",
+    fee: "1.00",
+    net: "39.00",
+    currency: "USD",
+    createTime: "2026-10-27T12:00:00Z",
+  };
+  const refundCapture = vi.fn<PayPalLedger["refundCapture"]>();
+  const getRefund = vi.fn<PayPalLedger["getRefund"]>();
   const client: ClientInput = {
     name: "Acme Inc",
     country: "US",
@@ -66,6 +91,8 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     objects = new Map();
     calls = [];
     replies = [{ id: "INV2-TEST" }, undefined];
+    refundCapture.mockReset().mockResolvedValue({ refundId: refund.refundId, status: "COMPLETED" });
+    getRefund.mockReset().mockResolvedValue(refund);
     files = {
       put: vi.fn(async (key, bytes) => {
         objects.set(key, bytes);
@@ -93,12 +120,8 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
       paypal: {
         rest,
         ledger: {
-          async getRefund() {
-            throw new Error("Unexpected refund read");
-          },
-          async refundCapture() {
-            throw new Error("Unexpected refund request");
-          },
+          getRefund,
+          refundCapture,
           async getCapture() {
             throw new Error("Unexpected capture read");
           },
@@ -185,11 +208,39 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     return new URL(invoice.pdfUrl).pathname.replace(/^\/api/, "");
   }
 
+  async function paidInvoice() {
+    const user = await setup();
+    const issued = await issue(user.cookie, user.input);
+    await readInvoice(await post(user.cookie, `/actions/${actionId(issued)}/approve`));
+    await recordPayment(t.db, {
+      captureId: "CAPTURE-TEST",
+      status: "COMPLETED",
+      paypalInvoiceId: "INV2-TEST",
+      gross: "100.00",
+      fee: "4.40",
+      net: "95.60",
+      currency: "USD",
+      fxRate: null,
+      createTime: "2026-10-26T12:00:00Z",
+    });
+    const [invoice] = await list(user.cookie);
+    const payment = invoice?.payments[0];
+    if (!invoice || !payment) throw new Error("Expected a paid invoice");
+    return { ...user, invoice, payment, path: `/payments/${payment.id}/refunds` };
+  }
+
+  function refundAction(invoice: Invoice) {
+    const action = invoice.refundActions[0];
+    if (!action) throw new Error("Expected a refund action");
+    return action;
+  }
+
   it.each([
     ["GET", "/invoices"],
     ["POST", "/invoices"],
     ["POST", "/actions/bad/approve"],
     ["POST", "/actions/bad/reject"],
+    ["POST", "/payments/bad/refunds"],
   ])("requires a session for %s %s", async (method, path) => {
     const response = await app.request(path, { method });
     expect(response.status).toBe(401);
@@ -648,4 +699,298 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
       expect((await getInvoiceForAction(t.db, userId, action.id))?.status).toBe("issued");
     },
   );
+
+  it("proposes the exact refund payload without PayPal and blocks another open proposal", async () => {
+    const { cookie, path, invoice, payment } = await paidInvoice();
+    const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    expect(proposed.action).toEqual(invoice.action);
+    expect(refundAction(proposed)).toEqual({
+      id: expect.any(String),
+      createdAt: expect.any(String),
+      error: null,
+      paypalAction: "refund_payment",
+      status: "proposed",
+      paymentId: payment.id,
+      payload: {
+        invoiceId: invoice.id,
+        paymentId: payment.id,
+        captureId: payment.paypalTxnId,
+        refund: {
+          amount: { currency_code: "USD", value: "40" },
+          note_to_payer: `Refund for invoice ${invoice.number}`,
+        },
+      },
+    });
+    const duplicate = await post(cookie, path, { amount: "40" });
+    expect(duplicate.status).toBe(409);
+    expect(await duplicate.json()).toEqual({ error: "refund_pending" });
+    expect(refundCapture).not.toHaveBeenCalled();
+    expect(getRefund).not.toHaveBeenCalled();
+  });
+
+  it("limits refunds to the remaining capture balance using exact amounts", async () => {
+    const { cookie, path } = await paidInvoice();
+    const excessive = await post(cookie, path, { amount: "100.01" });
+    expect(excessive.status).toBe(422);
+    expect(await excessive.json()).toEqual({ error: "refund_exceeds_payment" });
+    await recordRefund(t.db, { ...refund, gross: "60.00" });
+    const remaining = await post(cookie, path, { amount: "50" });
+    expect(remaining.status).toBe(422);
+    expect(await remaining.json()).toEqual({ error: "refund_exceeds_payment" });
+    await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    expect(refundCapture).not.toHaveBeenCalled();
+  });
+
+  it("hides foreign, unknown, unlinked and non-payment rows", async () => {
+    const { cookie, path, invoice } = await paidInvoice();
+    const other = await signup("other@example.com");
+    expect((await post(other.cookie, path, { amount: "40" })).status).toBe(404);
+    await recordPayment(t.db, {
+      captureId: "UNLINKED",
+      status: "COMPLETED",
+      paypalInvoiceId: null,
+      gross: "100",
+      fee: null,
+      net: null,
+      currency: "USD",
+      fxRate: null,
+      createTime: "2026-10-26T12:00:00Z",
+    });
+    const rows = await t.db.select().from(payments);
+    const unlinked = rows.find((row) => row.invoiceId === null);
+    if (!unlinked) throw new Error("Expected an unlinked payment");
+    await recordRefund(t.db, refund);
+    const saved = (await list(cookie))[0]?.refunds[0];
+    if (!saved) throw new Error("Expected a refund");
+    for (const id of ["bad", randomUUID(), unlinked.id, saved.id]) {
+      const response = await post(cookie, `/payments/${id}/refunds`, { amount: "1" });
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: "not_found" });
+    }
+    const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    for (const operation of ["approve", "reject"]) {
+      expect(
+        (await post(other.cookie, `/actions/${refundAction(proposed).id}/${operation}`)).status,
+      ).toBe(404);
+    }
+    expect(proposed.action).toEqual(invoice.action);
+    expect(refundCapture).not.toHaveBeenCalled();
+  });
+
+  it("records a completed approved refund once, retaining the send action and deduplicating the task", async () => {
+    const { cookie, path, invoice, payment } = await paidInvoice();
+    const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    const action = refundAction(proposed);
+    const approve = `/actions/${action.id}/approve`;
+    const result = await readInvoice(await post(cookie, approve));
+    expect(refundCapture).toHaveBeenCalledExactlyOnceWith(
+      {
+        captureId: payment.paypalTxnId,
+        amount: { value: "40", currency: "USD" },
+        noteToPayer: `Refund for invoice ${invoice.number}`,
+      },
+      `${action.id}-refund`,
+    );
+    expect(getRefund).toHaveBeenCalledExactlyOnceWith(refund.refundId);
+    expect(result.status).toBe("partially_refunded");
+    expect(result.refunds).toHaveLength(1);
+    expect(result.refunds[0]).toMatchObject({
+      paypalTxnId: refund.refundId,
+      gross: "40.00",
+      fee: "1.00",
+      net: "39.00",
+    });
+    expect(refundAction(result)).toMatchObject({ status: "done", payload: action.payload });
+    expect(result.action).toEqual(invoice.action);
+    const tasks = await app.request("/tasks", { headers: { Cookie: cookie } });
+    expect(await tasks.json()).toEqual([
+      expect.objectContaining({ type: "refund_recorded", invoiceId: invoice.id }),
+    ]);
+    expect((await post(cookie, approve)).status).toBe(409);
+    expect(refundCapture).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains a failed refund and reuses its request ID on approval retry", async () => {
+    const { cookie, path } = await paidInvoice();
+    const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    const action = refundAction(proposed);
+    refundCapture.mockRejectedValueOnce(new PayPalApiError(422, "REFUND_AMOUNT_EXCEEDED"));
+    const response = await post(cookie, `/actions/${action.id}/approve`);
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: "paypal_failed",
+      code: "REFUND_AMOUNT_EXCEEDED",
+    });
+    const [failed] = await list(cookie);
+    expect(failed?.refundActions[0]).toMatchObject({
+      status: "failed",
+      error: "REFUND_AMOUNT_EXCEEDED",
+    });
+    expect((await post(cookie, path, { amount: "1" })).status).toBe(409);
+    expect(getRefund).not.toHaveBeenCalled();
+    const retried = await readInvoice(await post(cookie, `/actions/${action.id}/approve`));
+    expect(refundAction(retried)).toMatchObject({
+      status: "done",
+      error: null,
+      payload: action.payload,
+    });
+    expect(refundCapture.mock.calls.map((call) => call[1])).toEqual([
+      `${action.id}-refund`,
+      `${action.id}-refund`,
+    ]);
+  });
+
+  it.each(["not_found", "not_completed"] as const)(
+    "keeps an unrecorded completed refund retryable when the read is %s",
+    async (outcome) => {
+      const { cookie, path, invoice } = await paidInvoice();
+      const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+      const action = refundAction(proposed);
+      const approve = `/actions/${action.id}/approve`;
+      getRefund.mockResolvedValueOnce(
+        outcome === "not_found" ? null : { ...refund, status: "PENDING" },
+      );
+      const response = await post(cookie, approve);
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({
+        error: "paypal_failed",
+        code: "refund_not_recorded",
+      });
+      const [failed] = await list(cookie);
+      expect(failed).toMatchObject({ status: "paid", refunds: [], action: invoice.action });
+      expect(failed?.refundActions[0]).toMatchObject({
+        status: "failed",
+        error: "refund_not_recorded",
+        payload: action.payload,
+      });
+      expect(getRefund).toHaveBeenCalledExactlyOnceWith(refund.refundId);
+      expect((await post(cookie, path, { amount: "40" })).status).toBe(409);
+      const tasksBeforeRetry = await app.request("/tasks", { headers: { Cookie: cookie } });
+      expect(await tasksBeforeRetry.json()).toEqual([]);
+
+      const retried = await readInvoice(await post(cookie, approve));
+      expect(refundAction(retried)).toMatchObject({
+        status: "done",
+        error: null,
+        payload: action.payload,
+      });
+      expect(retried.status).toBe("partially_refunded");
+      expect(retried.refunds).toHaveLength(1);
+      expect(retried.action).toEqual(invoice.action);
+      expect(refundCapture.mock.calls.map((call) => call[1])).toEqual([
+        `${action.id}-refund`,
+        `${action.id}-refund`,
+      ]);
+      const tasksAfterRetry = await app.request("/tasks", { headers: { Cookie: cookie } });
+      expect(await tasksAfterRetry.json()).toEqual([
+        expect.objectContaining({ type: "refund_recorded", invoiceId: invoice.id }),
+      ]);
+    },
+  );
+
+  it("finishes a pending refund without recording money or reading the refund", async () => {
+    const { cookie, path } = await paidInvoice();
+    const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    refundCapture.mockResolvedValueOnce({ refundId: refund.refundId, status: "PENDING" });
+    const result = await readInvoice(
+      await post(cookie, `/actions/${refundAction(proposed).id}/approve`),
+    );
+    expect(refundAction(result).status).toBe("done");
+    expect(result.refunds).toEqual([]);
+    expect(result.status).toBe("paid");
+    expect(getRefund).not.toHaveBeenCalled();
+  });
+
+  it("allows a new proposal after rejection and lists refund actions newest first", async () => {
+    const { cookie, path } = await paidInvoice();
+    const first = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    const action = refundAction(first);
+    await readInvoice(await post(cookie, `/actions/${action.id}/reject`));
+    expect((await post(cookie, `/actions/${action.id}/approve`)).status).toBe(409);
+    const second = await readInvoice(await post(cookie, path, { amount: "20" }), 201);
+    expect(second.refundActions).toHaveLength(2);
+    expect(second.refundActions.map((a) => a.status)).toEqual(["proposed", "rejected"]);
+    expect(refundCapture).not.toHaveBeenCalled();
+  });
+
+  it("proposes without PayPal and leaves the refund unclaimed on unavailable approval", async () => {
+    const { cookie, path } = await paidInvoice();
+    delete deps.paypal;
+    const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    const id = refundAction(proposed).id;
+    const response = await post(cookie, `/actions/${id}/approve`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "paypal_unavailable" });
+    expect((await list(cookie))[0]?.refundActions[0]?.status).toBe("proposed");
+    await readInvoice(await post(cookie, `/actions/${id}/reject`));
+    expect(refundCapture).not.toHaveBeenCalled();
+  });
+
+  it("validates refund JSON and positive decimal amounts before proposing", async () => {
+    const { cookie, path } = await paidInvoice();
+    for (const body of [
+      { amount: 40 },
+      { amount: "0" },
+      { amount: "-1" },
+      { amount: "0.001" },
+      { amount: "1", currency: "EUR" },
+    ]) {
+      const response = await post(cookie, path, body);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ error: "invalid_request" });
+    }
+    expect(
+      (
+        await app.request(path, {
+          method: "POST",
+          headers: { Cookie: cookie, "Content-Type": "text/plain" },
+          body: "{}",
+        })
+      ).status,
+    ).toBe(415);
+    expect(
+      (
+        await app.request(path, {
+          method: "POST",
+          headers: { Cookie: cookie, "Content-Type": "application/json" },
+          body: "{",
+        })
+      ).status,
+    ).toBe(400);
+    expect((await list(cookie))[0]?.refundActions).toEqual([]);
+    expect(refundCapture).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed and mismatched refund payloads before calling PayPal", async () => {
+    const { cookie, path, id: userId, invoice } = await paidInvoice();
+    const proposed = await readInvoice(await post(cookie, path, { amount: "40" }), 201);
+    const action = refundAction(proposed);
+    const valid = {
+      invoiceId: invoice.id,
+      paymentId: action.paymentId,
+      captureId: "CAPTURE-TEST",
+      refund: {
+        amount: { currency_code: "USD", value: "40" },
+        note_to_payer: `Refund for invoice ${invoice.number}`,
+      },
+    };
+    for (const payload of [
+      {},
+      { ...valid, extra: true },
+      { ...valid, invoiceId: randomUUID() },
+      { ...valid, paymentId: randomUUID() },
+      { ...valid, captureId: "OTHER-CAPTURE" },
+      { ...valid, refund: { ...valid.refund, extra: true } },
+      {
+        ...valid,
+        refund: { ...valid.refund, amount: { ...valid.refund.amount, currency_code: "EUR" } },
+      },
+      { ...valid, refund: { ...valid.refund, note_to_payer: "Changed" } },
+    ]) {
+      await expect(
+        actionHandlers(deps).refund_payment({ ...action, userId, payload }),
+      ).rejects.toMatchObject({ code: "invalid_payload" });
+    }
+    expect(refundCapture).not.toHaveBeenCalled();
+  });
 });

@@ -1,8 +1,91 @@
 import type { ActionStore } from "@niryat/agent";
-import { actionSchema } from "@niryat/shared";
+import { actionSchema, invoiceInputSchema } from "@niryat/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 import type { Db } from "./client";
-import { agentActions } from "./schema";
+import { agentActions, invoices, payments } from "./schema";
+
+export async function proposeRefund(
+  db: Db,
+  userId: string,
+  paymentId: string,
+  amount: string,
+  payloadFor: (p: {
+    invoiceId: string;
+    invoiceNumber: string;
+    captureId: string;
+    currency: string;
+  }) => Record<string, unknown>,
+): Promise<
+  | { ok: true; invoiceId: string }
+  | { ok: false; reason: "not_found" | "refund_pending" | "refund_exceeds_payment" }
+> {
+  return db
+    .transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          invoiceId: invoices.id,
+          invoiceNumber: invoices.number,
+          captureId: payments.paypalTxnId,
+          currency: payments.currency,
+        })
+        .from(payments)
+        .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
+        .where(
+          and(
+            eq(payments.id, paymentId),
+            eq(payments.kind, "payment"),
+            eq(invoices.userId, userId),
+          ),
+        )
+        .for("update", { of: payments });
+      if (!row) return { ok: false, reason: "not_found" } as const;
+      const payment = z
+        .strictObject({
+          invoiceId: z.uuid(),
+          invoiceNumber: z.string().min(1),
+          captureId: z.string().min(1),
+          currency: invoiceInputSchema.shape.currency,
+        })
+        .safeParse(row);
+      if (!payment.success) throw new Error("Stored payment is invalid");
+      const [pending] = await tx
+        .select({ id: agentActions.id })
+        .from(agentActions)
+        .where(
+          and(
+            eq(agentActions.paymentId, paymentId),
+            inArray(agentActions.status, ["proposed", "approved", "failed"]),
+          ),
+        );
+      if (pending) return { ok: false, reason: "refund_pending" } as const;
+      // Explicit table qualifiers keep the subquery correlated when Drizzle omits column qualifiers.
+      const [balance] = await tx
+        .select({
+          exceeds: sql<boolean>`${amount}::numeric > ${payments.gross} - (
+        select coalesce(sum(refund.gross), 0) from ${payments} as refund
+        where refund.kind = 'refund' and refund.capture_id = ${payments}.paypal_txn_id
+        and refund.currency = ${payments}.currency)`,
+        })
+        .from(payments)
+        .where(eq(payments.id, paymentId));
+      const parsed = z.object({ exceeds: z.boolean() }).safeParse(balance);
+      if (!parsed.success) throw new Error("Stored payment balance is invalid");
+      if (parsed.data.exceeds) return { ok: false, reason: "refund_exceeds_payment" } as const;
+      await tx.insert(agentActions).values({
+        userId,
+        invoiceId: payment.data.invoiceId,
+        paymentId,
+        paypalAction: "refund_payment",
+        status: "proposed",
+        payload: payloadFor(payment.data),
+      });
+      return { ok: true, invoiceId: payment.data.invoiceId } as const;
+    })
+    .catch(() => {
+      throw new Error("Refund proposal save failed");
+    });
+}
 
 export function actionStore(db: Db): ActionStore {
   return {
