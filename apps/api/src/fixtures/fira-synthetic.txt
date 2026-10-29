@@ -1,0 +1,12 @@
+SYNTHETIC TEST FIXTURE - NOT BANK ISSUED
+Foreign Inward Remittance Advice (FIRA)
+Issuer: Example Remittance Bank (fictional)
+Statement period: 01-Oct-2026 to 31-Oct-2026 (invented)
+Remittance lines: 4
+Line Date Foreign amount Currency Remittance reference Purpose code INR / FX
+1 05-Oct-2026 1,234.56 USD SYNTHETIC-REF-001 P0802 Not shown
+2 12-Oct-2026 250.00 USD SYNTHETIC-REF-002 P0802 Not shown
+3 19-Oct-2026 875.25 USD SYNTHETIC-REF-003 P0802 Not shown
+4 26-Oct-2026 90.00 USD SYNTHETIC-REF-004 P0802 Not shown
+Layout notes
+Invented values only. Real PayPal India FIRA compatibility remains unverified.
