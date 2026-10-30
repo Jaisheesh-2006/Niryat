@@ -1,11 +1,21 @@
-import type { Action } from "@niryat/shared";
-import { Children, createElement, isValidElement } from "react";
+import {
+  type Action,
+  type Client,
+  type ExtractionResult,
+  exportConditionIds,
+  extractionFieldNames,
+  extractionResultSchema,
+} from "@niryat/shared";
+import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
 import Fira from "../app/fira/page";
 import { ActionButtons } from "../components/ActionButtons";
+import { ClientForm } from "../components/ClientForm";
+import { ExtractPanel } from "../components/ExtractPanel";
 import { FiraLineButtons } from "../components/FiraLineButtons";
 import { FiraUpload } from "../components/FiraUpload";
+import { InvoiceForm } from "../components/InvoiceForm";
 import { RefundForm } from "../components/RefundForm";
 import { TaskDoneButton } from "../components/TaskDoneButton";
 import { apiGet } from "./api";
@@ -22,19 +32,354 @@ import {
 } from "./forms";
 
 const { refresh, setState } = vi.hoisted(() => ({ refresh: vi.fn(), setState: vi.fn() }));
+const panelState = vi.hoisted(() => ({
+  values: [] as unknown[],
+  hooks: null as unknown[] | null,
+  cursor: 0,
+}));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("./api", () => ({ apiGet: vi.fn() }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useId: () => "refund-amount",
-  useState: (initial: unknown) => [initial, setState],
+  useState: (initial: unknown) => {
+    const hooks = panelState.hooks;
+    if (!hooks) return [panelState.values.length ? panelState.values.shift() : initial, setState];
+    const index = panelState.cursor++;
+    if (!(index in hooks)) hooks[index] = initial;
+    return [
+      hooks[index],
+      (value: unknown) => {
+        hooks[index] = value;
+      },
+    ];
+  },
+  useRef: (initial: unknown) => {
+    if (!panelState.hooks) return { current: initial };
+    const index = panelState.cursor++;
+    if (!(index in panelState.hooks)) panelState.hooks[index] = { current: initial };
+    return panelState.hooks[index];
+  },
 }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  panelState.values = [];
+  panelState.hooks = null;
+  panelState.cursor = 0;
 });
+
+it.each([
+  ["ai_unavailable", "AI is not configured, so extraction is unavailable. Fill in the form below."],
+  ["ai_budget_exhausted", "The monthly AI budget is used up. Fill in the form below."],
+  ["extraction_running", "An extraction is already running."],
+  ["extraction_failed", "Claude could not extract details from this text. Fill in the form below."],
+])("explains %s", async (error, message) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error }, { status: 503 })));
+  expect(await sendJson("/api/extract", "POST", { text: "test" })).toEqual({ ok: false, message });
+});
+
+const extraction: ExtractionResult = extractionResultSchema.parse({
+  fields: {
+    ...Object.fromEntries(
+      extractionFieldNames.map((name) => [name, { value: null, source: null }]),
+    ),
+    clientName: { value: "Acme Inc", source: "Acme Inc" },
+    clientEmail: { value: "billing@acme.example", source: "billing@acme.example" },
+    clientCountry: { value: "US", source: "New York" },
+    description: { value: "Dashboard work", source: "Dashboard work" },
+    amount: { value: "1500", source: "1,500" },
+  },
+  matchedClientId: null,
+});
+
+it("validates successful extraction responses before returning them", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(extraction))
+      .mockResolvedValueOnce(Response.json({ fields: {} })),
+  );
+  expect(await sendJson("/api/extract", "POST", {}, extractionResultSchema)).toEqual({
+    ok: true,
+    data: extraction,
+  });
+  expect(await sendJson("/api/extract", "POST", {}, extractionResultSchema)).toEqual({
+    ok: false,
+    message: "Something went wrong. Try again.",
+  });
+});
+
+it("submits extraction once while busy and handles an error without saving", async () => {
+  const brief = "Please invoice Acme Inc USD 1,500 for dashboard work.";
+  panelState.values = [brief, false, "", null, false, null];
+  const element = ExtractPanel({ clients: [] });
+  const form = Children.toArray(element.props.children).find(
+    (child) => isValidElement(child) && child.type === "form",
+  );
+  if (!isValidElement<{ onSubmit: (event: { preventDefault: () => void }) => Promise<void> }>(form))
+    throw new Error("Expected extraction form");
+  const response = Promise.withResolvers<Response>();
+  const fetch = vi.fn().mockReturnValue(response.promise);
+  vi.stubGlobal("fetch", fetch);
+  const pending = form.props.onSubmit({ preventDefault: vi.fn() });
+  await form.props.onSubmit({ preventDefault: vi.fn() });
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/extract", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: brief }),
+  });
+  response.resolve(Response.json({ error: "extraction_failed" }, { status: 502 }));
+  await pending;
+  expect(setState).toHaveBeenCalledWith(
+    "Claude could not extract details from this text. Fill in the form below.",
+  );
+  expect(setState).toHaveBeenLastCalledWith(false);
+  expect(refresh).not.toHaveBeenCalled();
+});
+
+it("shows source quotes and Discard clears extraction without a request", () => {
+  panelState.values = ["private email text", false, "", extraction, false, null];
+  const element = ExtractPanel({ clients: [] });
+  const html = renderToStaticMarkup(element);
+  expect(html).toContain("Start from a client email");
+  expect(html).toContain("Source text");
+  expect(html).toContain("1,500");
+  expect(html).toContain("Not found");
+  expect(html).toContain(
+    "Extracted by Claude from your text. Check every value before you use it.",
+  );
+  const result = Children.toArray(element.props.children).find(
+    (child) =>
+      isValidElement<{ children: ReactNode }>(child) &&
+      Children.toArray(child.props.children).some(
+        (nested) =>
+          isValidElement<{ children: unknown }>(nested) && nested.props.children === "Discard",
+      ),
+  );
+  if (!isValidElement<{ children: ReactNode }>(result))
+    throw new Error("Expected extraction results");
+  const buttons = Children.toArray(result.props.children);
+  const discard = buttons.find(
+    (child) => isValidElement<{ children: unknown }>(child) && child.props.children === "Discard",
+  );
+  const use = buttons.find(
+    (child) =>
+      isValidElement<{ children: unknown }>(child) && child.props.children === "Use these values",
+  );
+  if (
+    !isValidElement<{ onClick: () => void }>(discard) ||
+    !isValidElement<{ onClick: () => void }>(use)
+  )
+    throw new Error("Expected extraction choices");
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  use.props.onClick();
+  expect(setState).toHaveBeenCalledWith(true);
+  discard.props.onClick();
+  expect(setState).toHaveBeenCalledWith(null);
+  expect(setState).toHaveBeenCalledWith(false);
+  expect(setState).toHaveBeenCalledWith("");
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it("waits for new-client confirmation and leaves export answers blank", () => {
+  panelState.values = ["email", false, "", extraction, true, null];
+  const html = renderToStaticMarkup(createElement(ExtractPanel, { clients: [] }));
+  expect(html).toContain("New client from the email");
+  expect(html).toContain('value="Acme Inc"');
+  expect(html).not.toContain('checked=""');
+  expect(html).not.toContain("Issue invoice");
+});
+
+const extractedClient: Client = {
+  id: "10000000-0000-4000-8000-000000000001",
+  name: "Acme Inc",
+  email: "billing@acme.example",
+  address: null,
+  country: "US",
+  exportCheck: {
+    answers: {
+      supplierInIndia: true,
+      clientPresentInIndia: false,
+      paidInForeignCurrency: true,
+      sameEstablishment: false,
+    },
+    result: {
+      eligible: true,
+      conditions: exportConditionIds.map((id) => ({
+        id,
+        status: "pass",
+        reference: "Test",
+        message: "Test",
+      })),
+      citation: { ruleId: "EXPORT_CONDITIONS", source: "Test", effectiveFrom: null },
+      checkedOn: "2026-10-30",
+    },
+  },
+};
+it("uses a validated created client callback to prefill the invoice and leaves SAC blank", async () => {
+  const client = extractedClient;
+  const onCreated = vi.fn();
+  const fetch = vi.fn().mockResolvedValue(Response.json(client, { status: 201 }));
+  vi.stubGlobal("fetch", fetch);
+  vi.stubGlobal(
+    "FormData",
+    class extends FormData {
+      constructor() {
+        super();
+        this.set("name", "Acme Inc");
+      }
+    },
+  );
+  const element = ClientForm({ onCreated });
+  const form = { reset: vi.fn() };
+  if (
+    !isValidElement<{
+      onSubmit: (event: {
+        preventDefault: () => void;
+        currentTarget: typeof form;
+      }) => Promise<void>;
+    }>(element)
+  )
+    throw new Error("Expected client form");
+  await element.props.onSubmit({ preventDefault: vi.fn(), currentTarget: form });
+  expect(onCreated).toHaveBeenCalledExactlyOnceWith(client);
+  panelState.values = ["email", false, "", extraction, true, client];
+  const html = renderToStaticMarkup(createElement(ExtractPanel, { clients: [] }));
+  expect(html).toContain('value="1500"');
+  expect(html).toContain("Dashboard work</textarea>");
+  expect(html).toContain(`value="${client.id}" selected=""`);
+  const sac = html.match(/<input[^>]*name="sac"[^>]*>/)?.[0];
+  expect(sac).toContain('required=""');
+  expect(sac).not.toContain("value=");
+  expect(html).not.toContain("New client from the email");
+  panelState.values = [
+    "email",
+    false,
+    "",
+    { ...extraction, matchedClientId: client.id },
+    true,
+    null,
+  ];
+  expect(renderToStaticMarkup(createElement(ExtractPanel, { clients: [client] }))).toContain(
+    "Matched your existing client Acme Inc.",
+  );
+});
+
+it.each(["current extraction", "new extraction", "discard"] as const)(
+  "applies a delayed client save only to its own active extraction: %s",
+  async (action) => {
+    const beta: Client = {
+      ...extractedClient,
+      id: "20000000-0000-4000-8000-000000000002",
+      name: "Beta Inc",
+      email: "billing@beta.example",
+    };
+    const betaExtraction: ExtractionResult = {
+      ...extraction,
+      matchedClientId: beta.id,
+      fields: { ...extraction.fields, description: { value: "Beta work", source: "Beta work" } },
+    };
+    const saved = Promise.withResolvers<Response>();
+    const nextExtraction = Promise.withResolvers<Response>();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(extraction))
+      .mockReturnValueOnce(saved.promise)
+      .mockReturnValueOnce(nextExtraction.promise);
+    vi.stubGlobal("fetch", fetch);
+    vi.stubGlobal(
+      "FormData",
+      class extends FormData {
+        constructor() {
+          super();
+          this.set("name", "Acme Inc");
+        }
+      },
+    );
+    const hooks: unknown[] = [];
+    function descendants(node: ReactNode): ReactElement<{ children?: ReactNode }>[] {
+      return Children.toArray(node).flatMap((child) =>
+        isValidElement<{ children?: ReactNode }>(child)
+          ? [child, ...descendants(child.props.children)]
+          : [],
+      );
+    }
+    function render() {
+      panelState.hooks = hooks;
+      panelState.cursor = 0;
+      return descendants(ExtractPanel({ clients: [beta] }));
+    }
+    function click(label: string) {
+      const button = render().find(
+        (element) => element.type === "button" && element.props.children === label,
+      );
+      if (!isValidElement<{ onClick: () => void }>(button))
+        throw new Error("Expected extraction choice");
+      button.props.onClick();
+    }
+    function extract() {
+      const form = render().find((element) => element.type === "form");
+      if (
+        !isValidElement<{ onSubmit: (event: { preventDefault: () => void }) => Promise<void> }>(
+          form,
+        )
+      )
+        throw new Error("Expected extraction form");
+      return form.props.onSubmit({ preventDefault: vi.fn() });
+    }
+    await extract();
+    click("Use these values");
+    const newClient = render().find((element) => element.type === ClientForm);
+    if (!isValidElement<Parameters<typeof ClientForm>[0]>(newClient))
+      throw new Error("Expected new-client form");
+    panelState.hooks = null;
+    const form = ClientForm(newClient.props);
+    const currentTarget = { reset: vi.fn() };
+    if (
+      !isValidElement<{
+        onSubmit: (event: {
+          preventDefault: () => void;
+          currentTarget: typeof currentTarget;
+        }) => Promise<void>;
+      }>(form)
+    )
+      throw new Error("Expected client form");
+    const pendingSave = form.props.onSubmit({ preventDefault: vi.fn(), currentTarget });
+    const pendingExtraction = action === "new extraction" ? extract() : undefined;
+    if (action === "discard") click("Discard");
+    saved.resolve(Response.json(extractedClient, { status: 201 }));
+    await pendingSave;
+    if (pendingExtraction) {
+      nextExtraction.resolve(Response.json(betaExtraction));
+      await pendingExtraction;
+      click("Use these values");
+    }
+    const invoice = render().find((element) => element.type === InvoiceForm);
+    if (!isValidElement<Parameters<typeof InvoiceForm>[0]>(invoice))
+      throw new Error("Expected invoice form");
+    if (action === "current extraction") {
+      expect(invoice.props.defaults?.clientId).toBe(extractedClient.id);
+    } else {
+      expect(invoice.props.clients.map((client) => client.id)).toEqual([beta.id]);
+      expect(invoice.props.defaults?.clientId).toBe(
+        action === "new extraction" ? beta.id : undefined,
+      );
+      expect(invoice.props.defaults?.description).toBe(
+        action === "new extraction" ? "Beta work" : undefined,
+      );
+    }
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual(
+      action === "new extraction"
+        ? ["/api/extract", "/api/clients", "/api/extract"]
+        : ["/api/extract", "/api/clients"],
+    );
+  },
+);
 
 it("keeps the refund amount as a decimal string", () => {
   const form = new FormData();

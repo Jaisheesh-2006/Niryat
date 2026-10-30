@@ -37,6 +37,19 @@ Sandbox result (2026-10-25): create, send, pay and remind all work for an India 
 
 P3-15 user verification (2026-10-27): the generated PDF opens, an India recipient is blocked with reasons, and the approved one-time invoice is sent from the India seller to the US buyer with the matching number, LUT terms and PDF link. The buyer paid and Niryat recorded one payment. Steps 3–5 were confirmed during P3-14 and steps 6–8 during close-out.
 
+P5-7 handoff (2026-10-30): AI invoice extraction is implemented. The user supplied a browser screenshot of the generated PDF with the expected client, service description and amount; this confirms PDF generation and serving. A separate PayPal sandbox API log shows `POST /v2/invoicing/invoices` rejected with HTTP 422 `UNPROCESSABLE_ENTITY`, before the send step. The detailed issue/description is unavailable. Duplicate numbering, recipient restrictions and profile values are unconfirmed hypotheses, not diagnosed causes. The Niryat profile's purpose code is not included in this invoice-create payload.
+
+**User decision: defer remaining P5-7 browser acceptance to P5-13's final acceptance pass.** Implementation work can proceed to P5-8; spec 04's extraction checkbox and the matching PLAN checkbox stay open. Source quotes, form prefilling with export answers and SAC left to the user, existing-client matching, Discard and the live amount regressions have not been explicitly confirmed. The prior P3-15 send result above does not establish a successful send for this extraction attempt.
+
+Automated close-out (2026-10-30): agent tests passed 94/94, web tests 124/124 and ordinary API tests 271 with 154 database cases skipped. The separate API `test:db` run passed all 425 tests with none skipped. `pnpm format`, `pnpm build` (9 tasks, 8 cached) and `pnpm verify` (27 package tasks, all cached) passed. SDK and PayPal calls are faked in these tests; they do not establish live acceptance.
+
+Final acceptance follow-up:
+- Inspect the existing failed sandbox API call's actual issue/description and identify the cause before changing code or retrying. Do not infer it from the general error or the PDF.
+- Repeat P5-13 step 2 on the configured public app origin with a separate sandbox buyer email: review source quotes, confirm/edit the client and invoice forms, issue, review the approval, approve in Niryat and verify buyer visibility. Confirm existing-client matching separately.
+- Extract a second brief and Discard before saving; verify no new client, invoice or approval exists. Run metadata and AI cost are still recorded.
+- Verify amounts remain `1500` in positive briefs containing `- a $1,500` and `- us $1,500`, while `-$1,500` and `- $1,500` cannot become positive amounts. Discard each result.
+- Record the user-confirmed outcomes here before ticking extraction acceptance. No browser automation or assistant-initiated PayPal calls were performed for this handoff.
+
 ## V04 Recurring invoices
 
 TODO(verify): Confirm recurring-series creation/activation for India; document account limitations. [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit).

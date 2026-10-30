@@ -1,11 +1,19 @@
 "use client";
 
-import type { Client } from "@niryat/shared";
+import { type Client, clientSchema } from "@niryat/shared";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { clientBody, sendJson } from "../lib/forms";
 
-export function ClientForm({ client }: { client?: Client }) {
+export function ClientForm({
+  client,
+  defaults,
+  onCreated,
+}: {
+  client?: Client;
+  defaults?: Partial<Pick<Client, "name" | "country" | "email" | "address">>;
+  onCreated?: (client: Client) => void;
+}) {
   const prefix = useId();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -31,13 +39,16 @@ export function ClientForm({ client }: { client?: Client }) {
         const form = event.currentTarget;
         setSubmitting(true);
         setMessage("");
-        const result = await sendJson(
-          client ? `/api/clients/${client.id}` : "/api/clients",
-          client ? "PUT" : "POST",
-          clientBody(new FormData(form)),
-        );
+        const url = client ? `/api/clients/${client.id}` : "/api/clients";
+        const method = client ? "PUT" : "POST";
+        const body = clientBody(new FormData(form));
+        const result =
+          onCreated && !client
+            ? await sendJson(url, method, body, clientSchema)
+            : await sendJson(url, method, body);
         setSubmitting(false);
         if (result.ok) {
+          if (result.data) onCreated?.(result.data);
           if (!client) form.reset();
           router.refresh();
         } else setMessage(result.message);
@@ -50,7 +61,7 @@ export function ClientForm({ client }: { client?: Client }) {
         type="text"
         required
         maxLength={200}
-        defaultValue={client?.name ?? ""}
+        defaultValue={client?.name ?? defaults?.name ?? ""}
       />
       <label htmlFor={`${prefix}-country`}>Client country (2-letter code, e.g. US)</label>
       <input
@@ -60,16 +71,21 @@ export function ClientForm({ client }: { client?: Client }) {
         required
         maxLength={2}
         pattern="[A-Za-z]{2}"
-        defaultValue={client?.country ?? ""}
+        defaultValue={client?.country ?? defaults?.country ?? ""}
       />
       <label htmlFor={`${prefix}-email`}>Client email (PayPal sends the invoice here)</label>
-      <input id={`${prefix}-email`} name="email" type="email" defaultValue={client?.email ?? ""} />
+      <input
+        id={`${prefix}-email`}
+        name="email"
+        type="email"
+        defaultValue={client?.email ?? defaults?.email ?? ""}
+      />
       <label htmlFor={`${prefix}-address`}>Client address</label>
       <textarea
         id={`${prefix}-address`}
         name="address"
         maxLength={500}
-        defaultValue={client?.address ?? ""}
+        defaultValue={client?.address ?? defaults?.address ?? ""}
       />
       {questions.map(([name, legend]) => (
         <fieldset key={name}>

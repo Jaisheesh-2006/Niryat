@@ -104,20 +104,36 @@ const labels: Record<string, string> = {
   "answers.sameEstablishment": "Own establishment",
 };
 
-type FormResult = { ok: true } | { ok: false; message: string; reasons?: string[] };
+type FormResult = { ok: true; data?: never } | { ok: false; message: string; reasons?: string[] };
 const fallback = { ok: false, message: "Something went wrong. Try again." } as const;
 
 export async function sendJson(
   url: string,
   method: "POST" | "PUT",
   body: unknown,
-): Promise<FormResult> {
+): Promise<FormResult>;
+export async function sendJson<T>(
+  url: string,
+  method: "POST" | "PUT",
+  body: unknown,
+  schema: z.ZodType<T>,
+): Promise<{ ok: true; data: T } | Extract<FormResult, { ok: false }>>;
+export async function sendJson(
+  url: string,
+  method: "POST" | "PUT",
+  body: unknown,
+  schema?: z.ZodType,
+): Promise<FormResult | { ok: true; data: unknown }> {
   try {
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    if (response.ok && schema) {
+      const parsed = schema.safeParse(await response.json());
+      return parsed.success ? { ok: true, data: parsed.data } : fallback;
+    }
     return await responseResult(response);
   } catch {
     return fallback;
@@ -152,6 +168,20 @@ async function responseResult(response: Response): Promise<FormResult> {
     .safeParse(await response.json().catch(() => undefined));
   if (!parsed.success) return fallback;
   switch (parsed.data.error) {
+    case "ai_unavailable":
+      return {
+        ok: false,
+        message: "AI is not configured, so extraction is unavailable. Fill in the form below.",
+      };
+    case "ai_budget_exhausted":
+      return { ok: false, message: "The monthly AI budget is used up. Fill in the form below." };
+    case "extraction_running":
+      return { ok: false, message: "An extraction is already running." };
+    case "extraction_failed":
+      return {
+        ok: false,
+        message: "Claude could not extract details from this text. Fill in the form below.",
+      };
     case "invoice_blocked":
       return {
         ok: false,

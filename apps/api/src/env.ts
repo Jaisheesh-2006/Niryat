@@ -52,3 +52,16 @@ export type FileStorageEnv = z.output<typeof fileStorageSchema>;
 export function loadFileStorageEnv(input: Record<string, string | undefined>) {
   return input.FILE_STORAGE_URL ? parseEnv(fileStorageSchema, input) : undefined;
 }
+
+const aiSchema = z.object({
+  ANTHROPIC_API_KEY: z.string().min(1),
+  CLAUDE_MODEL: z.string().min(1),
+  AI_MONTHLY_BUDGET_USD: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/)
+    .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0),
+});
+
+export function loadAiEnv(input: Record<string, string | undefined>) {
+  return input.ANTHROPIC_API_KEY ? parseEnv(aiSchema, input) : undefined;
+}

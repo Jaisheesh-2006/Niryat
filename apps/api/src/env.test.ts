@@ -1,5 +1,24 @@
 import { expect, it } from "vitest";
-import { loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
+import { loadAiEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
+
+it("enables AI only with all keys and a positive finite budget, reporting key names only", () => {
+  expect(loadAiEnv({})).toBeUndefined();
+  expect(loadAiEnv({ ANTHROPIC_API_KEY: "" })).toBeUndefined();
+  expect(() => loadAiEnv({ ANTHROPIC_API_KEY: "private-key" })).toThrow(
+    "Invalid environment: CLAUDE_MODEL, AI_MONTHLY_BUDGET_USD. See .env.example.",
+  );
+  const input = {
+    ANTHROPIC_API_KEY: "private-key",
+    CLAUDE_MODEL: "test-model",
+    AI_MONTHLY_BUDGET_USD: "5.00",
+  };
+  expect(loadAiEnv(input)).toEqual(input);
+  for (const budget of ["0", "-1", "NaN", "Infinity", "1e5", "9".repeat(400)]) {
+    expect(() => loadAiEnv({ ...input, AI_MONTHLY_BUDGET_USD: budget })).toThrow(
+      "Invalid environment: AI_MONTHLY_BUDGET_USD. See .env.example.",
+    );
+  }
+});
 
 it("keeps optional integrations disabled when their first key is empty", () => {
   expect(loadPayPalEnv({})).toBeUndefined();

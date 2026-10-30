@@ -11,6 +11,7 @@ export {
   runCloseAgent,
   type ToolLog,
 } from "./close-agent";
+export { extractionTool, runExtraction } from "./extraction";
 export { agentNoteSchema } from "./notes";
 export {
   createToolkitReader,

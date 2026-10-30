@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
 import { serve } from "@hono/node-server";
+import { createClaudeRunner } from "@niryat/agent";
 import { createDb, parseEncryptionKey } from "@niryat/db";
 import { createPayPalLedger, createPayPalLogin, createPayPalRestClient } from "@niryat/paypal";
-import { loadAuthEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
+import { loadAiEnv, loadAuthEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
 import { createS3FileStore } from "./files";
 import { createApp } from "./index";
 
@@ -15,6 +16,7 @@ const env = loadEnv(process.env);
 const authEnv = loadAuthEnv(process.env);
 const paypalEnv = loadPayPalEnv(process.env);
 const fileStorageEnv = loadFileStorageEnv(process.env);
+const aiEnv = loadAiEnv(process.env);
 const paypalCredentials = paypalEnv
   ? { clientId: paypalEnv.PAYPAL_CLIENT_ID, clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET }
   : undefined;
@@ -28,6 +30,17 @@ const app =
         sessionSecret: authEnv.SESSION_SECRET,
         secureCookies: env.NODE_ENV === "production",
         publicAppUrl: env.PUBLIC_APP_URL,
+        ...(aiEnv
+          ? {
+              ai: {
+                runner: createClaudeRunner({
+                  apiKey: aiEnv.ANTHROPIC_API_KEY,
+                  model: aiEnv.CLAUDE_MODEL,
+                }),
+                monthlyBudgetUsd: aiEnv.AI_MONTHLY_BUDGET_USD,
+              },
+            }
+          : {}),
         ...(fileStorageEnv ? { files: createS3FileStore(fileStorageEnv) } : {}),
         ...(paypalEnv && paypalCredentials
           ? {

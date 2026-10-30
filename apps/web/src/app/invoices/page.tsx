@@ -1,8 +1,7 @@
 import { clientSchema, invoiceViewSchema } from "@niryat/shared";
-import Link from "next/link";
 import { z } from "zod";
 import { ActionButtons } from "../../components/ActionButtons";
-import { InvoiceForm } from "../../components/InvoiceForm";
+import { ExtractPanel } from "../../components/ExtractPanel";
 import { RefundForm } from "../../components/RefundForm";
 import { apiGet } from "../../lib/api";
 
@@ -28,14 +27,7 @@ export default async function Invoices() {
   return (
     <>
       <h1>Invoices</h1>
-      <h2>New invoice</h2>
-      {clients && clients.length > 0 ? (
-        <InvoiceForm clients={clients} />
-      ) : (
-        <p>
-          Add a client first on the <Link href="/clients">Clients</Link> page.
-        </p>
-      )}
+      <ExtractPanel clients={clients ?? []} />
       {(invoices ?? []).map((invoice) => (
         <section key={invoice.id} id={`invoice-${invoice.id}`}>
           <h2>

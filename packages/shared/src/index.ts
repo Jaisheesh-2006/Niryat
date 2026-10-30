@@ -201,6 +201,29 @@ export const invoiceInputSchema = z
   });
 export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
 
+export const extractionFieldNames = [
+  "clientName",
+  "clientEmail",
+  "clientAddress",
+  "clientCountry",
+  "description",
+  "currency",
+  "amount",
+  "invoiceType",
+  "intervalUnit",
+] as const;
+export const extractionRequestSchema = z.strictObject({
+  text: z.string().trim().min(20).max(8000),
+});
+export const extractionResultSchema = z.strictObject({
+  fields: z.record(
+    z.enum(extractionFieldNames),
+    z.strictObject({ value: z.string().nullable(), source: z.string().nullable() }),
+  ),
+  matchedClientId: z.uuid().nullable(),
+});
+export type ExtractionResult = z.infer<typeof extractionResultSchema>;
+
 export const refundInputSchema = z.strictObject({ amount: invoiceInputSchema.shape.amount });
 export type RefundInput = z.infer<typeof refundInputSchema>;
 

@@ -115,6 +115,8 @@ Remaining acceptance evidence:
 
 **Handoff (2026-10-30):** the [login implementation plan](../login-implementation-plan.md) is complete, including all user browser checks. Phase 5 implementation has not started; its local task plan is `current-phase-plan.md`, with migration `0005` next. The Phase 4 acceptance-evidence items listed above remain open and are not closed by the login work.
 
+**P5-7 handoff (2026-10-30):** AI invoice extraction is implemented; next implementation task is P5-8 in the local plan. At the user's request, remaining P5-7 browser acceptance and the unresolved sandbox draft-create HTTP 422 are deferred to P5-13's final acceptance pass. The supplied PDF verifies generation and serving, not a successful PayPal send. Spec 04's extraction checkbox remains open; see [V03](verification.md#v03-invoicing-and-reminders). Phase 5 and its exit gate remain in progress.
+
 **Goal:** Claude proposes PayPal actions; the user approves; every call is logged.
 - [08 Monthly close](specs/08-monthly-close.md): Claude Agent SDK + PayPal Agent Toolkit behind the Phase 1 approval queue; Render Workflows schedule plus a "Close this month" button. Install the AI SDK and Toolkit here, not earlier.
 - [09 RBI deadlines](specs/09-rbi-deadlines.md): countdown per unpaid invoice from the versioned rule; reminder proposals at 60 and 30 days (reminders confirmed working).
