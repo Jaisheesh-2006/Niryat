@@ -338,7 +338,14 @@ export type Invoice = z.infer<typeof invoiceSchema>;
 export const invoiceViewSchema = invoiceSchema.extend({ compliance: complianceSchema });
 export type InvoiceView = z.infer<typeof invoiceViewSchema>;
 
-export const taskTypes = ["refund_recorded", "dispute_opened", "dispute_lost"] as const;
+export const taskTypes = [
+  "refund_recorded",
+  "dispute_opened",
+  "dispute_lost",
+  "fira_missing",
+  "rbi_deadline_passed",
+  "agent_suggestion",
+] as const;
 export const taskSchema = z.object({
   id: z.uuid(),
   type: z.enum(taskTypes),
@@ -351,6 +358,114 @@ export const taskSchema = z.object({
   doneAt: z.iso.datetime().nullable(),
 });
 export type Task = z.infer<typeof taskSchema>;
+
+export const reminderStages = [60, 30] as const;
+export const reminderStageSchema = z.union([z.literal(60), z.literal(30)]);
+export const rbiDeadlineSchema = z.object({
+  deadline: z.iso.date(),
+  daysRemaining: z.int(),
+  stage: reminderStageSchema.nullable(),
+  overdue: z.boolean(),
+  uncertainWindow: z.boolean(),
+  message: z.string(),
+  citation: ruleCitationSchema,
+});
+
+export const agentRunKinds = ["monthly_close", "reminders", "extraction"] as const;
+export type AgentRunKind = (typeof agentRunKinds)[number];
+export const agentRunTriggers = ["manual", "scheduled", "nightly"] as const;
+export type AgentRunTrigger = (typeof agentRunTriggers)[number];
+export const aiStatuses = ["used", "unavailable", "budget_exhausted", "failed"] as const;
+export type AiStatus = (typeof aiStatuses)[number];
+const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+export const agentAdviceSchema = z.object({
+  advice: z.enum(["send", "hold"]),
+  reason: z.string(),
+});
+export const toolCallSchema = z.object({
+  seq: z.int().min(1),
+  actor: z.enum(["agent", "system"]),
+  tool: z.string(),
+  input: z.json(),
+  output: z.json(),
+  ok: z.boolean(),
+  createdAt: z.iso.datetime(),
+});
+export const currencyTotalSchema = z.object({
+  currency: z.string(),
+  gross: z.string(),
+  fee: z.string().nullable(),
+  net: z.string().nullable(),
+});
+export type CurrencyTotal = z.infer<typeof currencyTotalSchema>;
+export const closeSummarySchema = z.object({
+  month: monthSchema,
+  asOf: z.iso.date(),
+  payments: z.object({ count: z.int().nonnegative(), totals: z.array(currencyTotalSchema) }),
+  refunds: z.object({
+    count: z.int().nonnegative(),
+    totals: z.array(currencyTotalSchema.pick({ currency: true, gross: true })),
+  }),
+  openDisputes: z.int().nonnegative(),
+  fira: z.object({
+    state: z.enum(["covered", "missing", "not_due", "not_needed"]),
+    needsConfirmation: z.int().nonnegative(),
+    unmatched: z.int().nonnegative(),
+  }),
+  deadlines: z.array(
+    z.object({
+      invoiceId: z.uuid(),
+      invoiceNumber: z.string(),
+      deadline: z.iso.date(),
+      daysRemaining: z.int(),
+      stage: reminderStageSchema.nullable(),
+      overdue: z.boolean(),
+    }),
+  ),
+  proposals: z.array(
+    z.object({
+      actionId: z.uuid(),
+      invoiceNumber: z.string(),
+      stage: reminderStageSchema,
+      advice: agentAdviceSchema.nullable(),
+    }),
+  ),
+  suggestedTasks: z.int().nonnegative(),
+  tasksCreated: z.int().nonnegative(),
+  focus: z.array(z.object({ label: z.string(), reason: z.string() })),
+  sync: z.object({
+    payments: z.enum(["done", "skipped", "failed"]),
+    disputes: z.enum(["done", "skipped", "failed"]),
+  }),
+  ai: z.object({ status: z.enum(aiStatuses), costUsd: z.string() }),
+  note: z.string().nullable(),
+  citations: z.array(ruleCitationSchema),
+});
+export type CloseSummary = z.infer<typeof closeSummarySchema>;
+export const agentRunSchema = z.object({
+  id: z.uuid(),
+  kind: z.enum(agentRunKinds),
+  trigger: z.enum(agentRunTriggers),
+  month: monthSchema,
+  asOf: z.iso.date(),
+  status: z.enum(["running", "completed", "failed"]),
+  error: z.string().nullable(),
+  startedAt: z.iso.datetime(),
+  finishedAt: z.iso.datetime().nullable(),
+  summary: closeSummarySchema.nullable(),
+  toolCalls: z.array(toolCallSchema),
+});
+export type AgentRun = z.infer<typeof agentRunSchema>;
+export const reminderActionSchema = actionSchema.extend({
+  paypalAction: z.literal("send_invoice_reminder"),
+  invoiceId: z.uuid(),
+  invoiceNumber: z.string(),
+});
+export type ReminderAction = z.infer<typeof reminderActionSchema>;
+export const closePageSchema = z.object({
+  runs: z.array(agentRunSchema),
+  approvals: z.array(reminderActionSchema),
+});
 
 export const firaMatchSchema = z.object({
   paymentId: z.uuid(),

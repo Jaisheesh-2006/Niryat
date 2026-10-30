@@ -33,7 +33,7 @@ export async function openTestDb(): Promise<{
     close,
     reset: async () => {
       await db.execute(
-        sql`TRUNCATE users, profiles, clients, invoices, payments, disputes, fira_documents, fira_lines, matches, agent_actions, tasks, rule_versions RESTART IDENTITY CASCADE`,
+        sql`TRUNCATE users, profiles, clients, invoices, payments, disputes, fira_documents, fira_lines, matches, agent_actions, agent_runs, agent_tool_calls, tasks, rule_versions RESTART IDENTITY CASCADE`,
       );
     },
   };

@@ -1,7 +1,11 @@
 import { expect, it } from "vitest";
 import {
+  actionSchema,
   actionStatusSchema,
+  agentRunSchema,
   clientInputSchema,
+  closePageSchema,
+  closeSummarySchema,
   credentialsSchema,
   disputeSchema,
   exportCheckResultSchema,
@@ -15,11 +19,111 @@ import {
   invoiceSchema,
   invoiceViewSchema,
   profileInputSchema,
+  rbiDeadlineSchema,
   recurrenceSchema,
   refundInputSchema,
   refundSchema,
+  reminderActionSchema,
+  reminderStageSchema,
   taskSchema,
+  toolCallSchema,
 } from "./index";
+
+it("validates agent run months and tool-call actors and JSON", () => {
+  const run = {
+    id: "40000000-0000-4000-8000-000000000001",
+    kind: "monthly_close",
+    trigger: "manual",
+    month: "2026-10",
+    asOf: "2026-10-30",
+    status: "running",
+    error: null,
+    startedAt: "2026-10-30T12:00:00Z",
+    finishedAt: null,
+    summary: null,
+    toolCalls: [],
+  };
+  expect(agentRunSchema.parse(run)).toEqual(run);
+  expect(agentRunSchema.safeParse({ ...run, month: "2026-13" }).success).toBe(false);
+  const call = {
+    seq: 1,
+    actor: "agent",
+    tool: "read",
+    input: {},
+    output: { count: 1 },
+    ok: true,
+    createdAt: run.startedAt,
+  };
+  expect(toolCallSchema.parse(call)).toEqual(call);
+  expect(toolCallSchema.safeParse({ ...call, actor: "model" }).success).toBe(false);
+  expect(toolCallSchema.safeParse({ ...call, seq: 0 }).success).toBe(false);
+  expect(toolCallSchema.safeParse({ ...call, output: undefined }).success).toBe(false);
+});
+
+it("validates close summaries and reminder reads without enabling reminder approval", () => {
+  const id = "40000000-0000-4000-8000-000000000001";
+  const summary = {
+    month: "2026-10",
+    asOf: "2026-10-30",
+    payments: { count: 1, totals: [{ currency: "USD", gross: "100.00", fee: null, net: null }] },
+    refunds: { count: 0, totals: [] },
+    openDisputes: 0,
+    fira: { state: "not_due", needsConfirmation: 0, unmatched: 0 },
+    deadlines: [
+      {
+        invoiceId: id,
+        invoiceNumber: "2026-27/0001",
+        deadline: "2026-12-01",
+        daysRemaining: 32,
+        stage: 60,
+        overdue: false,
+      },
+    ],
+    proposals: [
+      {
+        actionId: id,
+        invoiceNumber: "2026-27/0001",
+        stage: 60,
+        advice: { advice: "hold", reason: "Review the dispute" },
+      },
+    ],
+    suggestedTasks: 0,
+    tasksCreated: 0,
+    focus: [],
+    sync: { payments: "done", disputes: "skipped" },
+    ai: { status: "used", costUsd: "0.10" },
+    note: null,
+    citations: [],
+  };
+  expect(closeSummarySchema.parse(summary)).toEqual(summary);
+  expect(closeSummarySchema.safeParse({ ...summary, month: "2026-13" }).success).toBe(false);
+  const action = {
+    id,
+    invoiceId: id,
+    invoiceNumber: "2026-27/0001",
+    paymentId: null,
+    paypalAction: "send_invoice_reminder",
+    status: "proposed",
+    payload: {},
+    error: null,
+    createdAt: "2026-10-30T12:00:00Z",
+  };
+  expect(reminderActionSchema.parse(action)).toEqual(action);
+  expect(actionSchema.safeParse(action).success).toBe(false);
+  expect(closePageSchema.parse({ runs: [], approvals: [action] }).approvals).toEqual([action]);
+  expect(reminderStageSchema.safeParse(45).success).toBe(false);
+  const deadline = {
+    deadline: "2026-12-01",
+    daysRemaining: 32,
+    stage: 60,
+    overdue: false,
+    uncertainWindow: false,
+    message: "Test",
+    citation: { ruleId: "RBI_REALISATION", source: "Test", effectiveFrom: null },
+  };
+  expect(rbiDeadlineSchema.parse(deadline)).toEqual(deadline);
+  expect(rbiDeadlineSchema.safeParse({ ...deadline, deadline: "2026-02-30" }).success).toBe(false);
+});
 
 it("rejects empty identifiers at the boundary", () => {
   expect(identifierSchema.safeParse("  ").success).toBe(false);

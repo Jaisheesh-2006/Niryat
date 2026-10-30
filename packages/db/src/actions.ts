@@ -1,9 +1,96 @@
 import type { ActionStore } from "@niryat/agent";
-import { actionSchema, invoiceInputSchema } from "@niryat/shared";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import {
+  actionSchema,
+  invoiceInputSchema,
+  type ReminderAction,
+  reminderActionSchema,
+} from "@niryat/shared";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "./client";
 import { agentActions, invoices, payments } from "./schema";
+
+export async function proposeReminder(
+  db: Db,
+  userId: string,
+  input: { invoiceId: string; dedupeKey: string; payload: Record<string, unknown> },
+): Promise<{ ok: true; actionId: string } | { ok: false; reason: "exists" | "not_found" }> {
+  const payload = z.record(z.string(), z.json()).safeParse(input.payload);
+  if (!payload.success) throw new Error("Reminder payload is invalid");
+  return db
+    .transaction(async (tx) => {
+      const [invoice] = await tx
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(and(eq(invoices.id, input.invoiceId), eq(invoices.userId, userId)));
+      if (!invoice) return { ok: false, reason: "not_found" } as const;
+      const [row] = await tx
+        .insert(agentActions)
+        .values({
+          userId,
+          invoiceId: invoice.id,
+          paypalAction: "send_invoice_reminder",
+          status: "proposed",
+          dedupeKey: input.dedupeKey,
+          payload: payload.data,
+        })
+        .onConflictDoNothing({ target: agentActions.dedupeKey })
+        .returning({ id: agentActions.id });
+      return row
+        ? ({ ok: true, actionId: row.id } as const)
+        : ({ ok: false, reason: "exists" } as const);
+    })
+    .catch(() => {
+      throw new Error("Reminder proposal save failed");
+    });
+}
+
+export async function reminderKeys(db: Db, userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ key: agentActions.dedupeKey })
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.userId, userId),
+        eq(agentActions.paypalAction, "send_invoice_reminder"),
+        isNotNull(agentActions.dedupeKey),
+      ),
+    )
+    .catch(() => {
+      throw new Error("Reminder lookup failed");
+    });
+  const result = z.array(z.object({ key: z.string() })).safeParse(rows);
+  if (!result.success) throw new Error("Stored reminder key is invalid");
+  return new Set(result.data.map((row) => row.key));
+}
+
+export async function listReminderActions(
+  db: Db,
+  userId: string,
+  limit: number,
+): Promise<ReminderAction[]> {
+  const rows = await db
+    .select({ action: agentActions, invoiceNumber: invoices.number })
+    .from(agentActions)
+    .innerJoin(invoices, and(eq(invoices.id, agentActions.invoiceId), eq(invoices.userId, userId)))
+    .where(
+      and(eq(agentActions.userId, userId), eq(agentActions.paypalAction, "send_invoice_reminder")),
+    )
+    .orderBy(desc(agentActions.createdAt), desc(agentActions.id))
+    .limit(limit)
+    .catch(() => {
+      throw new Error("Reminder lookup failed");
+    });
+  return rows.map(({ action, invoiceNumber }) => {
+    const result = reminderActionSchema.safeParse({
+      ...action,
+      invoiceNumber,
+      createdAt: action.createdAt?.toISOString(),
+    });
+    if (!result.success) throw new Error("Stored reminder is invalid");
+    return result.data;
+  });
+}
 
 export async function proposeRefund(
   db: Db,

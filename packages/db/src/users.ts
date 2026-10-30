@@ -1,6 +1,19 @@
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import type { Db } from "./client";
 import { users } from "./schema";
+
+export async function listUserIds(db: Db): Promise<string[]> {
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .catch(() => {
+      throw new Error("User lookup failed");
+    });
+  const result = z.array(z.object({ id: z.uuid() })).safeParse(rows);
+  if (!result.success) throw new Error("Stored user is invalid");
+  return result.data.map((row) => row.id);
+}
 
 export async function createUser(
   db: Db,

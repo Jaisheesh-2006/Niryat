@@ -11,6 +11,9 @@ export default async function Tasks() {
     refund_recorded: "Refund recorded",
     dispute_opened: "Dispute opened",
     dispute_lost: "Dispute lost",
+    fira_missing: "FIRA missing",
+    rbi_deadline_passed: "RBI deadline passed",
+    agent_suggestion: "Suggested by Claude",
   };
 
   return (

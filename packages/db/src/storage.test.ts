@@ -13,6 +13,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import type { Db } from "./client";
 import {
   actionStore,
+  aiSpendSince,
   completeTask,
   createClient,
   createUser,
@@ -20,24 +21,33 @@ import {
   findPdfByToken,
   findUserByEmail,
   findUserById,
+  finishAgentRun,
   getInvoice,
   getInvoiceForAction,
   getProfile,
   gstRegistration,
   issueInvoice,
   knownTransactionIds,
+  listAgentRuns,
   listClients,
   listInvoices,
+  listReminderActions,
   listTasks,
+  listUserIds,
+  logToolCall,
   markSent,
+  monthLedger,
   paymentLink,
   profiles,
+  proposeReminder,
   recordPayment,
   recordRefund,
   rejectAction,
+  reminderKeys,
   setPayPalInvoiceId,
   setPayPalSeriesId,
   signInWithPayPal,
+  startAgentRun,
   updateClient,
   upsertDispute,
   upsertProfile,
@@ -90,6 +100,82 @@ describe("storage query failures", () => {
   const name = "Synthetic Client";
 
   it.each([
+    { operation: "listUserIds", run: (db: Db) => listUserIds(db), message: "User lookup failed" },
+    {
+      operation: "startAgentRun",
+      run: (db: Db) =>
+        startAgentRun(
+          db,
+          {
+            userId,
+            kind: "monthly_close",
+            trigger: "manual",
+            month: "2026-10",
+            asOf: "2026-10-30",
+          },
+          new Date(),
+        ),
+      message: "Agent run save failed",
+    },
+    {
+      operation: "logToolCall",
+      run: (db: Db) =>
+        logToolCall(db, userId, {
+          actor: "system",
+          tool: "synthetic",
+          input: {},
+          output: {},
+          ok: true,
+        }),
+      message: "Tool call save failed",
+    },
+    {
+      operation: "finishAgentRun",
+      run: (db: Db) =>
+        finishAgentRun(db, userId, {
+          status: "completed",
+          error: null,
+          summary: null,
+          aiStatus: "used",
+          aiCostUsd: "0.10",
+        }),
+      message: "Agent run save failed",
+    },
+    {
+      operation: "listAgentRuns",
+      run: (db: Db) => listAgentRuns(db, userId, ["monthly_close"], 10),
+      message: "Agent run lookup failed",
+    },
+    {
+      operation: "aiSpendSince",
+      run: (db: Db) => aiSpendSince(db, new Date()),
+      message: "AI spend lookup failed",
+    },
+    {
+      operation: "monthLedger",
+      run: (db: Db) => monthLedger(db, userId, "2026-10"),
+      message: "Month ledger lookup failed",
+    },
+    {
+      operation: "proposeReminder",
+      run: (db: Db) =>
+        proposeReminder(db, userId, {
+          invoiceId: userId,
+          dedupeKey: `reminder:${userId}:60`,
+          payload: {},
+        }),
+      message: "Reminder proposal save failed",
+    },
+    {
+      operation: "reminderKeys",
+      run: (db: Db) => reminderKeys(db, userId),
+      message: "Reminder lookup failed",
+    },
+    {
+      operation: "listReminderActions",
+      run: (db: Db) => listReminderActions(db, userId, 10),
+      message: "Reminder lookup failed",
+    },
     {
       operation: "signInWithPayPal",
       run: (db: Db) => signInWithPayPal(db, { paypalId: "PAYER-SYNTHETIC", email }),

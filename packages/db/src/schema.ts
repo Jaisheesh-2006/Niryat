@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -9,6 +10,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -171,9 +173,52 @@ export const agentActions = pgTable("agent_actions", {
   payload: jsonb("payload").notNull(),
   status: text("status").notNull(),
   error: text("error"),
+  dedupeKey: text("dedupe_key").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
+export const agentRuns = pgTable(
+  "agent_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    kind: text("kind").notNull(),
+    trigger: text("trigger").notNull(),
+    month: text("month").notNull(),
+    asOf: date("as_of").notNull(),
+    status: text("status").notNull(),
+    error: text("error"),
+    summary: jsonb("summary"),
+    aiStatus: text("ai_status"),
+    aiCostUsd: numeric("ai_cost_usd").notNull().default("0"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("agent_runs_one_running")
+      .on(table.userId, table.kind)
+      .where(sql`${table.status} = 'running'`),
+  ],
+);
+export const agentToolCalls = pgTable(
+  "agent_tool_calls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => agentRuns.id),
+    seq: integer("seq").notNull(),
+    actor: text("actor").notNull(),
+    tool: text("tool").notNull(),
+    input: jsonb("input").notNull(),
+    output: jsonb("output").notNull(),
+    ok: boolean("ok").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [unique().on(table.runId, table.seq)],
+);
 export const tasks = pgTable("tasks", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
