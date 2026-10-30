@@ -72,6 +72,12 @@ export function refundBody(form: FormData): Record<string, unknown> {
   return { amount: text(form, "amount") };
 }
 
+export function daysRemainingLabel(days: number): string {
+  if (days === 0) return "Due today";
+  if (days < 0) return `Overdue by ${-days} ${days === -1 ? "day" : "days"}`;
+  return String(days);
+}
+
 const labels: Record<string, string> = {
   email: "Client email",
   legalName: "Legal name",
@@ -106,11 +112,17 @@ const labels: Record<string, string> = {
 
 type FormResult = { ok: true; data?: never } | { ok: false; message: string; reasons?: string[] };
 const fallback = { ok: false, message: "Something went wrong. Try again." } as const;
+const reminderFallback = {
+  ok: false,
+  message:
+    "Unable to confirm this reminder's status. Reload this page to check it before taking further action.",
+} as const;
 
 export async function sendJson(
   url: string,
   method: "POST" | "PUT",
   body: unknown,
+  context?: "reminder_approval",
 ): Promise<FormResult>;
 export async function sendJson<T>(
   url: string,
@@ -122,7 +134,7 @@ export async function sendJson(
   url: string,
   method: "POST" | "PUT",
   body: unknown,
-  schema?: z.ZodType,
+  schema?: z.ZodType | "reminder_approval",
 ): Promise<FormResult | { ok: true; data: unknown }> {
   try {
     const response = await fetch(url, {
@@ -130,13 +142,13 @@ export async function sendJson(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (response.ok && schema) {
+    if (response.ok && schema && schema !== "reminder_approval") {
       const parsed = schema.safeParse(await response.json());
       return parsed.success ? { ok: true, data: parsed.data } : fallback;
     }
-    return await responseResult(response);
+    return await responseResult(response, schema === "reminder_approval");
   } catch {
-    return fallback;
+    return schema === "reminder_approval" ? reminderFallback : fallback;
   }
 }
 
@@ -153,7 +165,7 @@ export async function sendPdf(url: string, file: File): Promise<FormResult> {
   }
 }
 
-async function responseResult(response: Response): Promise<FormResult> {
+async function responseResult(response: Response, reminderApproval = false): Promise<FormResult> {
   if (response.ok) return { ok: true };
   const parsed = z
     .object({
@@ -166,8 +178,10 @@ async function responseResult(response: Response): Promise<FormResult> {
         .optional(),
     })
     .safeParse(await response.json().catch(() => undefined));
-  if (!parsed.success) return fallback;
+  if (!parsed.success) return reminderApproval ? reminderFallback : fallback;
   switch (parsed.data.error) {
+    case "close_running":
+      return { ok: false, message: "A close is already running. Wait for it to finish." };
     case "ai_unavailable":
       return {
         ok: false,
@@ -201,7 +215,27 @@ async function responseResult(response: Response): Promise<FormResult> {
         message: "The refund is more than what is left to refund on this payment.",
       };
     case "paypal_failed":
-      if (!parsed.data.code) return fallback;
+      if (!parsed.data.code) return reminderApproval ? reminderFallback : fallback;
+      if (parsed.data.code === "reminder_not_needed") {
+        return {
+          ok: false,
+          message: "This invoice no longer needs a reminder. Reject this proposal.",
+        };
+      }
+      if (parsed.data.code === "reminder_outcome_unknown") {
+        return {
+          ok: false,
+          message:
+            "PayPal may have accepted this reminder. Check PayPal before taking further action. This reminder cannot be resent.",
+        };
+      }
+      if (reminderApproval) {
+        return {
+          ok: false,
+          message:
+            "The reminder attempt failed. This reminder cannot be retried. You can reject this proposal.",
+        };
+      }
       return {
         ok: false,
         message: `PayPal did not accept the request (${parsed.data.code}). Nothing else was sent. You can approve again to retry.`,
@@ -241,6 +275,6 @@ async function responseResult(response: Response): Promise<FormResult> {
     case "unauthenticated":
       return { ok: false, message: "Your session has ended. Sign in again." };
     default:
-      return fallback;
+      return reminderApproval ? reminderFallback : fallback;
   }
 }

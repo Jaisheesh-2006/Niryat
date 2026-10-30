@@ -21,6 +21,7 @@ import { TaskDoneButton } from "../components/TaskDoneButton";
 import { apiGet } from "./api";
 import {
   clientBody,
+  daysRemainingLabel,
   invoiceBody,
   profileBody,
   refundBody,
@@ -72,6 +73,7 @@ afterEach(() => {
 });
 
 it.each([
+  ["close_running", "A close is already running. Wait for it to finish."],
   ["ai_unavailable", "AI is not configured, so extraction is unavailable. Fill in the form below."],
   ["ai_budget_exhausted", "The monthly AI budget is used up. Fill in the form below."],
   ["extraction_running", "An extraction is already running."],
@@ -80,6 +82,72 @@ it.each([
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error }, { status: 503 })));
   expect(await sendJson("/api/extract", "POST", { text: "test" })).toEqual({ ok: false, message });
 });
+
+it.each([
+  [0, "Due today"],
+  [1, "1"],
+  [5, "5"],
+  [-1, "Overdue by 1 day"],
+  [-3, "Overdue by 3 days"],
+])("formats %s days remaining", (days, label) => {
+  expect(daysRemainingLabel(Number(days))).toBe(label);
+});
+
+it.each([
+  ["reminder_not_needed", "This invoice no longer needs a reminder. Reject this proposal."],
+  [
+    "reminder_outcome_unknown",
+    "PayPal may have accepted this reminder. Check PayPal before taking further action. This reminder cannot be resent.",
+  ],
+])("explains %s without offering a retry", async (code, message) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ error: "paypal_failed", code }, { status: 502 })),
+  );
+  expect(await sendJson("/api/actions/test/approve", "POST", {})).toEqual({ ok: false, message });
+  expect(await sendJson("/api/actions/test/approve", "POST", {}, "reminder_approval")).toEqual({
+    ok: false,
+    message,
+  });
+});
+
+it.each(["INVALID_REQUEST", "HTTP_401", "invalid_payload"])(
+  "does not offer a retry for reminder rejection %s",
+  async (code) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ error: "paypal_failed", code }, { status: 502 })),
+    );
+    expect(await sendJson("/api/actions/test/approve", "POST", {}, "reminder_approval")).toEqual({
+      ok: false,
+      message:
+        "The reminder attempt failed. This reminder cannot be retried. You can reject this proposal.",
+    });
+  },
+);
+
+it.each(["interrupted", "unreadable", "missing code", "unknown error"])(
+  "asks to reload after %s reminder approval",
+  async (failure) => {
+    const fetch = vi.fn();
+    if (failure === "interrupted") fetch.mockRejectedValue(new Error("interrupted"));
+    else if (failure === "unreadable")
+      fetch.mockResolvedValue(new Response("invalid", { status: 502 }));
+    else
+      fetch.mockResolvedValue(
+        Response.json(
+          { error: failure === "missing code" ? "paypal_failed" : "unexpected" },
+          { status: 502 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetch);
+    expect(await sendJson("/api/actions/test/approve", "POST", {}, "reminder_approval")).toEqual({
+      ok: false,
+      message:
+        "Unable to confirm this reminder's status. Reload this page to check it before taking further action.",
+    });
+  },
+);
 
 const extraction: ExtractionResult = extractionResultSchema.parse({
   fields: {

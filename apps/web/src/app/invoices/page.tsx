@@ -1,14 +1,21 @@
-import { clientSchema, invoiceViewSchema } from "@niryat/shared";
+import {
+  clientSchema,
+  closePageSchema,
+  invoiceViewSchema,
+  reminderStageSchema,
+} from "@niryat/shared";
 import { z } from "zod";
 import { ActionButtons } from "../../components/ActionButtons";
 import { ExtractPanel } from "../../components/ExtractPanel";
 import { RefundForm } from "../../components/RefundForm";
 import { apiGet } from "../../lib/api";
+import { daysRemainingLabel } from "../../lib/forms";
 
 export default async function Invoices() {
-  const [invoices, clients] = await Promise.all([
+  const [invoices, clients, close] = await Promise.all([
     apiGet("/invoices", z.array(invoiceViewSchema)),
     apiGet("/clients", z.array(clientSchema)),
+    apiGet("/close", closePageSchema),
   ]);
   const statusLabels = {
     issued: "Issued",
@@ -64,6 +71,33 @@ export default async function Invoices() {
             </dd>
           </dl>
           {invoice.action && <ActionButtons action={invoice.action} />}
+          {(close?.approvals ?? [])
+            .filter((action) => action.invoiceId === invoice.id)
+            .map((action) => (
+              <div key={action.id}>
+                <p>
+                  Invoice {action.invoiceNumber}: reminder{" "}
+                  {reminderStageSchema.parse(action.payload.stage)} days before the RBI deadline
+                </p>
+                <ActionButtons key={action.id} action={action} />
+              </div>
+            ))}
+          {invoice.compliance.deadline && (
+            <>
+              <h3>RBI deadline</h3>
+              <dl>
+                <dt>Receive full payment by</dt>
+                <dd>{invoice.compliance.deadline.deadline}</dd>
+                <dt>Days remaining</dt>
+                <dd>{daysRemainingLabel(invoice.compliance.deadline.daysRemaining)}</dd>
+              </dl>
+              <p>{invoice.compliance.deadline.message}</p>
+              <p>
+                Rule {invoice.compliance.deadline.citation.ruleId}:{" "}
+                {invoice.compliance.deadline.citation.source}. Verify with your CA.
+              </p>
+            </>
+          )}
           <h3>Payments</h3>
           {invoice.payments.length === 0 ? (
             <p>No payments recorded yet.</p>

@@ -302,6 +302,9 @@ importers:
 
   apps/worker:
     dependencies:
+      "@niryat/api":
+        specifier: workspace:*
+        version: link:../api
       "@niryat/config":
         specifier: workspace:*
         version: link:../../packages/config

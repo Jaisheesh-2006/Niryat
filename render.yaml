@@ -1,5 +1,4 @@
-# https://render.com/docs/blueprint-spec
-# Account deployment: docs/verification.md V11. Monthly trigger deferred to spec 08.
+# Account deployment: docs/verification.md V11. Monthly close: niryat-monthly-close cron starts the monthlyClose workflow task (spec 08).
 services:
   - type: web
     name: niryat-web
@@ -83,6 +82,24 @@ services:
         sync: false
       - key: PAYPAL_ENVIRONMENT
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        sync: false
+      - key: AI_MONTHLY_BUDGET_USD
+        sync: false
+  - type: cron
+    name: niryat-monthly-close
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "30 1 1 * *"
+    buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm exec turbo run build --filter=@niryat/worker
+    startCommand: corepack pnpm --filter @niryat/worker trigger:monthly-close
+    envVars:
+      # Set on the cron service; the SDK uses it to start the workflow task.
+      - key: RENDER_API_KEY
+        sync: false
   - type: workflow
     name: niryat-worker
     runtime: node
@@ -109,6 +126,8 @@ services:
       - key: FILE_STORAGE_URL
         sync: false
       - key: ENCRYPTION_KEY
+        sync: false
+      - key: SESSION_SECRET
         sync: false
       - key: DATABASE_URL
         fromDatabase:
