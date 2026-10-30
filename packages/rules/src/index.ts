@@ -9,6 +9,7 @@ export const ruleMetadataSchema = z.strictObject({
   effective_from: z.iso.date().nullable(),
   review: z.enum(["unchecked", "source_checked"]),
   logic: z.string().regex(/^(TODO|[a-z][A-Za-z0-9]*)$/),
+  params: z.record(z.string(), z.number().int().positive()).optional(),
 });
 export type RuleMetadata = z.infer<typeof ruleMetadataSchema>;
 
@@ -21,4 +22,5 @@ export * from "./invoice-number";
 export * from "./load";
 export * from "./money";
 export * from "./purpose-codes";
+export * from "./rbi-deadline";
 export * from "./realisation";

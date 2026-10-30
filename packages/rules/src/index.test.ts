@@ -12,6 +12,7 @@ const IMPLEMENTED: Record<string, string> = {
   EXPORT_INVOICE_FIELDS: "prepareExportInvoice",
   CREDIT_NOTE: "creditNoteFor",
   REALISATION_ADJUSTMENT: "realisationFor",
+  RBI_REALISATION: "realisationDeadline",
 };
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {

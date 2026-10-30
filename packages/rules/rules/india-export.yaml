@@ -55,7 +55,10 @@ rules:
     source: "FEMA (Export and Import of Goods and Services) Regulations, 2026 (FEMA 23(R)/2026-RB) Reg 5(1)(a), as amended by FEMA 23(R)/(1)/2026-RB"
     effective_from: 2026-10-01
     review: source_checked
-    logic: TODO
+    logic: realisationDeadline
+    params:
+      months: 9
+      months_inr: 12
   - id: REALISATION_ADJUSTMENT
     description: "A refund or lost dispute is an under-realisation; it reduces export value only when the AD bank allows it, which for invoices up to Rs 10 lakh may rest on the exporter's declaration"
     source: "FEMA 23(R)/2026-RB Reg 6 and Reg 4(2) proviso"
