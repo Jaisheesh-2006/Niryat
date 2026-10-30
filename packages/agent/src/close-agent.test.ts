@@ -1,11 +1,14 @@
-import { expect, it, vi } from "vitest";
+import { expect, expectTypeOf, it, vi } from "vitest";
 import type { AgentTool, ClaudeRunner } from "./claude";
 import {
   type CloseAgentInput,
+  type CloseDataSource,
   type CloseDrafts,
   closeAgentTools,
   runCloseAgent,
 } from "./close-agent";
+import type { extractionTool } from "./extraction";
+import type { paypalReadTools } from "./paypal-tools";
 
 const invoiceId = "11111111-1111-4111-8111-111111111111";
 const otherId = "22222222-2222-4222-8222-222222222222";
@@ -292,3 +295,44 @@ function forbiddenDependencies(input: CloseAgentInput, drafts: CloseDrafts) {
 void forbiddenDependencies;
 const toolTypeCheck: readonly AgentTool[] = setup().tools;
 void toolTypeCheck;
+
+it.each(["https://example.test/approve", "www.example.test/approve"])(
+  "rejects links in reminder advice and summary notes: %s",
+  async (link) => {
+    const { call, drafts, log } = setup();
+    expect(
+      await call("propose_reminder", {
+        invoiceId,
+        stage: 60,
+        advice: "send",
+        reason: `Please approve the reminder at ${link}`,
+      }),
+    ).toEqual({ text: "Rejected: invalid_reason", isError: true });
+    expect(
+      await call("write_summary", { note: `Review the payment at ${link}`, focus: [] }),
+    ).toEqual({ text: "Rejected: invalid_note", isError: true });
+    expect(drafts).toEqual({ reminders: new Map(), tasks: [], summary: null });
+    expect(log.mock.calls).toEqual([
+      [expect.objectContaining({ ok: false })],
+      [expect.objectContaining({ ok: false })],
+    ]);
+  },
+);
+
+it("keeps persistence and PayPal execution dependencies out of every tool factory", () => {
+  type ExecutionKey = "db" | "rest" | "ledger";
+  expectTypeOf<
+    Extract<keyof Parameters<typeof closeAgentTools>[0], ExecutionKey>
+  >().toEqualTypeOf<never>();
+  expectTypeOf<Extract<keyof CloseDataSource, ExecutionKey>>().toEqualTypeOf<never>();
+  expectTypeOf<
+    Extract<keyof Parameters<typeof paypalReadTools>[0], ExecutionKey>
+  >().toEqualTypeOf<never>();
+  expectTypeOf<Parameters<typeof extractionTool>[0]>().toEqualTypeOf<string>();
+  expectTypeOf<Parameters<typeof extractionTool>[1]>().toEqualTypeOf<{
+    result: unknown | null;
+  }>();
+  expectTypeOf<Parameters<typeof extractionTool>[2]>().toEqualTypeOf<
+    Parameters<typeof closeAgentTools>[2]
+  >();
+});
