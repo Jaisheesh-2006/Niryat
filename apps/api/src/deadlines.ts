@@ -5,12 +5,13 @@ export async function ensureDeadlineTasks(
   db: Db,
   userId: string,
   views: readonly InvoiceView[],
-): Promise<number> {
+): Promise<{ overdue: number; created: number }> {
   let overdue = 0;
+  let created = 0;
   for (const view of views) {
     const deadline = view.compliance.deadline;
     if (!deadline?.overdue) continue;
-    await ensureTask(db, {
+    const inserted = await ensureTask(db, {
       userId,
       invoiceId: view.id,
       type: "rbi_deadline_passed",
@@ -19,7 +20,8 @@ export async function ensureDeadlineTasks(
       sourceRuleId: deadline.citation.ruleId,
       dedupeKey: `rbi:${view.id}:overdue`,
     });
+    if (inserted) created += 1;
     overdue += 1;
   }
-  return overdue;
+  return { overdue, created };
 }

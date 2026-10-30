@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { createDb, type Db, knownTransactionIds } from "@niryat/db";
+import { createClaudeRunner, createToolkitReader } from "@niryat/agent";
+import { createDb, type Db, knownTransactionIds, parseEncryptionKey } from "@niryat/db";
 import {
   createPayPalLedger,
   createPayPalRestClient,
@@ -9,8 +10,9 @@ import {
   type PayPalRestClient,
 } from "@niryat/paypal";
 import { z } from "zod";
+import { nightlyReminders } from "./close";
 import { recordDispute } from "./disputes";
-import { loadAuthEnv, loadEnv, loadPayPalEnv } from "./env";
+import { loadAiEnv, loadAuthEnv, loadEnv, loadPayPalEnv } from "./env";
 import { recordCapture, recordRefundById } from "./payments";
 
 export async function syncPayments(
@@ -99,11 +101,15 @@ export async function main(args: string[] = []) {
     }
     let authEnv: ReturnType<typeof loadAuthEnv>;
     let paypalEnv: ReturnType<typeof loadPayPalEnv>;
+    let aiEnv: ReturnType<typeof loadAiEnv>;
+    let encryptionKey: Buffer;
     try {
       loadEnv(process.env);
       authEnv = loadAuthEnv(process.env);
       paypalEnv = loadPayPalEnv(process.env);
+      aiEnv = refundId ? undefined : loadAiEnv(process.env);
       if (!authEnv) throw new Error("Invalid environment: DATABASE_URL. See .env.example.");
+      encryptionKey = parseEncryptionKey(authEnv.ENCRYPTION_KEY);
       if (!paypalEnv) {
         throw new Error(
           "Invalid environment: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID. See .env.example.",
@@ -133,9 +139,32 @@ export async function main(args: string[] = []) {
       const now = new Date();
       const payments = await syncPayments({ db: database.db, ledger }, now);
       const disputes = await syncDisputes({ db: database.db, rest, ledger }, now);
-      const summary = { payments, disputes };
+      const reminders = await nightlyReminders(
+        {
+          db: database.db,
+          encryptionKey,
+          paypal: { rest, ledger },
+          ...(aiEnv
+            ? {
+                ai: {
+                  runner: createClaudeRunner({
+                    apiKey: aiEnv.ANTHROPIC_API_KEY,
+                    model: aiEnv.CLAUDE_MODEL,
+                  }),
+                  monthlyBudgetUsd: aiEnv.AI_MONTHLY_BUDGET_USD,
+                  paypalReader: createToolkitReader({
+                    clientId: paypalEnv.PAYPAL_CLIENT_ID,
+                    clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET,
+                  }),
+                },
+              }
+            : {}),
+        },
+        now,
+      );
+      const summary = { payments, disputes, reminders };
       console.log(JSON.stringify(summary));
-      if (payments.failed > 0 || disputes.failed > 0) process.exitCode = 1;
+      if (payments.failed > 0 || disputes.failed > 0 || reminders.failed > 0) process.exitCode = 1;
     } finally {
       await database.close();
     }

@@ -673,8 +673,9 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       sourceRuleId: "CREDIT_NOTE",
       dedupeKey: "refund:REFUND-1",
     };
-    await ensureTask(t.db, task);
-    await ensureTask(t.db, task);
+    const inserted = await Promise.all([ensureTask(t.db, task), ensureTask(t.db, task)]);
+    expect(inserted.sort()).toEqual([false, true]);
+    expect(await ensureTask(t.db, task)).toBe(false);
     const [saved] = await listTasks(t.db, userId);
     if (!saved) throw new Error("Test task was not saved");
     expect(await listTasks(t.db, userId)).toHaveLength(1);

@@ -24,14 +24,16 @@ export async function ensureTask(
     sourceRuleId: string;
     dedupeKey: string;
   },
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const rows = await db
     .insert(tasks)
     .values(task)
     .onConflictDoNothing({ target: tasks.dedupeKey })
+    .returning({ id: tasks.id })
     .catch(() => {
       throw new Error("Task save failed");
     });
+  return rows.length > 0;
 }
 
 export async function listTasks(db: Db, userId: string): Promise<Task[]> {

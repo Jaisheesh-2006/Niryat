@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./close": "./src/close.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",
@@ -15,6 +16,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "sync:payments": "tsx src/sync.ts",
+    "close:run": "tsx src/close.ts",
     "seed:fira-demo": "tsx src/seed-fira-demo.ts"
   },
   "dependencies": {

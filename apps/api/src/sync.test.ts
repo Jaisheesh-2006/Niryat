@@ -12,6 +12,7 @@ import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
 import type { CaptureRecord, PayPalLedger, PayPalRestClient } from "@niryat/paypal";
 import * as paypalModule from "@niryat/paypal";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import * as closeModule from "./close";
 import * as paymentModule from "./payments";
 import { main, syncDisputes, syncPayments } from "./sync";
 
@@ -45,7 +46,7 @@ describe("payment sync CLI", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     for (const [key, value] of Object.entries({
       DATABASE_URL: "postgres://unused:unused@127.0.0.1:1/unused",
-      ENCRYPTION_KEY: "test-key",
+      ENCRYPTION_KEY: Buffer.alloc(32).toString("base64"),
       SESSION_SECRET: "x".repeat(32),
       PAYPAL_CLIENT_ID: "test-client-id",
       PAYPAL_CLIENT_SECRET: "test-secret",
@@ -54,6 +55,7 @@ describe("payment sync CLI", () => {
       PUBLIC_APP_URL: "http://localhost:3000",
       PORT: "3001",
       NODE_ENV: "test",
+      ANTHROPIC_API_KEY: "",
     })) {
       vi.stubEnv(key, value);
     }
@@ -63,6 +65,12 @@ describe("payment sync CLI", () => {
     searchTransactions.mockReset().mockResolvedValue([]);
     vi.spyOn(dbModule, "createDb").mockReturnValue({ db: database.db, close });
     vi.spyOn(dbModule, "knownTransactionIds").mockResolvedValue(new Set());
+    vi.spyOn(closeModule, "nightlyReminders").mockResolvedValue({
+      users: 0,
+      runs: 0,
+      proposed: 0,
+      failed: 0,
+    });
     vi.spyOn(paypalModule, "createPayPalLedger").mockReturnValue({
       getCapture,
       searchTransactions,
@@ -106,6 +114,7 @@ describe("payment sync CLI", () => {
             failed: failed ? 1 : 0,
           },
           disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+          reminders: { users: 0, runs: 0, proposed: 0, failed: 0 },
         }),
       );
       expect(console.error).not.toHaveBeenCalled();
@@ -121,6 +130,24 @@ describe("payment sync CLI", () => {
     expect(console.error).toHaveBeenCalledExactlyOnceWith("Payment sync failed");
     expect(process.exitCode).toBe(1);
     expect(close).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it("runs reminders after sync and exits unsuccessfully when a reminder run fails", async () => {
+    vi.mocked(closeModule.nightlyReminders).mockImplementation(async (deps, instant) => {
+      expect(searchTransactions).toHaveBeenCalledOnce();
+      expect(deps.db).toBe(database.db);
+      expect(deps.encryptionKey).toEqual(Buffer.alloc(32));
+      expect(deps.paypal?.ledger.searchTransactions).toBe(searchTransactions);
+      expect(deps.paypal?.rest.get).toBe(getDisputes);
+      expect(instant).toBeInstanceOf(Date);
+      return { users: 2, runs: 1, proposed: 0, failed: 1 };
+    });
+    await main();
+    expect(process.exitCode).toBe(1);
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('"reminders":{"users":2,"runs":1,"proposed":0,"failed":1}'),
+    );
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it.each(["recorded", "not_found", "not_completed"] as const)(
@@ -155,6 +182,42 @@ describe("payment sync CLI", () => {
     expect(console.error).toHaveBeenCalledExactlyOnceWith("Payment sync failed");
     expect(process.exitCode).toBe(1);
     expect(close).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it("recovers an explicit refund even when unrelated AI settings are incomplete", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "fake");
+    vi.stubEnv("CLAUDE_MODEL", "");
+    vi.stubEnv("AI_MONTHLY_BUDGET_USD", "");
+    const recordRefund = vi.spyOn(paymentModule, "recordRefundById").mockResolvedValue("recorded");
+
+    await main(["--refund-id", "REFUND-MISSED"]);
+
+    expect(recordRefund).toHaveBeenCalledOnce();
+    expect(console.log).toHaveBeenCalledExactlyOnceWith(
+      JSON.stringify({ refund: { status: "recorded" } }),
+    );
+    expect(console.error).not.toHaveBeenCalled();
+    expect(searchTransactions).not.toHaveBeenCalled();
+    expect(closeModule.nightlyReminders).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(0);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("still validates AI settings for nightly sync before contacting PayPal", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "fake");
+    vi.stubEnv("CLAUDE_MODEL", "");
+    vi.stubEnv("AI_MONTHLY_BUDGET_USD", "");
+
+    await main();
+
+    expect(console.error).toHaveBeenCalledExactlyOnceWith(
+      "Invalid environment: CLAUDE_MODEL, AI_MONTHLY_BUDGET_USD. See .env.example.",
+    );
+    expect(searchTransactions).not.toHaveBeenCalled();
+    expect(closeModule.nightlyReminders).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    expect(dbModule.createDb).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -204,6 +267,7 @@ describe("payment sync CLI", () => {
       JSON.stringify({
         payments: { seen: 3, alreadyRecorded: 2, recorded: 1, skipped: 0, failed: 0 },
         disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+        reminders: { users: 0, runs: 0, proposed: 0, failed: 0 },
       }),
     );
     expect(process.exitCode).toBe(0);
@@ -219,6 +283,7 @@ describe("payment sync CLI", () => {
       JSON.stringify({
         payments: { seen: 1, alreadyRecorded: 0, recorded: 0, skipped: 1, failed: 0 },
         disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+        reminders: { users: 0, runs: 0, proposed: 0, failed: 0 },
       }),
     );
     expect(process.exitCode).toBe(0);
@@ -240,6 +305,7 @@ describe("payment sync CLI", () => {
       JSON.stringify({
         payments: { seen: 2, alreadyRecorded: 0, recorded: 1, skipped: 0, failed: 1 },
         disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+        reminders: { users: 0, runs: 0, proposed: 0, failed: 0 },
       }),
     );
     expect(process.exitCode).toBe(1);
@@ -255,6 +321,7 @@ describe("payment sync CLI", () => {
       JSON.stringify({
         payments: { seen: 2, alreadyRecorded: 2, recorded: 0, skipped: 0, failed: 0 },
         disputes: { seen: 0, recorded: 0, notFound: 0, failed: 0 },
+        reminders: { users: 0, runs: 0, proposed: 0, failed: 0 },
       }),
     );
     expect(process.exitCode).toBe(0);

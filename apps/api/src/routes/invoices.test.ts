@@ -569,8 +569,8 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     const sent = await readInvoice(await post(cookie, `/actions/${actionId(issued)}/approve`));
     expect(sent.status).toBe("sent");
     expect(sent.compliance.deadline).toEqual(issued.compliance.deadline);
-    expect(await ensureDeadlineTasks(t.db, userId, [sent])).toBe(0);
-    expect(await ensureDeadlineTasks(t.db, userId, [])).toBe(0);
+    expect(await ensureDeadlineTasks(t.db, userId, [sent])).toEqual({ overdue: 0, created: 0 });
+    expect(await ensureDeadlineTasks(t.db, userId, [])).toEqual({ overdue: 0, created: 0 });
 
     const today = "2027-07-27";
     vi.mocked(ruleClock.todayInIndia).mockReturnValue(today);
@@ -580,8 +580,8 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect(deadline.overdue).toBe(true);
     expect(await listTasks(t.db, userId)).toEqual([]);
     expect(await list(other.cookie)).toEqual([]);
-    expect(await ensureDeadlineTasks(t.db, userId, views)).toBe(1);
-    expect(await ensureDeadlineTasks(t.db, userId, views)).toBe(1);
+    expect(await ensureDeadlineTasks(t.db, userId, views)).toEqual({ overdue: 1, created: 1 });
+    expect(await ensureDeadlineTasks(t.db, userId, views)).toEqual({ overdue: 1, created: 0 });
     expect(await listTasks(t.db, userId)).toEqual([
       expect.objectContaining({
         invoiceId: sent.id,
@@ -600,7 +600,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
   it("removes a paid invoice's deadline and restores it after a refund shortfall", async () => {
     const { id: userId, cookie, invoice } = await paidInvoice();
     expect(invoice.compliance.deadline).toBeNull();
-    expect(await ensureDeadlineTasks(t.db, userId, [invoice])).toBe(0);
+    expect(await ensureDeadlineTasks(t.db, userId, [invoice])).toEqual({ overdue: 0, created: 0 });
     await recordRefund(t.db, refund);
     const [refunded] = await list(cookie);
     expect(refunded?.status).toBe("partially_refunded");
