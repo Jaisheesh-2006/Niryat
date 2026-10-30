@@ -2,6 +2,7 @@ import { cite, PAYPAL_INDIA_PURPOSE_CODES } from "@niryat/rules";
 import { Hono } from "hono";
 import { type AppDeps, authRoutes } from "./routes/auth";
 import { clientRoutes } from "./routes/clients";
+import { closeRoutes } from "./routes/close";
 import { extractRoutes } from "./routes/extract";
 import { firaRoutes } from "./routes/fira";
 import { healthCheckRoutes } from "./routes/health-check";
@@ -21,6 +22,7 @@ export function createApp(deps?: AppDeps): Hono {
     if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", firaRoutes(deps));
     app.route("/", clientRoutes(deps));
+    app.route("/", closeRoutes(deps));
     app.route("/", extractRoutes(deps));
     app.route("/", invoiceRoutes(deps));
     app.route("/", taskRoutes(deps));

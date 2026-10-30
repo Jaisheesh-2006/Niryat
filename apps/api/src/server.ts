@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { serve } from "@hono/node-server";
-import { createClaudeRunner } from "@niryat/agent";
+import { createClaudeRunner, createToolkitReader } from "@niryat/agent";
 import { createDb, parseEncryptionKey } from "@niryat/db";
 import { createPayPalLedger, createPayPalLogin, createPayPalRestClient } from "@niryat/paypal";
 import { loadAiEnv, loadAuthEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
@@ -38,6 +38,9 @@ const app =
                   model: aiEnv.CLAUDE_MODEL,
                 }),
                 monthlyBudgetUsd: aiEnv.AI_MONTHLY_BUDGET_USD,
+                ...(paypalCredentials
+                  ? { paypalReader: createToolkitReader(paypalCredentials) }
+                  : {}),
               },
             }
           : {}),

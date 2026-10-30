@@ -7,7 +7,7 @@ import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { z } from "zod";
 import { hashPassword, verifyPassword } from "../auth/password";
 import { endSession, readSession, startSession } from "../auth/session";
-import type { AiDeps } from "../extraction";
+import type { CloseDeps } from "../close";
 import type { FileStore } from "../files";
 
 export interface AppDeps {
@@ -19,7 +19,8 @@ export interface AppDeps {
   paypalLogin?: PayPalLogin;
   files?: FileStore;
   publicAppUrl?: string;
-  ai?: AiDeps;
+  ai?: NonNullable<CloseDeps["ai"]>;
+  runInBackground?: (work: () => Promise<void>) => void | Promise<void>;
 }
 
 const dummyHash = `scrypt$16384$8$1$${Buffer.alloc(16).toString("base64")}$${Buffer.alloc(64).toString("base64")}`;
