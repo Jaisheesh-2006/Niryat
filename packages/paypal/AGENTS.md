@@ -6,4 +6,5 @@ rest/ owns typed Invoicing v2 and Disputes v1 transport.
 webhooks/ owns signature verification; its scaffold fails closed.
 Validate request/response boundaries with zod; keep tokens out of logs.
 Route every PayPal action through user approval; model approval is insufficient.
+The Agent Toolkit is used only for the read-only allowlist in packages/agent (root AGENTS.md).
 Check India seller limitations and test retries/idempotency in the selected spec.

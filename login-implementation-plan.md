@@ -11,13 +11,13 @@ Decided 2026-10-29: one app, the existing one.
   - It doesn't need the signed-in user's PayPal access, so email users never need a PayPal step.
 - **Known limit:** the account that owns the app can't use the button. PayPal returns userinfo 400 when the signing-in account owns the app ([root cause](docs/paypal-sandbox-findings.md#root-cause-the-app-owner-cannot-sign-in-to-its-own-app-2026-10-29)). That account uses email sign-in. Any other PayPal account works (verified 2026-10-29).
 
-## Current state (2026-10-29)
+## Current state (checked 2026-10-30)
 
 - Email sign-in: `POST /auth/signup|login|logout`, `GET /auth/me` ([auth.ts](apps/api/src/routes/auth.ts)). Signed session cookie ([session.ts](apps/api/src/auth/session.ts)).
 - The web app calls the API through the `/api/*` rewrite ([next.config.ts](apps/web/next.config.ts)), so cookies land on the web origin.
 - `users.password_hash` is `NOT NULL`. `users.paypal_payer_id` exists but is unused ([schema.ts](packages/db/src/schema.ts)).
 - `createPayPalRestClient` only does client-credentials tokens, so it can't run the authorization-code flow.
-- The latest migration is `0003`. Uncommitted P4 work in `packages/db` and `packages/shared` must be committed first, so that this task's migration and diff stay separate.
+- The latest migration is `0003`, so this work creates `0004`. Phase 5 then takes `0005`.
 
 ## Step 0: Two sandbox checks before coding (user, about 10 minutes)
 
@@ -77,7 +77,8 @@ Schema ([schema.ts](packages/db/src/schema.ts)):
 - The PayPal identifier column depends on step 0:
   - **payer ID available:** keep `paypal_payer_id` and add a unique constraint.
   - **payer ID unavailable:** add `paypal_user_id text unique` and leave `paypal_payer_id` untouched. Dropping and adding in one migration makes `drizzle-kit generate` prompt interactively, and that doesn't work here.
-- Then run `pnpm db:generate` (creates the next migration) and `pnpm db:migrate`.
+- Then run `pnpm db:generate` (creates `0004_*.sql`) and `pnpm db:migrate`.
+- Update [index.test.ts](packages/db/src/index.test.ts). Its "requires a unique email and a password hash for users" test asserts `passwordHash.notNull === true`. Change it to `false`, and rename the test to match. If a new identifier column is added, assert that it is unique.
 
 Repository ([users.ts](packages/db/src/users.ts)):
 - **`createUser`:** `passwordHash` and `paypalId` become optional.
@@ -87,7 +88,8 @@ Repository ([users.ts](packages/db/src/users.ts)):
   2. **No email from PayPal:** return `no_email`.
   3. **A user has the same email:** return `email_taken`. Don't link by email, because that would be an account-takeover path. That user signs in with email.
   4. **Otherwise:** create the user with `passwordHash` null. If the insert loses a race on a unique constraint, look the user up again.
-- Integration tests in [storage.test.ts](packages/db/src/storage.test.ts) style. Like the existing ones, they skip without `DATABASE_URL`. Cover each branch above, plus a PayPal-only user who can't sign in by password.
+- Integration tests go in the `describe.skipIf(!testDatabaseUrl)("user and profile storage")` block of [storage.test.ts](packages/db/src/storage.test.ts). They use `openTestDb()` from [testing.ts](packages/db/src/testing.ts), skip without `TEST_DATABASE_URL`, and run with `pnpm --filter @niryat/db test:db`. Cover each branch above, plus a PayPal-only user who can't sign in by password.
+- Add `signInWithPayPal` to the `describe("storage query failures")` cases in the same file, so a failing query throws the repository's error string and not the driver's.
 
 ## Step 3: API (`apps/api`)
 
@@ -115,7 +117,8 @@ Repository ([users.ts](packages/db/src/users.ts)):
 ## Step 4: Web (`apps/web`)
 
 - **[login/page.tsx](apps/web/src/app/login/page.tsx)** and the signup page: add a plain link `<a href="/api/auth/paypal/start">Log in with PayPal</a>` under `AuthForm`. It's a full-page navigation, so no client JS is needed.
-- Read `searchParams.error` and show a fixed message per reason in a `role="alert"` paragraph, never echoing the raw parameter. For `paypal_failed`, say: "PayPal couldn't sign you in. If this PayPal account runs this Niryat deployment, use email sign-in."
+- Next 16 (the repo pins 16.4.3) passes `searchParams` as a Promise. Make each page `async`, take `{ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }`, and `await` it before reading `error`. Neither page reads `searchParams` today, so there is no house example. Confirm the shape with Context7 for Next 16.
+- Read `error` and show a fixed message per reason in a `role="alert"` paragraph, never echoing the raw parameter. For `paypal_failed`, say: "PayPal couldn't sign you in. If this PayPal account runs this Niryat deployment, use email sign-in."
 
 ## Step 5: Docs
 
@@ -128,6 +131,7 @@ Repository ([users.ts](packages/db/src/users.ts)):
 ## Verification
 
 - `pnpm verify` and `pnpm build`.
+- `pnpm --filter @niryat/db test:db` and `pnpm --filter @niryat/api test:db`, with `TEST_DATABASE_URL` set. Check that the integration tests ran and were not skipped.
 - Browser checks, done by the user. Start with `pnpm dev`, with `DATABASE_URL` and the PayPal keys set:
   1. On `http://localhost:3000/login`, click **Log in with PayPal**. Sign in with a sandbox account that **doesn't** own the app. **Expected:** `/profile`, signed in.
   2. Sign out, then sign in with PayPal again. **Expected:** the same Niryat account, with its saved profile still there.
@@ -146,7 +150,7 @@ Repository ([users.ts](packages/db/src/users.ts)):
 
 ## Size and order
 
-A few hours, as one commit series after the P4 work is committed:
+A few hours, as one commit series. P4 is committed (`616178a`), and this lands before Phase 5:
 1. Step 0, done by the user.
 2. Steps 1 and 2, together with their tests.
 3. Step 3.

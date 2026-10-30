@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export { type ActionStatus, actionStatusSchema } from "@niryat/shared";
 
-// Agent-initiated PayPal calls, including reads, must pass the user's approval queue (spec 08).
+// Agent-initiated PayPal actions must pass the user's approval queue (spec 08); only PAYPAL_READ_TOOLS skip it (AGENTS.md).
 export type PayPalActionName = (typeof paypalActionNames)[number];
 
 export interface ProposedAction {

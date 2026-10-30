@@ -33,6 +33,7 @@ On restricted PowerShell, use corepack.cmd pnpm or pnpm.cmd instead of the ps1 s
 
 - Every legal/tax number, deadline and compliance calculation comes only from packages/rules.
 - Every PayPal action, including coding-assistant MCP calls, needs explicit user approval through the approval workflow. Never let the model approve its own action.
+- One exception, for Niryat's in-product Claude agent only: it may call the PayPal Agent Toolkit read tools named in `PAYPAL_READ_TOOLS` (packages/agent) without approval. Every call is logged, and outputs are filtered to the user's own records. A tool that creates, sends, updates, cancels, deletes, records, accepts, captures, refunds or activates anything is never exposed to the model.
 - Sandbox only. No production PayPal endpoints or credentials.
 - Never commit secrets or read/edit .env* files. .env.example is the only committed template; change it only when explicitly authorized. Users supply actual values themselves.
 - Validate every external boundary and environment with zod. Errors name keys without exposing values.
