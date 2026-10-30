@@ -3,6 +3,8 @@
 Spec 01 follow-up. Adds Log in with PayPal **alongside** email sign-in; both stay.
 Decided 2026-10-29: one app, the existing one.
 
+Status: **complete (2026-10-30)**. Steps 1–5 are implemented and all five browser checks below are user-confirmed, including profile persistence, cancellation, app-owner failure guidance and email sign-up/sign-in. Migration `0004_closed_mantis` is generated and applied; unique `paypal_payer_id` identifies PayPal users, and login tokens are discarded. The temporary spike scope is restored. Automated verification, build and both database integration suites passed; spec 01 and PLAN record the satisfied sign-in criterion. See [V02](docs/verification.md#v02-identity). The login task is closed; Phase 5 implementation is next, using migration `0005` for its schema work.
+
 ## How it works
 
 - Niryat's PayPal actions (invoicing, payments, refunds, disputes, webhooks, sync) keep using the existing app credentials, `PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET`. They always act on the account that owns that app.
@@ -11,7 +13,7 @@ Decided 2026-10-29: one app, the existing one.
   - It doesn't need the signed-in user's PayPal access, so email users never need a PayPal step.
 - **Known limit:** the account that owns the app can't use the button. PayPal returns userinfo 400 when the signing-in account owns the app ([root cause](docs/paypal-sandbox-findings.md#root-cause-the-app-owner-cannot-sign-in-to-its-own-app-2026-10-29)). That account uses email sign-in. Any other PayPal account works (verified 2026-10-29).
 
-## Current state (checked 2026-10-30)
+## Baseline before implementation (checked 2026-10-30)
 
 - Email sign-in: `POST /auth/signup|login|logout`, `GET /auth/me` ([auth.ts](apps/api/src/routes/auth.ts)). Signed session cookie ([session.ts](apps/api/src/auth/session.ts)).
 - The web app calls the API through the `/api/*` rewrite ([next.config.ts](apps/web/next.config.ts)), so cookies land on the web origin.
@@ -25,8 +27,8 @@ Decided 2026-10-29: one app, the existing one.
    - Run the spike as before, signing in with an account that **doesn't** own the app.
    - Note `payer_id=present|absent`. It decides which identifier step 2 stores.
    - Restore the scope line afterwards.
-2. **Return URL.** Change the app's Return URL to `http://localhost:3000/api/auth/paypal/callback`.
-   - If PayPal rejects `http://localhost`, try `http://127.0.0.1:3000/...` and set `PUBLIC_APP_URL` to match.
+2. **Return URL.** Set the app's Return URL to `${PUBLIC_APP_URL}/api/auth/paypal/callback` on a reachable origin.
+   - Follow-up 2026-10-30: the user could not save the HTTP localhost URL, and diagnostics found an HTTPS localhost callback against an HTTP-only dev server. Use the [HTTPS development setup](docs/paypal.md#log-in-with-paypal), setting the same origin in `PUBLIC_APP_URL`, the callback and browser visits. A protocol change alone does not enable HTTPS. The dashboard's generic save error does not establish its internal cause.
    - Record what was accepted. The spike's `example.com` URL then stops working, which is fine.
 
 ## Step 1: PayPal adapter (`packages/paypal`)
@@ -132,8 +134,8 @@ Repository ([users.ts](packages/db/src/users.ts)):
 
 - `pnpm verify` and `pnpm build`.
 - `pnpm --filter @niryat/db test:db` and `pnpm --filter @niryat/api test:db`, with `TEST_DATABASE_URL` set. Check that the integration tests ran and were not skipped.
-- Browser checks, done by the user. Start with `pnpm dev`, with `DATABASE_URL` and the PayPal keys set:
-  1. On `http://localhost:3000/login`, click **Log in with PayPal**. Sign in with a sandbox account that **doesn't** own the app. **Expected:** `/profile`, signed in.
+- Browser checks: **all passed, user-confirmed 2026-10-30**. To repeat them, start with `pnpm dev`, with `DATABASE_URL` and the PayPal keys set:
+  1. On `${PUBLIC_APP_URL}/login`, using the same HTTPS origin as the registered callback, click **Log in with PayPal**. Sign in with a sandbox account that **doesn't** own the app. **Expected:** `/profile`, signed in.
   2. Sign out, then sign in with PayPal again. **Expected:** the same Niryat account, with its saved profile still there.
   3. Start Log in with PayPal and cancel on PayPal's page. **Expected:** `/login` with the "cancelled" message.
   4. Try Log in with PayPal as the **app owner**. **Expected:** `/login` with the `paypal_failed` message.

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { serve } from "@hono/node-server";
 import { createDb, parseEncryptionKey } from "@niryat/db";
-import { createPayPalLedger, createPayPalRestClient } from "@niryat/paypal";
+import { createPayPalLedger, createPayPalLogin, createPayPalRestClient } from "@niryat/paypal";
 import { loadAuthEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
 import { createS3FileStore } from "./files";
 import { createApp } from "./index";
@@ -31,6 +31,10 @@ const app =
         ...(fileStorageEnv ? { files: createS3FileStore(fileStorageEnv) } : {}),
         ...(paypalEnv && paypalCredentials
           ? {
+              paypalLogin: createPayPalLogin({
+                ...paypalCredentials,
+                returnUrl: `${env.PUBLIC_APP_URL}/api/auth/paypal/callback`,
+              }),
               paypal: {
                 rest: createPayPalRestClient(paypalCredentials),
                 ledger: createPayPalLedger(paypalCredentials),

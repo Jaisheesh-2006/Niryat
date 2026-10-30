@@ -21,9 +21,10 @@ it("exports all twelve planned tables without opening a connection", () => {
   );
 });
 
-it("requires a unique email and a password hash for users", () => {
+it("requires unique email and PayPal identifiers, allowing users without a password", () => {
   expect(schema.users.email.notNull).toBe(true);
   expect(schema.users.email.isUnique).toBe(true);
-  expect(schema.users.passwordHash.notNull).toBe(true);
+  expect(schema.users.passwordHash.notNull).toBe(false);
+  expect(schema.users.paypalPayerId.isUnique).toBe(true);
   expect(schema.users.passwordHash.name).toBe("password_hash");
 });

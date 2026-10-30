@@ -109,14 +109,14 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 ### 1. Sign in with PayPal and compliance health check
 
-**What:** The user signs in with PayPal _(verify)_, then completes the profile: GST status, GSTIN, LUT number and validity, work type, current PayPal purpose code. Niryat shows a **health score** with plain-language red flags (e.g. _"LUT expired"_, _"Purpose code doesn't match your work"_, _"You're close to the ₹20 lakh GST threshold"_).
+**What:** The user signs in with PayPal (sandbox verified, 2026-10-30), then completes the profile: GST status, GSTIN, LUT number and validity, work type, current PayPal purpose code. Niryat shows a **health score** with plain-language red flags (e.g. _"LUT expired"_, _"Purpose code doesn't match your work"_, _"You're close to the ₹20 lakh GST threshold"_).
 
 **Why first:** every other feature depends on this profile, and it is the demo's opening "aha".
 
 **How:** Log in with PayPal for identity; rules engine evaluates the profile; AI writes the explanations.
 
 **Done when:**
-- [ ] User signs in with PayPal (sandbox) and the PayPal business account is connected
+- [x] User signs in with PayPal (sandbox) and the PayPal business account is connected
 - [x] Profile saves GST status, GSTIN, LUT details, work type, purpose code
 - [x] Health score (0–100) with at least: LUT status, purpose-code fit, GST threshold proximity
 - [x] Each red flag shows the rule it comes from and a "verify with your CA" note
@@ -373,18 +373,18 @@ APIMatic PayPal Context Plugin used while coding the integration     ← APIMati
 
 ## 11. PayPal integration
 
-| Need                              | PayPal capability                                                                  | India sandbox |
-| --------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
-| Sign in                           | Log in with PayPal                                                                 | Verify        |
-| Create and send export invoices   | Invoicing API v2 (`create_invoice`, `send_invoice`)                                | Works         |
-| Retainer billing                  | Recurring invoice series (`create_recurring_series`, `activate_recurring_series`)  | Works         |
-| Milestone billing                 | Partial payments on invoices                                                       | Unavailable   |
-| Remind late payers                | `send_invoice_reminder`                                                            | Works         |
-| Detect payments in real time      | Webhooks (invoice paid, payment capture completed)                                 | Verify        |
-| Refunds                           | Webhooks (refund events), `record_refund_for_invoice`                              | Verify        |
-| Disputes                          | Webhooks (dispute created/updated) + Disputes API (`list_disputes`, `get_dispute`) | Verify        |
-| Fees, net amounts, reconciliation | Transaction history (`list_transactions`)                                          | Works         |
-| Agent access to PayPal            | PayPal Agent Toolkit (sandbox mode)                                                | n/a           |
+| Need                              | PayPal capability                                                                  | India sandbox             |
+| --------------------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
+| Sign in                           | Log in with PayPal; email fallback for the app owner                               | Verified 2026-10-30 (V02) |
+| Create and send export invoices   | Invoicing API v2 (`create_invoice`, `send_invoice`)                                | Works                     |
+| Retainer billing                  | Recurring invoice series (`create_recurring_series`, `activate_recurring_series`)  | Works                     |
+| Milestone billing                 | Partial payments on invoices                                                       | Unavailable               |
+| Remind late payers                | `send_invoice_reminder`                                                            | Works                     |
+| Detect payments in real time      | Webhooks (invoice paid, payment capture completed)                                 | Verify                    |
+| Refunds                           | Webhooks (refund events), `record_refund_for_invoice`                              | Verify                    |
+| Disputes                          | Webhooks (dispute created/updated) + Disputes API (`list_disputes`, `get_dispute`) | Verify                    |
+| Fees, net amounts, reconciliation | Transaction history (`list_transactions`)                                          | Works                     |
+| Agent access to PayPal            | PayPal Agent Toolkit (sandbox mode)                                                | n/a                       |
 
 **Accounts:** one **India** sandbox business account (seller) and one **US** sandbox personal account (buyer).
 
@@ -577,7 +577,7 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 ## 21. Day-1 verification checklist
 
 **PayPal (India sandbox seller → US sandbox buyer):**
-- [ ] Log in with PayPal works: **yes for India business sellers, through an app the seller does not own** ([findings](paypal-sandbox-findings.md#root-cause-the-app-owner-cannot-sign-in-to-its-own-app-2026-10-29))
+- [x] Log in with PayPal works: **yes for India business sellers, through an app the seller does not own**; all login-plan browser checks user-confirmed 2026-10-30 ([V02](verification.md#v02-identity), [findings](paypal-sandbox-findings.md#login-identifier-check-2026-10-30))
 - [x] Invoices can be created and sent to a US buyer
 - [x] Recurring invoice series can be created and activated
 - [ ] Partial payments on invoices are supported: **not for India sellers** ([findings](paypal-sandbox-findings.md))

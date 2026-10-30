@@ -2,21 +2,21 @@
 
 Sandbox only. Use one India business seller and one US personal buyer created in the [Developer Dashboard](https://developer.paypal.com/dashboard/). Do not put their passwords, client secrets or access tokens in the repository. Through Phase 4, Niryat implements approved invoice/refund actions, deterministic payment/refund ingestion and dispute polling; automated checks use fakes rather than contacting PayPal.
 
-| Feature                | API or tool                                            | Verify on India sandbox                                       |
-| ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| 01 Identity and health | Log in with PayPal; local profile/rules                | Identity connection and scopes                                |
-| 02 Purpose code        | Curated bank/RBI table; AI suggestion                  | Seller's current purpose code visibility                      |
-| 03 Export eligibility  | Pure rules                                             | No PayPal API needed                                          |
-| 04 Invoicing           | REST Invoicing v2; Toolkit create_invoice/send_invoice | One-time, recurring series, partial payments, PDF attachments |
-| 05 Payments            | Webhooks; Server SDK transaction search                | Gross, fees, net, FX and invoice links                        |
-| 06 Refunds/disputes    | Server SDK refunds; webhook events; REST Disputes v1   | Refund and dispute test flows                                 |
-| 07 FIRA                | User-uploaded PDF matched against payment ledger       | Own redacted India FIRA sample                                |
-| 08 Monthly close       | Claude Agent SDK + PayPal Agent Toolkit                | Approved actions only                                         |
-| 09 RBI reminders       | Toolkit send_invoice_reminder / Invoicing v2           | Reminder delivery                                             |
-| 10 GSTR-1              | Rules over invoice/refund ledger                       | Reconciliation; no GST filing API                             |
-| 11 Calendar            | Rules and invoice/dispute dates                        | Due-date availability                                         |
-| 12 Dashboard           | PayPal ledger; AG Studio later                         | Transaction coverage                                          |
-| 13 Advance tax         | Rules over receipts net of refunds                     | Receipt coverage; no filing API                               |
+| Feature                | API or tool                                            | Verify on India sandbox                                           |
+| ---------------------- | ------------------------------------------------------ | ----------------------------------------------------------------- |
+| 01 Identity and health | Log in with PayPal; local profile/rules                | Complete: all login-plan browser checks user-confirmed 2026-10-30 |
+| 02 Purpose code        | Curated bank/RBI table; AI suggestion                  | Seller's current purpose code visibility                          |
+| 03 Export eligibility  | Pure rules                                             | No PayPal API needed                                              |
+| 04 Invoicing           | REST Invoicing v2; Toolkit create_invoice/send_invoice | One-time, recurring series, partial payments, PDF attachments     |
+| 05 Payments            | Webhooks; Server SDK transaction search                | Gross, fees, net, FX and invoice links                            |
+| 06 Refunds/disputes    | Server SDK refunds; webhook events; REST Disputes v1   | Refund and dispute test flows                                     |
+| 07 FIRA                | User-uploaded PDF matched against payment ledger       | Own redacted India FIRA sample                                    |
+| 08 Monthly close       | Claude Agent SDK + PayPal Agent Toolkit                | Approved actions only                                             |
+| 09 RBI reminders       | Toolkit send_invoice_reminder / Invoicing v2           | Reminder delivery                                                 |
+| 10 GSTR-1              | Rules over invoice/refund ledger                       | Reconciliation; no GST filing API                                 |
+| 11 Calendar            | Rules and invoice/dispute dates                        | Due-date availability                                             |
+| 12 Dashboard           | PayPal ledger; AG Studio later                         | Transaction coverage                                              |
+| 13 Advance tax         | Rules over receipts net of refunds                     | Receipt coverage; no filing API                                   |
 
 The [Server SDK](https://github.com/paypal/PayPal-TypeScript-Server-SDK) does not cover Invoicing/Disputes. The [Agent Toolkit](https://github.com/paypal/agent-toolkit) supplies future AI-facing actions; it is not the deterministic ledger adapter. The implemented REST client uses sandbox endpoints, caches OAuth tokens until five minutes before expiry, validates responses and retries transient failures once. Invoice create/send and series create/activate use stable per-action `PayPal-Request-Id` values and execute only after an owner-scoped approval claim. Created IDs survive retries. Disputes are read through REST Disputes v1. See [architecture](architecture.md).
 
@@ -55,6 +55,30 @@ The `niryat-sync` cron is configured for 02:00 IST; hosted operation is not yet 
 
 For invoices, PLAN maps GSTIN to invoicer.tax_id, LUT text to detail.terms_and_conditions, notes to detail.note and numbering to detail.invoice_number. Verify attachments/partial-payment fields against [Invoicing v2](https://developer.paypal.com/docs/api/invoicing/v2/); link a PDF in the note when attachments are unavailable. Record India limitations in the relevant spec without dropping the whole feature.
 
+## Log in with PayPal
+
+Email and PayPal sign-in both remain available. The login flow uses the same sandbox `PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET` as the seller integrations, with `openid email https://uri.paypal.com/services/paypalattributes`. Userinfo supplies the payer ID (user-confirmed 2026-10-30). The account that owns the app must use email sign-in because PayPal rejects its userinfo request; other accounts can use the PayPal button.
+
+Login acceptance is complete (2026-10-30): the user verified PayPal login, profile saving, sign-out, repeat login retaining the profile, health check, cancelled consent, app-owner failure guidance and email sign-up/sign-in. See [V02](verification.md#v02-identity).
+
+In Developer Dashboard → Apps & Credentials → Sandbox → the existing app → Log in with PayPal → Advanced Settings, enable PayPal account ID (payer ID) and set Return URL to `${PUBLIC_APP_URL}/api/auth/paypal/callback`. PayPal requires an [exact match](https://www.paypal.com/au/cshelp/article/how-do-i-set-a-redirect-url-for-the-paypal-identity-api-ts1995), including scheme, host, port and path. No new environment keys are needed.
+
+The user could not save `http://localhost:3000/api/auth/paypal/callback` on 2026-10-30: the dashboard repeatedly returned a generic error ID. Its internal cause is unknown. Diagnostics also found the running app requesting `https://localhost:3000/api/auth/paypal/callback`, although the dev server serves only HTTP; HTTPS to that port fails with `ERR_SSL_WRONG_VERSION_NUMBER`. Changing the URL's scheme does not enable TLS.
+
+For a reachable HTTPS development origin, use the already installed `cloudflared`:
+1. With `corepack.cmd pnpm dev` running, start `cloudflared tunnel --url http://localhost:3000` in a separate terminal. This makes the web app publicly reachable while the tunnel is running; start it only when that exposure is intended. On Linux/macOS use `corepack pnpm` for pnpm commands.
+2. Copy the printed HTTPS origin, such as `https://<assigned-host>.trycloudflare.com`. Set `PUBLIC_APP_URL` to that exact origin, without a path, in the shell used to restart `pnpm dev`. In PowerShell: `$env:PUBLIC_APP_URL = 'https://<assigned-host>.trycloudflare.com'`; on Linux/macOS: `export PUBLIC_APP_URL='https://<assigned-host>.trycloudflare.com'`. Shell values take precedence over the private file; no file edit is required.
+3. Save `https://<assigned-host>.trycloudflare.com/api/auth/paypal/callback` as the same sandbox app's Return URL. Reopen the settings to confirm it persisted. If saving still fails, retain the error ID and timestamp for PayPal support; a Niryat code change cannot fix a dashboard save failure.
+4. Visit `https://<assigned-host>.trycloudflare.com/login` and start sign-in there. Do not start on localhost and return to the tunnel hostname: the host-only state cookie would be missing. The tunnel must forward to the **web port 3000**, which proxies `/api/*` to the API, rather than directly to API port 3001.
+
+For this local setup, keep `API_URL=http://localhost:3001` in your private configuration. It is the internal web-to-API address; `PUBLIC_APP_URL` is the public browser/callback origin. A stale tunnel in `API_URL` causes `ENOTFOUND` before the request reaches PayPal. With one `pnpm dev` running, both `http://localhost:3001/health` and `http://localhost:3000/api/health` must return `{"status":"ok"}`.
+
+In development, the web config loads the shared root environment settings and allows only the hostname in `PUBLIC_APP_URL` through Next.js's `allowedDevOrigins`. Turbo preserves a shell override of that key. Restart `pnpm dev` after changing the origin. Without this allowlist, Next blocks tunnel-origin JavaScript with HTTP 403: the PayPal link still works, but client controls such as Save profile and Sign out cannot run. After fixing the origin, hard-refresh the tunnel page to load its scripts.
+
+The [Cloudflare Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) hostname changes when the tunnel restarts; update both settings together. If another tunnel is used for existing webhooks, keep it running; changing a webhook registration is separate from setting this login callback. The user confirmed saving the HTTPS tunnel callback and successful product sign-in on 2026-10-30 after matching `PUBLIC_APP_URL` to that origin. PayPal's dashboard says to allow up to three hours for a Return URL change to take effect. First verify the running app sends the new callback, then begin a fresh login attempt rather than refreshing an old PayPal error URL.
+
+Sign-in identifies a Niryat user; it grants no seller access. The server exchanges the code and reads userinfo, then discards the token. Accounts are matched by unique payer ID, never by email. An email collision directs the user to email sign-in. Seller operations still act on the app owner's account. See [V02](verification.md#v02-identity) for manual acceptance checks.
+
 ## Development MCP
 
 The [current official quickstart](https://developer.paypal.com/ai-tools/mcp-server) documents npx -y @paypal/mcp --tools=all. The editor configs run scripts/paypal-mcp.mts, which forces sandbox mode and prepares authentication before starting that exact command. No token belongs in committed configuration or command arguments.
@@ -69,7 +93,7 @@ When you start the configured PayPal server in an editor, the launcher:
 
 The launcher finds .env relative to its own source path, not the editor's working directory. The file needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET from the sandbox app. PAYPAL_ENVIRONMENT must be SANDBOX or omitted. Production is rejected. Tokens and credentials are never printed or saved. Authentication messages use stderr; stdout remains reserved for MCP protocol traffic.
 
-Assistant tools do not inspect .env during development. Launcher tests inject fake file loaders and mock HTTP responses; pnpm verify does not load the private file or contact PayPal. The actual launcher reads it only when the user starts their MCP server. The API server, drizzle-kit and explicit `test:db` scripts load the root .env when present; ordinary `test` scripts and `pnpm verify` do not. No new dependency was introduced; Node's built-in [util.parseEnv](https://nodejs.org/docs/latest-v24.x/api/util.html#utilparseenvcontent) parses the local file.
+Assistant tools do not inspect .env during development. Launcher tests inject fake file loaders and mock HTTP responses; pnpm verify does not load the private file or contact PayPal. The actual launcher reads it only when the user starts their MCP server. The API server, Next development config, drizzle-kit and explicit `test:db` scripts load the root .env when present; ordinary `test` scripts, `pnpm verify` and the Next production build do not. Web config tests mock the file loader when testing development startup. No new dependency was introduced; Node's built-in [util.parseEnv](https://nodejs.org/docs/latest-v24.x/api/util.html#utilparseenvcontent) parses the local file.
 
 ### Check Claude Code
 

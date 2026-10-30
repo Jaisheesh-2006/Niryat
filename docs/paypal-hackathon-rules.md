@@ -2,24 +2,18 @@ PayPal AI Hackathon (the “Hackathon”) Official Rules
 NO PURCHASE OR PAYMENT NECESSARY TO ENTER OR WIN. A PURCHASE OR PAYMENT WILL NOT INCREASE YOUR CHANCES OF WINNING.
 
 SUBMISSION OF ANY ENTRY CONSTITUTES AGREEMENT TO THESE OFFICIAL RULES AS A CONTRACT BETWEEN ENTRANT (AND EACH INDIVIDUAL MEMBER OF ENTRANT), THE HACKATHON SPONSOR, AND DEVPOST.
-
-
 1. Dates and Timing
    Submission Period: Thursday Oct 1, 2026 (9:15 am Pacific Time) – Thursday Nov 12, 2026 (12:00 pm Pacific Time) (“Submission Period”).
 
 Judging Period: Tuesday Dec 1, 2026 (2:00 pm Pacific Time) – Tuesday Dec 15, 2026 (8:00 am Pacific Time) (“Judging Period”).
 
 Winners Announced: On or around Monday, Dec 21, 2026 (2:00 pm Pacific Time).
-
-
 2. Sponsor and Administrator
-   Sponsor: PayPal Inc., 2211 North First Street, San Jose, California 95131, United States
+Sponsor: PayPal Inc., 2211 North First Street, San Jose, California 95131, United States
 
 Administrator: Devpost, Inc. (“Devpost”), 250 Broadway, Floor 24, New York, NY 10007
-
-
 3. Eligibility
-   The Hackathon IS open to:
+The Hackathon IS open to:
 
 Individuals who are at least the age of majority where they reside as of the time of entry (“Eligible Individuals”);
 
@@ -52,10 +46,8 @@ Any other individual or organization whose participation in the Hackathon would 
 **Agents include individuals or organizations that in creating a Submission to the Hackathon, are acting on behalf of, and at the direction of, a Promotion Entity through a contractual or similar relationship.
 
 ***An affiliate is: (a) an organization that is under common control, sharing a common majority or controlling owner, or common management; or (b) an organization that has a substantial ownership in, or is substantially owned by the other organization.
-
-
 4. How To Enter
-   Entrants may enter by visiting paypalaihackathon.devpost.com (“Hackathon Website”) and following the below steps:
+Entrants may enter by visiting paypalaihackathon.devpost.com (“Hackathon Website”) and following the below steps:
 
 Register for the Hackathon on the Hackathon Website by clicking the “Join Hackathon” button. To complete registration, sign up to create a free Devpost account, or log in with an existing Devpost account. This will enable you to receive important updates and to create your Submission.
 
@@ -170,20 +162,16 @@ Your Submission must: (a) be your (or your Team, or Organization’s) original w
 Financial or Preferential Support
 
 A Project must not have been developed, or derived from a Project developed, with financial or preferential support from the Sponsor or Administrator. Such Projects include, but are not limited to, those that received funding or investment for their development, were developed under contract, or received a commercial license, from the Sponsor or Administrator any time prior to the end of Hackathon Submission Period. The Sponsor, at their sole discretion, may disqualify a Project, if awarding a prize to the Project would create a real or apparent conflict of interest.
-
-
 5. Submission Modifications
-   Draft Submissions
+Draft Submissions
 
 Prior to the end of the Submission Period, you may save draft versions of your submission on Devpost to your portfolio before submitting the Submission materials to the Hackathon for evaluation. Once the Submission Period has ended, you may not make any changes or alterations to your Submission, but you may continue to update the Project in your Devpost portfolio.
 
 Modifications After the Submission Period
 
 The Sponsor and Devpost may permit you to modify part of your Submission after the Submission Period for the purpose of adding, removing or replacing material that potentially infringes a third party mark or right, discloses personally identifiable information, or is otherwise inappropriate. The modified Submission must remain substantively the same as the original Submission with the only modification being what the Sponsor and Devpost permits.
-
-
 6. Judges & Criteria
-   Sponsor and Administrator reserve the sole right to determine the eligibility and judging methodologies for all submissions. This process may utilize expert panels, peer review, automated AI-driven analysis, or any combination thereof to ensure efficient, fair, and objective evaluation. Eligible submissions will be evaluated by a panel of judges selected by the Sponsor (the “Judges”). Judges may be employees of the sponsor or third parties, may or may not be listed individually on the Hackathon Website, and may change before or during the Judging Period. Judging may take place in one or more rounds with one or more panels of Judges, at the discretion of the sponsor.
+Sponsor and Administrator reserve the sole right to determine the eligibility and judging methodologies for all submissions. This process may utilize expert panels, peer review, automated AI-driven analysis, or any combination thereof to ensure efficient, fair, and objective evaluation. Eligible submissions will be evaluated by a panel of judges selected by the Sponsor (the “Judges”). Judges may be employees of the sponsor or third parties, may or may not be listed individually on the Hackathon Website, and may change before or during the Judging Period. Judging may take place in one or more rounds with one or more panels of Judges, at the discretion of the sponsor.
 
 
 
@@ -210,11 +198,8 @@ The scores from the Judges will determine the potential winners of the applicabl
 Tie Breaking
 
 For each Prize listed below, if two or more Submissions are tied, the tied Submission with the highest score in the first applicable criterion listed above will be considered the higher scoring Submission. In the event any ties remain, this process will be repeated, as needed, by comparing the tied Submissions’ scores on the next applicable criterion. If two or more Submissions are tied on all applicable criteria, the panel of Judges will vote on the tied Submissions.
-
-
 7. Intellectual Property Rights
-   All Submissions remain the intellectual property of the individuals or organizations that developed them. By submitting an entry, entrants agree that the Sponsor will have a non-exclusive license to use such entry for judging the entry. Entrants agree that the sponsor and Devpost shall have the right to promote the Submission and use the name, likeness, voice and image of all individuals contributing to a Submission, in any materials promoting or publicizing the Hackathon and its results, during the Hackathon Period and for three years thereafter. Some Submission components may be displayed to the public. Other Submission materials may be viewed by the sponsor, Devpost, and judges for screening and evaluation. By submitting an entry or accepting any prize, entrants represent and warrant that (a) submitted content is not copyrighted, protected by trade secret or otherwise subject to third party intellectual property rights or other proprietary rights, including privacy and publicity rights, unless entrant is the owner of such rights or has permission from their rightful owner to post the content; and (b) the content submitted does not contain any viruses, Trojan horses, worms, spyware or other disabling devices or harmful or malicious code.
-
+All Submissions remain the intellectual property of the individuals or organizations that developed them. By submitting an entry, entrants agree that the Sponsor will have a non-exclusive license to use such entry for judging the entry. Entrants agree that the sponsor and Devpost shall have the right to promote the Submission and use the name, likeness, voice and image of all individuals contributing to a Submission, in any materials promoting or publicizing the Hackathon and its results, during the Hackathon Period and for three years thereafter. Some Submission components may be displayed to the public. Other Submission materials may be viewed by the sponsor, Devpost, and judges for screening and evaluation. By submitting an entry or accepting any prize, entrants represent and warrant that (a) submitted content is not copyrighted, protected by trade secret or otherwise subject to third party intellectual property rights or other proprietary rights, including privacy and publicity rights, unless entrant is the owner of such rights or has permission from their rightful owner to post the content; and (b) the content submitted does not contain any viruses, Trojan horses, worms, spyware or other disabling devices or harmful or malicious code.
 8. Prizes
 
 
@@ -385,10 +370,8 @@ Verification Requirement: THE AWARD OF A PRIZE TO A POTENTIAL WINNER IS SUBJECT 
 Prize Delivery: Prizes will be payable to the Entrant, if an individual; to the Entrant’s Representative, if a Team; or to the Organization, if the Entrant is an Organization. It will be the responsibility of the winning Entrant’s Representative to allocate the Prize among their Team or Organization’s participating members, as the Representative deems appropriate. A monetary Prize will be mailed to the winning Entrant’s address (if an individual) or the Representative’s address (if a Team or Organization), or sent electronically to the Entrant, Entrant’s Representative, or Organization’s bank account, only after receipt of the completed winner affidavit and other required forms (collectively the “Required Forms”), if applicable. The deadline for returning the Required Forms to the Administrator is ten (10) business days after the Required Forms are sent. Failure to provide correct information on the Required Forms, or other correct information required for the delivery of a Prize, may result in delayed Prize delivery, disqualification of the Entrant, or forfeiture of a Prize. Prizes will be delivered within 60 days of the Sponsor or Devpost’s receipt of the completed Required Forms.
 
 Fees & Taxes: Winners (and in the case of Team or Organization, all participating members) are responsible for any fees associated with receiving or using a prize, including but not limited to, wiring fees or currency exchange fees. Winners (and in the case of Team or Organization, all participating members) are responsible for reporting and paying all applicable taxes in their jurisdiction of residence (federal, state/provincial/territorial and local). Winners may be required to provide certain information to facilitate receipt of the award, including completing and submitting any tax or other forms necessary for compliance with applicable withholding and reporting requirements. United States residents may be required to provide a completed form W-9 and residents of other countries may be required to provide a completed W-8BEN form. Winners are also responsible for complying with foreign exchange and banking regulations in their respective jurisdictions and reporting the receipt of the Prize to relevant government departments/agencies, if necessary. The Sponsor, Devpost, and/or Prize provider reserves the right to withhold a portion of the prize amount to comply with the tax laws of the United States or other Sponsor jurisdiction, or those of a winner’s jurisdiction.
-
-
 9. Entry Conditions and Release
-   By entering the Hackathon, you (and, if you are entering on behalf of a Team, Organization each participating members) agree(s) to the following:
+By entering the Hackathon, you (and, if you are entering on behalf of a Team, Organization each participating members) agree(s) to the following:
 
 The relationship between you, the Entrant, and the Sponsor and Administrator, is not a confidential, fiduciary, or other special relationship.
 
@@ -409,13 +392,10 @@ Technical or human error which may occur in the administration of the Hackathon 
 Any injury or damage to persons or property which may be caused, directly or indirectly, in whole or in part, from the Entrant’s participation in the Hackathon or receipt or use or misuse of any Prize.
 
 The Released Parties are not responsible for incomplete, late, misdirected, damaged, lost, illegible, or incomprehensible Submissions or for address or email address changes of the Entrants. Proof of sending or submitting the aforementioned will not be deemed to be proof of receipt by the Sponsor or Administrator. If for any reason any Entrant’s Submission is determined to have not been received or been erroneously deleted, lost, or otherwise destroyed or corrupted, the Entrant’s sole remedy is to request the opportunity to resubmit its Submission. Such a request must be made promptly after the Entrant knows or should have known there was a problem and will be determined at the sole discretion of the Sponsor.
-
-
 10. Publicity
-    By participating in the Hackathon, Entrant consents to the promotion and display of the Entrant’s Submission, and to the use of personal information about themselves for promotional purposes, by the Sponsor, Administrator, and third parties acting on their behalf. Such personal information includes, but is not limited to, your name, likeness, photograph, voice, opinions, comments and hometown and country of residence. It may be used in any existing or newly created media, worldwide without further payment or consideration or right of review, unless prohibited by law. Authorized use includes but is not limited to advertising and promotional purposes.
-
+By participating in the Hackathon, Entrant consents to the promotion and display of the Entrant’s Submission, and to the use of personal information about themselves for promotional purposes, by the Sponsor, Administrator, and third parties acting on their behalf. Such personal information includes, but is not limited to, your name, likeness, photograph, voice, opinions, comments and hometown and country of residence. It may be used in any existing or newly created media, worldwide without further payment or consideration or right of review, unless prohibited by law. Authorized use includes but is not limited to advertising and promotional purposes.
 11. General Conditions
-    Sponsor and Administrator reserve the right, in their sole discretion, to cancel, suspend and/or modify the Hackathon, or any part of it, in the event of a technical failure, fraud, or any other factor or event that was not anticipated or is not within their control.
+Sponsor and Administrator reserve the right, in their sole discretion, to cancel, suspend and/or modify the Hackathon, or any part of it, in the event of a technical failure, fraud, or any other factor or event that was not anticipated or is not within their control.
 
 Sponsor and Administrator reserve the right in their sole discretion to disqualify any individual or Entrant if it finds to be actually or presenting the appearance of tampering with the entry process or the operation of the Hackathon or to be acting in violation of these Official Rules or in a manner that is inappropriate, unsportsmanlike, not in the best interests of this Hackathon, or a violation of any applicable law or regulation.
 
@@ -430,13 +410,10 @@ If at any time prior to the deadline, an Entrant or prospective Entrant believes
 The Sponsor or Administrator’s failure to enforce any term of these Official Rules shall not constitute a waiver of that provision. Should any provision of these Official Rules be or become illegal or unenforceable in any jurisdiction whose laws or regulations may apply to an Entrant, such illegality or unenforceability shall leave the remainder of these Official Rules, including the Rule affected, to the fullest extent permitted by law, unaffected and valid. The illegal or unenforceable provision shall be replaced by a valid and enforceable provision that comes closest and best reflects the Sponsor’s intention in a legal and enforceable manner with respect to the invalid or unenforceable provision.
 
 Excluding Submissions, all intellectual property related to this Hackathon, including but not limited to copyrighted material, trademarks, trade-names, logos, designs, promotional materials, web pages, source codes, drawings, illustrations, slogans and representations are owned or used under license by the Sponsor and/or Administrator. All rights are reserved. Unauthorized copying or use of any copyrighted material or intellectual property without the express written consent of its owners is strictly prohibited. Any use in a Submission of Sponsor or Administrator’s intellectual property shall be solely to the extent provided for in these Official Rules.
-
-
 12. Limitations of Liability
-    By entering, all Entrants (including, in the case of a Team or Organization, all participating members) agree to release the Released Parties from any and all liability in connection with the Prizes or Entrant’s participation in the Hackathon. Provided, however, that any liability limitation regarding gross negligence or intentional acts, or events of death or body injury shall not be applicable in jurisdictions where such limitation is not legal.
-
+By entering, all Entrants (including, in the case of a Team or Organization, all participating members) agree to release the Released Parties from any and all liability in connection with the Prizes or Entrant’s participation in the Hackathon. Provided, however, that any liability limitation regarding gross negligence or intentional acts, or events of death or body injury shall not be applicable in jurisdictions where such limitation is not legal.
 13. Disputes
-    Except where prohibited by law, as a condition of participating in this Hackathon, Entrant agrees that:
+Except where prohibited by law, as a condition of participating in this Hackathon, Entrant agrees that:
 
 Any and all disputes and causes of action arising out of or connected with this Hackathon, or any Prizes awarded, shall be resolved individually, without resort to any form of class action lawsuit, and exclusively by final and binding arbitration under the rules of the American Arbitration Association and held at the AAA regional office nearest the contestant;
 
@@ -449,12 +426,9 @@ Under no circumstances will Entrant be permitted to obtain awards for, and Entra
 All issues and questions concerning the construction, validity, interpretation and enforceability of these Official Rules, or the rights and obligations of the Entrant and Sponsor in connection with this Hackathon, shall be governed by, and construed in accordance with, the substantive laws of the State of New York, USA without regard to New York choice of law rules.
 
 SOME JURISDICTIONS DO NOT ALLOW THE LIMITATIONS OR EXCLUSION OF LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES, SO THE ABOVE LIMITATIONS OF LIABILITY MAY NOT APPLY TO YOU.
-
-
 14. Additional Terms
-    Please review the Devpost Terms of Service at https://info.devpost.com/terms for additional rules that apply to your participation in the Hackathon and more generally your use of the Hackathon Website. Such Terms of Service are incorporated by reference into these Official Rules, including that the term "Poster" in the Terms of Service shall mean the same as "Sponsor" in these Official Rules." If there is a conflict between the Terms of Service and these Official Rules, these Official Rules shall control with respect to this Hackathon only.
-
+Please review the Devpost Terms of Service at https://info.devpost.com/terms for additional rules that apply to your participation in the Hackathon and more generally your use of the Hackathon Website. Such Terms of Service are incorporated by reference into these Official Rules, including that the term "Poster" in the Terms of Service shall mean the same as "Sponsor" in these Official Rules." If there is a conflict between the Terms of Service and these Official Rules, these Official Rules shall control with respect to this Hackathon only.
 15. Entrant’s Personal Information
-    Information collected from Entrants is subject to Devpost’s Privacy Policy, which is available at https://info.devpost.com/privacy.
+Information collected from Entrants is subject to Devpost’s Privacy Policy, which is available at https://info.devpost.com/privacy.
 
 For questions, send an email to support@devpost.com.

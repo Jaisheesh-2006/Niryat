@@ -29,6 +29,13 @@
       "when": 1793112239156,
       "tag": "0003_milky_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793337556099,
+      "tag": "0004_closed_mantis",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Architecture
 
-The [product plan](PLAN.md) owns scope. Through Phase 4, Niryat implements email sign-in, profiles, cited health and export checks, clients, invoice PDFs, approval-gated sandbox invoicing and refunds, payment/refund ingestion, dispute polling, tasks and deterministic FIRA matching. FIRA parsing is verified only against a synthetic fixture; real-layout acceptance remains open. The monthly-close workflow remains a stub and AI execution is deferred.
+The [product plan](PLAN.md) owns scope. Through Phase 4 and the completed spec 01 login follow-up, Niryat implements email/password and PayPal sign-in, profiles, cited health and export checks, clients, invoice PDFs, approval-gated sandbox invoicing and refunds, payment/refund ingestion, dispute polling, tasks and deterministic FIRA matching. All login-plan browser checks are user-confirmed (2026-10-30); see [V02](verification.md#v02-identity). FIRA parsing is verified only against a synthetic fixture; real-layout acceptance remains open. The monthly-close workflow remains a stub and AI execution is deferred to Phase 5.
 
 ## Components and flow
 
@@ -18,6 +18,10 @@ flowchart LR
 ```
 
 Verified PayPal events and transaction backfill populate the payment ledger. Issuing an invoice creates a PDF and a persistent action proposal; user approval permits PayPal execution. Refund and dispute records feed cited compliance messages and persistent tasks. Uploaded FIRA PDFs are parsed and matched without AI; uncertain matches require user confirmation. Future phases add AI extraction, monthly close and reports.
+
+## Sign-in
+
+Sign-in uses the existing sandbox app's authorization-code flow and server-side userinfo. A unique payer ID identifies returning users; an email collision does not link accounts, and no login token is retained. PayPal-only users have a nullable password hash (migration `0004_closed_mantis`). Both sign-in methods use the existing signed session cookie. The app owner uses email sign-in; seller operations still use that app owner's credentials. In local development the web proxy targets `API_URL=http://localhost:3001`, while browser links and the callback use `PUBLIC_APP_URL`.
 
 ## Three-layer PayPal integration
 

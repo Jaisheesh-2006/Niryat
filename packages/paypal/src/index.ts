@@ -7,6 +7,7 @@ export {
   listUpdatedDisputeIds,
   toDisputeRecord,
 } from "./rest/disputes";
+export { createPayPalLogin, type PayPalLogin } from "./rest/identity";
 export {
   createPayPalRestClient,
   PayPalApiError,

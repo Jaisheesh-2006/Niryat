@@ -37,6 +37,7 @@ import {
   rejectAction,
   setPayPalInvoiceId,
   setPayPalSeriesId,
+  signInWithPayPal,
   updateClient,
   upsertDispute,
   upsertProfile,
@@ -89,6 +90,11 @@ describe("storage query failures", () => {
   const name = "Synthetic Client";
 
   it.each([
+    {
+      operation: "signInWithPayPal",
+      run: (db: Db) => signInWithPayPal(db, { paypalId: "PAYER-SYNTHETIC", email }),
+      message: "PayPal sign-in failed",
+    },
     {
       operation: "createUser",
       run: (db: Db) => createUser(db, { email, passwordHash }),
@@ -324,6 +330,7 @@ describe("storage query failures", () => {
       "REFUND-SYNTHETIC",
       "DISPUTE-SYNTHETIC",
       "Synthetic task",
+      "PAYER-SYNTHETIC",
       "100.00",
     ];
     const failure = new Error(`Database failure: ${secrets.join(", ")}`);
@@ -378,6 +385,68 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
     }
     return user;
   }
+
+  it("creates a PayPal-only user without a password and reuses the linked identity", async () => {
+    const result = await signInWithPayPal(t.db, {
+      paypalId: "PAYER-1",
+      email: " PAYPAL@EXAMPLE.COM ",
+    });
+    expect(result).toEqual({
+      ok: true,
+      user: { id: expect.any(String), email: "paypal@example.com" },
+    });
+    expect(await findUserByEmail(t.db, "paypal@example.com")).toEqual({
+      id: expect.any(String),
+      email: "paypal@example.com",
+      passwordHash: null,
+    });
+    expect(await signInWithPayPal(t.db, { paypalId: "PAYER-1", email: undefined })).toEqual(result);
+    expect(
+      await signInWithPayPal(t.db, { paypalId: "PAYER-1", email: "changed@example.com" }),
+    ).toEqual(result);
+  });
+
+  it("requires an email for new PayPal identities", async () => {
+    expect(await signInWithPayPal(t.db, { paypalId: "PAYER-1", email: undefined })).toEqual({
+      ok: false,
+      reason: "no_email",
+    });
+    expect(await t.db.select().from(schema.users)).toEqual([]);
+  });
+
+  it("does not link an existing email account to a PayPal identity", async () => {
+    await addUser("paypal@example.com");
+    expect(
+      await signInWithPayPal(t.db, { paypalId: "PAYER-1", email: "PAYPAL@example.com" }),
+    ).toEqual({ ok: false, reason: "email_taken" });
+    const [user] = await t.db.select().from(schema.users);
+    expect(user?.paypalPayerId).toBeNull();
+    expect(user?.passwordHash).toBe("test-password-hash");
+  });
+
+  it("concurrent callbacks for the same payer ID resolve to one user", async () => {
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        signInWithPayPal(t.db, { paypalId: "PAYER-1", email: "paypal@example.com" }),
+      ),
+    );
+    expect(results[0]?.ok).toBe(true);
+    expect(results.every((result) => JSON.stringify(result) === JSON.stringify(results[0]))).toBe(
+      true,
+    );
+    expect(await t.db.select().from(schema.users)).toHaveLength(1);
+  });
+
+  it("concurrent different payer IDs cannot claim the same email", async () => {
+    const results = await Promise.all(
+      ["PAYER-1", "PAYER-2"].map((paypalId) =>
+        signInWithPayPal(t.db, { paypalId, email: "paypal@example.com" }),
+      ),
+    );
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(results).toContainEqual({ ok: false, reason: "email_taken" });
+    expect(await t.db.select().from(schema.users)).toHaveLength(1);
+  });
 
   it("creates a user, hides the hash, and rejects a duplicate email", async () => {
     const user = await addUser();

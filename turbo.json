@@ -8,7 +8,7 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["PORT", "NODE_ENV", "PAYPAL_ENVIRONMENT"]
+      "passThroughEnv": ["PORT", "NODE_ENV", "PAYPAL_ENVIRONMENT", "PUBLIC_APP_URL"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"],

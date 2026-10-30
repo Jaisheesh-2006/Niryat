@@ -4,7 +4,7 @@ An AI agent planned for Indian freelancers paid from abroad through PayPal.
 It will turn invoices, payments, refunds and disputes into export-compliance records for CA review. Every PayPal action requires user approval; legal/numeric logic belongs to sourced rules.
 
 Built for the PayPal AI Hackathon, due November 12, 2026.
-**Current status: scaffold only.** The web home page, API health route and workflow stub work; product features and judge mode are not implemented.
+**Current status:** features through Phase 4 are implemented, with remaining acceptance evidence tracked in [build flow](docs/build-flow.md). Email and PayPal sign-in and all login-plan browser checks are user-confirmed (2026-10-30). The login follow-up is complete; Phase 5 agent implementation is next. Judge mode and hosted deployment remain pending.
 
 ## Setup
 
@@ -18,7 +18,7 @@ corepack pnpm dev
 
 On PowerShell with blocked ps1 scripts, use corepack.cmd pnpm or pnpm.cmd.
 Web: http://localhost:3000. API: http://localhost:3001/health returns status ok.
-No credentials, database or environment file is needed for the skeleton.
+The health endpoint and purpose-code catalogue work without credentials. Sign-in and saved records require the database and private configuration.
 
 For invoice PDFs during development, use [local S3 storage in Docker](docs/local-storage.md).
 It works with the existing storage client and needs no AWS account.
@@ -39,9 +39,9 @@ verify runs strict typechecks, Biome, scaffold/guardrail checks and workspace te
 
 ## Environment
 
-[.env.example](.env.example) lists empty future integration values: PayPal credentials, sandbox environment, webhook ID, login return URL; Anthropic key/model/budget; database and storage URLs; encryption key; AG Studio/Bryntum licence keys. Do not commit real values. The skeleton does not load a root .env file; set integration values through your process environment or Render when the relevant feature is implemented.
+[.env.example](.env.example) documents configuration keys; supply actual values privately and never commit them. The API and Next development config load the root `.env` when present. For local development, `API_URL=http://localhost:3001` connects web to API; `PUBLIC_APP_URL` is the browser origin and determines the PayPal callback `${PUBLIC_APP_URL}/api/auth/paypal/callback`. The configured callback must match the sandbox app exactly. See [HTTPS development setup](docs/paypal.md#log-in-with-paypal).
 
-Development PayPal MCP uses the checked-in launcher. When you start the server, it uses an inherited sandbox access token or obtains one from sandbox PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your private repository-root .env. No parent-editor token setup is required. Restart the server after updating credentials. No token is printed, saved or placed in config/arguments. Application env loading is unchanged. See [setup and client checks](docs/paypal.md#development-mcp).
+Development PayPal MCP uses the checked-in launcher. When you start the server, it uses an inherited sandbox access token or obtains one from sandbox PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your private repository-root .env. No parent-editor token setup is required. Restart the server after updating credentials. No token is printed, saved or placed in config/arguments. See [setup and client checks](docs/paypal.md#development-mcp).
 
 The optional earlier command remains supported: node --env-file=.env scripts/start-codex-paypal.mts (append claude or vscode for those clients).
 

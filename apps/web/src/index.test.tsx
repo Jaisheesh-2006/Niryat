@@ -8,7 +8,10 @@ import { profileBody } from "./lib/forms";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 it("renders the home page with sign-up and sign-in links without external services", () => {
   const html = renderToStaticMarkup(<Home />);
@@ -71,4 +74,60 @@ it.each([
   expect(await config.rewrites?.()).toEqual([
     { source: "/api/:path*", destination: "http://localhost:3001/:path*" },
   ]);
+});
+
+it.each([
+  { appUrl: undefined, hosts: [] },
+  { appUrl: "", hosts: [] },
+  { appUrl: "http://localhost:3000", hosts: ["localhost"] },
+  { appUrl: "https://test-login.trycloudflare.com/", hosts: ["test-login.trycloudflare.com"] },
+])(
+  "allows only the configured development hostname for PUBLIC_APP_URL=$appUrl",
+  async ({ appUrl, hosts }) => {
+    vi.stubEnv("PUBLIC_APP_URL", appUrl);
+    vi.resetModules();
+    const { default: config } = await import("../next.config");
+    expect(config.allowedDevOrigins).toEqual(hosts);
+  },
+);
+
+it("rejects an invalid public URL without exposing the value", async () => {
+  vi.stubEnv("PUBLIC_APP_URL", "invalid-private-value");
+  vi.resetModules();
+  await expect(import("../next.config")).rejects.toThrow(
+    "Invalid environment: PUBLIC_APP_URL. See .env.example.",
+  );
+});
+
+it("loads shared root settings in development so the tunnel can load client scripts", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  vi.stubEnv("PUBLIC_APP_URL", undefined);
+  const load = vi.spyOn(process, "loadEnvFile").mockImplementation(() => {
+    process.env.PUBLIC_APP_URL = "https://configured-login.trycloudflare.com";
+  });
+  vi.resetModules();
+  const { default: config } = await import("../next.config");
+  expect(load).toHaveBeenCalledOnce();
+  expect(config.allowedDevOrigins).toEqual(["configured-login.trycloudflare.com"]);
+});
+
+it.each(["test", "production"])("does not load a private environment file in %s", async (mode) => {
+  vi.stubEnv("NODE_ENV", mode);
+  const load = vi.spyOn(process, "loadEnvFile");
+  vi.resetModules();
+  await import("../next.config");
+  expect(load).not.toHaveBeenCalled();
+});
+
+it.each(["ENOENT", "EACCES"])("handles development environment file errors: %s", async (code) => {
+  vi.stubEnv("NODE_ENV", "development");
+  vi.spyOn(process, "loadEnvFile").mockImplementation(() => {
+    throw Object.assign(new Error("Environment file unavailable"), { code });
+  });
+  vi.resetModules();
+  if (code === "ENOENT") {
+    await expect(import("../next.config")).resolves.toHaveProperty("default");
+  } else {
+    await expect(import("../next.config")).rejects.toThrow("Environment file unavailable");
+  }
 });
