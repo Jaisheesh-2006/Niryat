@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import {
   actionStore,
   getInvoiceForAction,
+  listTasks,
   payments,
   recordPayment,
   recordRefund,
@@ -14,20 +15,22 @@ import {
   type PayPalRestPath,
   type RefundRecord,
 } from "@niryat/paypal";
-import { financialYear, LUT_ENDORSEMENT } from "@niryat/rules";
+import { financialYear, LUT_ENDORSEMENT, realisationDeadline } from "@niryat/rules";
 import {
   type ClientInput,
   clientSchema,
   type Invoice,
   type InvoiceInput,
+  type InvoiceView,
   invoiceBlockedSchema,
-  invoiceSchema,
+  invoiceViewSchema,
   type ProfileInput,
   profileInputSchema,
 } from "@niryat/shared";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { actionHandlers } from "../actions";
+import { ensureDeadlineTasks } from "../deadlines";
 import { type FileStore, pdfKey } from "../files";
 import { createApp } from "../index";
 import * as ruleClock from "../rules";
@@ -184,9 +187,9 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     return { ...user, input };
   }
 
-  async function readInvoice(response: Response, status = 200): Promise<Invoice> {
+  async function readInvoice(response: Response, status = 200): Promise<InvoiceView> {
     expect(response.status).toBe(status);
-    return invoiceSchema.parse(await response.json());
+    return invoiceViewSchema.parse(await response.json());
   }
 
   async function issue(cookie: string, input: InvoiceInput) {
@@ -196,7 +199,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
   async function list(cookie: string) {
     const response = await app.request("/invoices", { headers: { Cookie: cookie } });
     expect(response.status).toBe(200);
-    return z.array(invoiceSchema).parse(await response.json());
+    return z.array(invoiceViewSchema).parse(await response.json());
   }
 
   function actionId(invoice: Invoice): string {
@@ -235,6 +238,56 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     if (!action) throw new Error("Expected a refund action");
     return action;
   }
+
+  it("returns rules deadlines and ensures overdue tasks once, scoped to the user", async () => {
+    const { id: userId, cookie, input } = await setup();
+    const other = await signup("other@example.com");
+    const issued = await issue(cookie, input);
+    expect(issued.compliance.deadline).toEqual(
+      realisationDeadline({ invoice: issued, today: invoiceDate }, ruleClock.rules),
+    );
+    const sent = await readInvoice(await post(cookie, `/actions/${actionId(issued)}/approve`));
+    expect(sent.status).toBe("sent");
+    expect(sent.compliance.deadline).toEqual(issued.compliance.deadline);
+    expect(await ensureDeadlineTasks(t.db, userId, [sent])).toBe(0);
+    expect(await ensureDeadlineTasks(t.db, userId, [])).toBe(0);
+
+    const today = "2027-07-27";
+    vi.mocked(ruleClock.todayInIndia).mockReturnValue(today);
+    const views = await list(cookie);
+    const deadline = realisationDeadline({ invoice: sent, today }, ruleClock.rules);
+    expect(views[0]?.compliance.deadline).toEqual(deadline);
+    expect(deadline.overdue).toBe(true);
+    expect(await listTasks(t.db, userId)).toEqual([]);
+    expect(await list(other.cookie)).toEqual([]);
+    expect(await ensureDeadlineTasks(t.db, userId, views)).toBe(1);
+    expect(await ensureDeadlineTasks(t.db, userId, views)).toBe(1);
+    expect(await listTasks(t.db, userId)).toEqual([
+      expect.objectContaining({
+        invoiceId: sent.id,
+        type: "rbi_deadline_passed",
+        status: "open",
+        dueDate: deadline.deadline,
+        message:
+          `The RBI deadline to receive payment for invoice ${sent.number} was 2027-07-26. ` +
+          "Ask your bank (AD bank) whether it can extend the deadline.",
+        sourceRuleId: "RBI_REALISATION",
+      }),
+    ]);
+    expect(await listTasks(t.db, other.id)).toEqual([]);
+  });
+
+  it("removes a paid invoice's deadline and restores it after a refund shortfall", async () => {
+    const { id: userId, cookie, invoice } = await paidInvoice();
+    expect(invoice.compliance.deadline).toBeNull();
+    expect(await ensureDeadlineTasks(t.db, userId, [invoice])).toBe(0);
+    await recordRefund(t.db, refund);
+    const [refunded] = await list(cookie);
+    expect(refunded?.status).toBe("partially_refunded");
+    expect(refunded?.compliance.deadline).toEqual(
+      realisationDeadline({ invoice, today: invoiceDate }, ruleClock.rules),
+    );
+  });
 
   it.each([
     ["GET", "/invoices"],

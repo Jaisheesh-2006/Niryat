@@ -1,23 +1,36 @@
-import { creditNoteFor, disputeAlert, LOST_DISPUTE_OUTCOMES, realisationFor } from "@niryat/rules";
+import {
+  creditNoteFor,
+  disputeAlert,
+  LOST_DISPUTE_OUTCOMES,
+  realisationDeadline,
+  realisationFor,
+  toMinor,
+} from "@niryat/rules";
 import type { Invoice, InvoiceView } from "@niryat/shared";
 import { indiaDate, rules } from "./rules";
 
-export function toInvoiceView(invoice: Invoice, gstRegistered: boolean | null): InvoiceView {
+export function toInvoiceView(
+  invoice: Invoice,
+  gstRegistered: boolean | null,
+  today: string,
+): InvoiceView {
+  const realisation = realisationFor(
+    {
+      invoice,
+      paidTotal: invoice.paidTotal,
+      refundedTotal: invoice.refundedTotal,
+      disputeLost: invoice.disputes.some(
+        (dispute) => dispute.outcome !== null && LOST_DISPUTE_OUTCOMES.includes(dispute.outcome),
+      ),
+    },
+    rules,
+  );
   return {
     ...invoice,
     compliance: {
-      realisation: realisationFor(
-        {
-          invoice,
-          paidTotal: invoice.paidTotal,
-          refundedTotal: invoice.refundedTotal,
-          disputeLost: invoice.disputes.some(
-            (dispute) =>
-              dispute.outcome !== null && LOST_DISPUTE_OUTCOMES.includes(dispute.outcome),
-          ),
-        },
-        rules,
-      ),
+      realisation,
+      deadline:
+        toMinor(realisation.shortfall) > 0n ? realisationDeadline({ invoice, today }, rules) : null,
       creditNotes: invoice.refunds.flatMap((refund) => {
         const note = creditNoteFor(
           {

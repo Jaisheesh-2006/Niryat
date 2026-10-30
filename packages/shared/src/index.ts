@@ -281,8 +281,21 @@ export const disputeAlertSchema = z.object({
 });
 export type DisputeAlert = z.infer<typeof disputeAlertSchema>;
 
+export const reminderStages = [60, 30] as const;
+export const reminderStageSchema = z.union([z.literal(60), z.literal(30)]);
+export const rbiDeadlineSchema = z.object({
+  deadline: z.iso.date(),
+  daysRemaining: z.int(),
+  stage: reminderStageSchema.nullable(),
+  overdue: z.boolean(),
+  uncertainWindow: z.boolean(),
+  message: z.string(),
+  citation: ruleCitationSchema,
+});
+
 export const complianceSchema = z.object({
   realisation: realisationSchema,
+  deadline: rbiDeadlineSchema.nullable(),
   creditNotes: z.array(creditNoteSchema),
   disputeAlerts: z.array(disputeAlertSchema),
 });
@@ -358,18 +371,6 @@ export const taskSchema = z.object({
   doneAt: z.iso.datetime().nullable(),
 });
 export type Task = z.infer<typeof taskSchema>;
-
-export const reminderStages = [60, 30] as const;
-export const reminderStageSchema = z.union([z.literal(60), z.literal(30)]);
-export const rbiDeadlineSchema = z.object({
-  deadline: z.iso.date(),
-  daysRemaining: z.int(),
-  stage: reminderStageSchema.nullable(),
-  overdue: z.boolean(),
-  uncertainWindow: z.boolean(),
-  message: z.string(),
-  citation: ruleCitationSchema,
-});
 
 export const agentRunKinds = ["monthly_close", "reminders", "extraction"] as const;
 export type AgentRunKind = (typeof agentRunKinds)[number];

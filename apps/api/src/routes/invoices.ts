@@ -37,8 +37,11 @@ export function invoiceRoutes(deps: AppDeps): Hono {
     const userId = await readSession(c, deps.sessionSecret);
     if (!userId) return c.json({ error: "unauthenticated" }, 401);
     const gstRegistered = await gstRegistration(deps.db, userId);
+    const today = todayInIndia();
     return c.json(
-      (await listInvoices(deps.db, userId)).map((invoice) => toInvoiceView(invoice, gstRegistered)),
+      (await listInvoices(deps.db, userId)).map((invoice) =>
+        toInvoiceView(invoice, gstRegistered, today),
+      ),
     );
   });
   routes.post("/invoices", async (c) => {
@@ -134,7 +137,7 @@ export function invoiceRoutes(deps: AppDeps): Hono {
         },
         (seq) => invoiceNumberFor(date, seq).number,
       );
-      return c.json(toInvoiceView(invoice, await gstRegistration(deps.db, userId)), 201);
+      return c.json(toInvoiceView(invoice, await gstRegistration(deps.db, userId), date), 201);
     } catch (error) {
       if (storageFailed) return c.json({ error: "file_storage_unavailable" }, 503);
       throw error;
@@ -164,7 +167,10 @@ export function invoiceRoutes(deps: AppDeps): Hono {
     }
     const invoice = await getInvoice(deps.db, userId, result.invoiceId);
     if (!invoice) throw new Error("Invoice lookup failed");
-    return c.json(toInvoiceView(invoice, await gstRegistration(deps.db, userId)), 201);
+    return c.json(
+      toInvoiceView(invoice, await gstRegistration(deps.db, userId), todayInIndia()),
+      201,
+    );
   });
 
   for (const operation of ["approve", "reject"] as const) {
@@ -197,7 +203,7 @@ export function invoiceRoutes(deps: AppDeps): Hono {
       }
       const result = await getInvoiceForAction(deps.db, userId, id.data);
       return result
-        ? c.json(toInvoiceView(result, await gstRegistration(deps.db, userId)))
+        ? c.json(toInvoiceView(result, await gstRegistration(deps.db, userId), todayInIndia()))
         : c.json({ error: "not_found" }, 404);
     });
   }

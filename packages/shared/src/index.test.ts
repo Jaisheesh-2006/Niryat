@@ -379,6 +379,7 @@ it("validates invoice responses with payments and an action", () => {
   }
   const citation = { ruleId: "REALISATION_ADJUSTMENT", source: "Test source", effectiveFrom: null };
   const compliance = {
+    deadline: null,
     realisation: {
       exportValue: "100.00",
       received: "60.00",
