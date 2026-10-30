@@ -27,9 +27,11 @@ import {
   payments,
   profiles,
   proposeRefund,
+  proposeReminder,
   recordPayment,
   recordRefund,
   rejectAction,
+  reminderKeys,
   setPayPalInvoiceId,
   setPayPalSeriesId,
   tasks,
@@ -307,6 +309,57 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
       [3, 2, 1].map(numberFor),
     );
   });
+
+  it.each([
+    { status: "proposed", error: null, claim: true, reject: true },
+    { status: "approved", error: null, claim: false, reject: false },
+    { status: "failed", error: "reminder_outcome_unknown", claim: false, reject: false },
+    { status: "failed", error: "INVALID_REQUEST", claim: false, reject: true },
+    { status: "failed", error: "reminder_not_needed", claim: false, reject: true },
+    { status: "failed", error: null, claim: false, reject: true },
+    { status: "done", error: null, claim: false, reject: false },
+    { status: "rejected", error: null, claim: false, reject: false },
+  ])(
+    "reminder transitions are owner-scoped and final for $status/$error",
+    async ({ status, error, claim, reject }) => {
+      const a = await seller();
+      const b = await seller("b@example.com");
+      const invoice = await issueInvoice(t.db, a.userId, a.input, finalize, numberFor);
+      const keys = [60, 30].map((stage) => `reminder:${invoice.id}:${stage}`);
+      const rows = await t.db
+        .insert(agentActions)
+        .values(
+          keys.map((dedupeKey) => ({
+            userId: a.userId,
+            invoiceId: invoice.id,
+            paypalAction: "send_invoice_reminder",
+            status,
+            error,
+            payload: {},
+            dedupeKey,
+          })),
+        )
+        .returning();
+      const [toClaim, toReject] = rows;
+      if (!toClaim || !toReject) throw new Error("Expected reminders");
+      const store = actionStore(t.db);
+      expect(await store.claim(toClaim.id, b.userId)).toBeUndefined();
+      expect(await rejectAction(t.db, b.userId, toReject.id)).toBe(false);
+      const claims = await Promise.all([
+        store.claim(toClaim.id, a.userId),
+        store.claim(toClaim.id, a.userId),
+      ]);
+      expect(claims.filter(Boolean)).toHaveLength(claim ? 1 : 0);
+      expect(await store.claim(toClaim.id, a.userId)).toBeUndefined();
+      expect(await rejectAction(t.db, a.userId, toReject.id)).toBe(reject);
+      expect(await reminderKeys(t.db, a.userId)).toEqual(new Set(keys));
+      for (const dedupeKey of keys) {
+        expect(
+          await proposeReminder(t.db, a.userId, { invoiceId: invoice.id, dedupeKey, payload: {} }),
+        ).toEqual({ ok: false, reason: "exists" });
+      }
+    },
+  );
 
   it("deduplicates captures, copies fee/net/FX and rolls up 60 plus 40 in SQL", async () => {
     const { userId, invoice } = await sentInvoice();

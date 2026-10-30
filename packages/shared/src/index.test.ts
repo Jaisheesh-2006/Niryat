@@ -60,7 +60,7 @@ it("validates agent run months and tool-call actors and JSON", () => {
   expect(toolCallSchema.safeParse({ ...call, output: undefined }).success).toBe(false);
 });
 
-it("validates close summaries and reminder reads without enabling reminder approval", () => {
+it("validates close summaries and reminder actions for the approval queue", () => {
   const id = "40000000-0000-4000-8000-000000000001";
   const summary = {
     month: "2026-10",
@@ -109,7 +109,7 @@ it("validates close summaries and reminder reads without enabling reminder appro
     createdAt: "2026-10-30T12:00:00Z",
   };
   expect(reminderActionSchema.parse(action)).toEqual(action);
-  expect(actionSchema.safeParse(action).success).toBe(false);
+  expect(actionSchema.safeParse(action).success).toBe(true);
   expect(closePageSchema.parse({ runs: [], approvals: [action] }).approvals).toEqual([action]);
   expect(reminderStageSchema.safeParse(45).success).toBe(false);
   const deadline = {

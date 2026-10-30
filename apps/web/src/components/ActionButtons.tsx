@@ -15,6 +15,10 @@ const labels: Record<Action["paypalAction"], { approve: string; done: string }> 
     approve: "Approve and refund through PayPal",
     done: "Refund sent to PayPal.",
   },
+  send_invoice_reminder: {
+    approve: "Send PayPal's standard reminder",
+    done: "Reminder request accepted by PayPal.",
+  },
 };
 
 export function ActionButtons({ action }: { action: Action }) {

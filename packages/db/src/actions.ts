@@ -5,7 +5,7 @@ import {
   type ReminderAction,
   reminderActionSchema,
 } from "@niryat/shared";
-import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "./client";
 import { agentActions, invoices, payments } from "./schema";
@@ -184,7 +184,13 @@ export function actionStore(db: Db): ActionStore {
           and(
             eq(agentActions.id, actionId),
             eq(agentActions.userId, userId),
-            inArray(agentActions.status, ["proposed", "failed"]),
+            or(
+              eq(agentActions.status, "proposed"),
+              and(
+                eq(agentActions.status, "failed"),
+                ne(agentActions.paypalAction, "send_invoice_reminder"),
+              ),
+            ),
           ),
         )
         .returning()
@@ -221,6 +227,11 @@ export async function rejectAction(db: Db, userId: string, actionId: string): Pr
         eq(agentActions.id, actionId),
         eq(agentActions.userId, userId),
         inArray(agentActions.status, ["proposed", "failed"]),
+        or(
+          ne(agentActions.paypalAction, "send_invoice_reminder"),
+          ne(agentActions.status, "failed"),
+          sql`${agentActions.error} is distinct from 'reminder_outcome_unknown'`,
+        ),
       ),
     )
     .returning({ id: agentActions.id })

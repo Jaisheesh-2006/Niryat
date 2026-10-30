@@ -231,3 +231,41 @@ it("rejects non-JSON request bodies before fetching", async () => {
   );
   expect(fetcher).not.toHaveBeenCalled();
 });
+
+it.each(["401", "503", "network", "read", "parse"])(
+  "dispatches once and forbids redirects with retry false after %s",
+  async (failure) => {
+    const { fetcher, rest } = setup();
+    fetcher.mockResolvedValueOnce(token()).mockImplementation(async () => {
+      if (failure === "network") throw new Error("private transport detail");
+      if (failure === "read") {
+        const response = new Response(null, { status: 204 });
+        vi.spyOn(response, "text").mockRejectedValue(new Error("private read detail"));
+        return response;
+      }
+      if (failure === "parse") return new Response("invalid JSON");
+      return Response.json({ name: "REQUEST_FAILED" }, { status: failure === "401" ? 401 : 503 });
+    });
+    await expect(
+      rest.post(path, {}, "action-remind", z.json().optional().parse, { retry: false }),
+    ).rejects.toBeInstanceOf(PayPalApiError);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher.mock.calls[1]?.[1]).toMatchObject({ method: "POST", redirect: "error" });
+  },
+);
+
+it("keeps OAuth retries and scopes the opt-out to one POST", async () => {
+  const { fetcher, rest } = setup();
+  fetcher
+    .mockRejectedValueOnce(new Error("token network failure"))
+    .mockResolvedValueOnce(token())
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(Response.json({ name: "SERVICE_UNAVAILABLE" }, { status: 503 }))
+    .mockResolvedValueOnce(Response.json({ id: "INV2-TEST" }));
+  await rest.post(path, {}, "once", z.undefined().parse, { retry: false });
+  await expect(rest.post(path, {}, "retry", parse)).resolves.toEqual({ id: "INV2-TEST" });
+  expect(fetcher).toHaveBeenCalledTimes(5);
+  expect(fetcher.mock.calls[2]?.[1]?.redirect).toBe("error");
+  expect(fetcher.mock.calls[3]?.[1]?.redirect).toBeUndefined();
+  expect(fetcher.mock.calls[3]).toEqual(fetcher.mock.calls[4]);
+});

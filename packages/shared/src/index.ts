@@ -171,6 +171,7 @@ export const paypalActionNames = [
   "send_invoice",
   "create_recurring_series",
   "refund_payment",
+  "send_invoice_reminder",
 ] as const;
 export const invoiceCurrencies = ["USD", "EUR", "GBP", "AUD", "CAD"] as const;
 

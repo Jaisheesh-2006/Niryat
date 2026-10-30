@@ -22,6 +22,7 @@ function fakeHandlers() {
     send_invoice: vi.fn(async (_action: ProposedAction) => {}),
     create_recurring_series: vi.fn(async (_action: ProposedAction) => {}),
     refund_payment: vi.fn(async (_action: ProposedAction) => {}),
+    send_invoice_reminder: vi.fn(async (_action: ProposedAction) => {}),
   };
 }
 

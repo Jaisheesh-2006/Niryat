@@ -302,6 +302,11 @@ describe("storage query failures", () => {
       message: "Action save failed",
     },
     {
+      operation: "finish done",
+      run: (db: Db) => actionStore(db).finish(userId, { status: "done" }),
+      message: "Action save failed",
+    },
+    {
       operation: "rejectAction",
       run: (db: Db) => rejectAction(db, userId, userId),
       message: "Action save failed",

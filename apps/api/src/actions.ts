@@ -1,6 +1,12 @@
 import type { ActionHandler, PayPalActionName } from "@niryat/agent";
 import { getInvoiceForAction, markSent, setPayPalInvoiceId, setPayPalSeriesId } from "@niryat/db";
-import { invoiceInputSchema, recurrenceSchema } from "@niryat/shared";
+import { PayPalApiError } from "@niryat/paypal";
+import {
+  agentAdviceSchema,
+  invoiceInputSchema,
+  recurrenceSchema,
+  reminderStageSchema,
+} from "@niryat/shared";
 import { z } from "zod";
 import { recordRefundById } from "./payments";
 import type { AppDeps } from "./routes/auth";
@@ -48,6 +54,24 @@ const sendInvoicePayloadSchema = z.strictObject({
 });
 
 const paypalInvoiceIdSchema = z.string().regex(/^INV2-[A-Z0-9-]+$/);
+const reminderPayloadSchema = z.strictObject({
+  invoiceId: z.uuid(),
+  stage: reminderStageSchema,
+  paypalInvoiceId: paypalInvoiceIdSchema,
+  agent: agentAdviceSchema.strict().nullable(),
+  remind: z.strictObject({
+    send_to_invoicer: z.literal(false),
+    send_to_recipient: z.literal(true),
+  }),
+});
+const reminderRejectionSchema = z.object({
+  status: z.int().min(400).max(499),
+  code: z
+    .string()
+    .max(100)
+    .regex(/^[A-Za-z][A-Za-z0-9_]*$/)
+    .refine((code) => code !== "INVALID_RESPONSE" && !/^HTTP_\d{3}$/.test(code)),
+});
 const createdSchema = z
   .object({ id: paypalInvoiceIdSchema.optional(), href: z.url().optional() })
   .transform((reply) => reply.id ?? reply.href?.split("/").pop())
@@ -89,6 +113,39 @@ const refundPayloadSchema = z.strictObject({
 
 export function actionHandlers(deps: AppDeps): Readonly<Record<PayPalActionName, ActionHandler>> {
   return {
+    async send_invoice_reminder(action) {
+      const parsed = reminderPayloadSchema.safeParse(action.payload);
+      if (!parsed.success) {
+        throw Object.assign(new Error("invalid_payload"), { code: "invalid_payload" });
+      }
+      const invoice = await getInvoiceForAction(deps.db, action.userId, action.id);
+      const payload = parsed.data;
+      if (
+        !invoice ||
+        payload.invoiceId !== invoice.id ||
+        payload.paypalInvoiceId !== invoice.paypalInvoiceId
+      ) {
+        throw Object.assign(new Error("invalid_payload"), { code: "invalid_payload" });
+      }
+      if (invoice.status !== "sent" && invoice.status !== "partially_paid") {
+        throw Object.assign(new Error("reminder_not_needed"), { code: "reminder_not_needed" });
+      }
+      if (!deps.paypal) throw new Error("PayPal unavailable");
+      try {
+        await deps.paypal.rest.post(
+          `/v2/invoicing/invoices/${payload.paypalInvoiceId}/remind`,
+          payload.remind,
+          `${action.id}-remind`,
+          parseAny,
+          { retry: false },
+        );
+      } catch (error) {
+        const rejection =
+          error instanceof PayPalApiError ? reminderRejectionSchema.safeParse(error) : undefined;
+        const code = rejection?.success ? rejection.data.code : "reminder_outcome_unknown";
+        throw Object.assign(new Error(code), { code });
+      }
+    },
     async refund_payment(action) {
       const parsed = refundPayloadSchema.safeParse(action.payload);
       const invoice = await getInvoiceForAction(deps.db, action.userId, action.id);

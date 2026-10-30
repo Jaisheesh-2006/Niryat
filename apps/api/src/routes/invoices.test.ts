@@ -2,13 +2,16 @@ import { randomBytes, randomUUID } from "node:crypto";
 import {
   actionStore,
   getInvoiceForAction,
+  listReminderActions,
   listTasks,
   payments,
   recordPayment,
   recordRefund,
+  reminderKeys,
 } from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
 import {
+  createPayPalRestClient,
   PayPalApiError,
   type PayPalLedger,
   type PayPalRestClient,
@@ -30,9 +33,11 @@ import {
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { actionHandlers } from "../actions";
+import { toInvoiceView } from "../compliance";
 import { ensureDeadlineTasks } from "../deadlines";
 import { type FileStore, pdfKey } from "../files";
 import { createApp } from "../index";
+import { buildReminderPayload, proposeReminders, reminderCandidates } from "../reminders";
 import * as ruleClock from "../rules";
 import type { AppDeps } from "./auth";
 
@@ -44,7 +49,12 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
   let app: ReturnType<typeof createApp>;
   let files: FileStore;
   let objects: Map<string, Uint8Array>;
-  let calls: { path: PayPalRestPath; body: unknown; requestId: string }[];
+  let calls: {
+    path: PayPalRestPath;
+    body: unknown;
+    requestId: string;
+    options?: { retry: false };
+  }[];
   let replies: unknown[];
   const refund: RefundRecord = {
     refundId: "REFUND-TEST",
@@ -106,8 +116,8 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
       async get() {
         throw new Error("Unexpected PayPal read");
       },
-      async post(path, body, requestId, parse) {
-        calls.push({ path, body, requestId });
+      async post(path, body, requestId, parse, options) {
+        calls.push({ path, body, requestId, ...(options ? { options } : {}) });
         const reply = replies.shift();
         if (reply instanceof Error) throw reply;
         return parse(reply);
@@ -206,6 +216,316 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     if (!invoice.action) throw new Error("Expected a proposed action");
     return invoice.action.id;
   }
+
+  async function proposedReminder() {
+    const user = await setup();
+    const issued = await issue(user.cookie, user.input);
+    const invoice = toInvoiceView(
+      await readInvoice(await post(user.cookie, `/actions/${actionId(issued)}/approve`)),
+      true,
+      "2027-06-01",
+    );
+    const candidate = reminderCandidates([invoice], new Set())[0];
+    if (!candidate) throw new Error("Expected due reminder candidate");
+    const advice = {
+      advice: "hold" as const,
+      reason: "The client has an open dispute on this invoice.",
+    };
+    const drafts = new Map([[`reminder:${invoice.id}:60`, advice]]);
+    const proposed = await proposeReminders(deps, user.id, [candidate], drafts);
+    const action = (await listReminderActions(t.db, user.id, 10))[0];
+    if (!action) throw new Error("Expected reminder proposal");
+    expect(proposed.proposed).toEqual([
+      { actionId: action.id, invoiceNumber: invoice.number, stage: 60, advice },
+    ]);
+    expect(action.payload).toEqual(buildReminderPayload(candidate, advice));
+    calls.length = 0;
+    replies = [];
+    return { ...user, invoice, candidate, action, drafts };
+  }
+
+  it("approves one concurrent reminder, sends only the standard flags and preserves the send action", async () => {
+    const { cookie, id, invoice, action } = await proposedReminder();
+    const responses = await Promise.all([
+      post(cookie, `/actions/${action.id}/approve`),
+      post(cookie, `/actions/${action.id}/approve`),
+    ]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    expect(calls).toEqual([
+      {
+        path: "/v2/invoicing/invoices/INV2-TEST/remind",
+        body: { send_to_invoicer: false, send_to_recipient: true },
+        requestId: `${action.id}-remind`,
+        options: { retry: false },
+      },
+    ]);
+    expect((await listReminderActions(t.db, id, 10))[0]).toMatchObject({
+      status: "done",
+      error: null,
+      payload: action.payload,
+    });
+    expect((await list(cookie))[0]?.action).toEqual(invoice.action);
+  });
+
+  it("keeps the no-advice payload fixed and deduplicates real proposals", async () => {
+    const { id, candidate, cookie } = await proposedReminder();
+    const next = { ...candidate, stage: 30 as const };
+    const result = await proposeReminders(deps, id, [next], new Map());
+    expect(result.proposed).toHaveLength(1);
+    expect(
+      (await listReminderActions(t.db, id, 10)).find(
+        (row) => row.id === result.proposed[0]?.actionId,
+      )?.payload,
+    ).toEqual(buildReminderPayload(next, null));
+    expect(await proposeReminders(deps, id, [next], new Map())).toEqual({
+      proposed: [],
+      existing: 1,
+    });
+    expect(calls).toEqual([]);
+    expect((await list(cookie))[0]?.action?.status).toBe("done");
+  });
+
+  it("rejects extra text, flags and mismatched IDs before sending a reminder", async () => {
+    const { id: userId, candidate, action } = await proposedReminder();
+    const valid = buildReminderPayload(candidate, null);
+    const remind = { send_to_invoicer: false, send_to_recipient: true };
+    for (const payload of [
+      { ...valid, subject: "Custom" },
+      { ...valid, note: "Custom" },
+      { ...valid, extra: true },
+      { ...valid, remind: { ...remind, subject: "Custom" } },
+      { ...valid, remind: { ...remind, note: "Custom" } },
+      { ...valid, remind: { ...remind, send_to_invoicer: true } },
+      { ...valid, remind: { ...remind, send_to_recipient: false } },
+      { ...valid, stage: 45 },
+      { ...valid, invoiceId: randomUUID() },
+      { ...valid, paypalInvoiceId: "INV2-OTHER" },
+      { ...valid, agent: { advice: "send", reason: "A reason", extra: true } },
+    ]) {
+      await expect(
+        actionHandlers(deps).send_invoice_reminder({ ...action, userId, payload }),
+      ).rejects.toMatchObject({ code: "invalid_payload" });
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    {
+      error: new PayPalApiError(422, "UNPROCESSABLE_ENTITY"),
+      code: "UNPROCESSABLE_ENTITY",
+      reject: 200,
+    },
+    {
+      error: new PayPalApiError(503, "SERVICE_UNAVAILABLE"),
+      code: "reminder_outcome_unknown",
+      reject: 409,
+    },
+    {
+      error: new PayPalApiError(200, "INVALID_RESPONSE"),
+      code: "reminder_outcome_unknown",
+      reject: 409,
+    },
+    {
+      error: new PayPalApiError(422, "INVALID_RESPONSE"),
+      code: "reminder_outcome_unknown",
+      reject: 409,
+    },
+    {
+      error: new PayPalApiError(422, "private detail@example.com"),
+      code: "reminder_outcome_unknown",
+      reject: 409,
+    },
+    { error: new Error("private transport detail"), code: "reminder_outcome_unknown", reject: 409 },
+  ])(
+    "never retries a failed reminder; rejection status $reject for $code",
+    async ({ error, code, reject }) => {
+      const { cookie, id, action } = await proposedReminder();
+      replies = [error];
+      const response = await post(cookie, `/actions/${action.id}/approve`);
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({ error: "paypal_failed", code });
+      expect((await listReminderActions(t.db, id, 10))[0]).toMatchObject({
+        status: "failed",
+        error: code,
+      });
+      expect((await post(cookie, `/actions/${action.id}/approve`)).status).toBe(409);
+      expect((await post(cookie, `/actions/${action.id}/reject`)).status).toBe(reject);
+      expect(calls).toHaveLength(1);
+    },
+  );
+
+  it("does not remind an invoice paid after proposal and allows rejecting it", async () => {
+    const { cookie, id, action } = await proposedReminder();
+    await recordPayment(t.db, {
+      captureId: "CAPTURE-TEST",
+      status: "COMPLETED",
+      paypalInvoiceId: "INV2-TEST",
+      gross: "100.00",
+      fee: null,
+      net: null,
+      currency: "USD",
+      fxRate: null,
+      createTime: "2026-10-27T12:00:00Z",
+    });
+    const response = await post(cookie, `/actions/${action.id}/approve`);
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "paypal_failed", code: "reminder_not_needed" });
+    expect((await post(cookie, `/actions/${action.id}/approve`)).status).toBe(409);
+    expect((await post(cookie, `/actions/${action.id}/reject`)).status).toBe(200);
+    expect((await listReminderActions(t.db, id, 10))[0]?.status).toBe("rejected");
+    expect(calls).toEqual([]);
+  });
+
+  it("isolates reminder approvals and leaves a proposal unclaimed without PayPal", async () => {
+    const { cookie, id, action } = await proposedReminder();
+    const other = await signup("other@example.com");
+    for (const operation of ["approve", "reject"]) {
+      expect((await post(other.cookie, `/actions/${action.id}/${operation}`)).status).toBe(404);
+    }
+    delete deps.paypal;
+    app = createApp(deps);
+    expect((await post(cookie, `/actions/${action.id}/approve`)).status).toBe(503);
+    expect((await listReminderActions(t.db, id, 10))[0]?.status).toBe("proposed");
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    { body: "not JSON", code: "reminder_outcome_unknown", rejectStatus: 409 },
+    { body: '{"name":42}', code: "reminder_outcome_unknown", rejectStatus: 409 },
+    {
+      body: '{"message":"unrecognised error"}',
+      code: "reminder_outcome_unknown",
+      rejectStatus: 409,
+    },
+    { body: '{"name":"UNPROCESSABLE_ENTITY"}', code: "UNPROCESSABLE_ENTITY", rejectStatus: 200 },
+  ])(
+    "keeps unvalidated PayPal error bodies unknown: $body",
+    async ({ body, code, rejectStatus }) => {
+      const { cookie, id, action } = await proposedReminder();
+      const fetcher = vi.fn<typeof fetch>(async (url) =>
+        String(url).endsWith("/v1/oauth2/token")
+          ? Response.json({ access_token: "test-token", expires_in: 3600 })
+          : new Response(body, { status: 422 }),
+      );
+      if (!deps.paypal) throw new Error("Expected PayPal fake");
+      deps.paypal.rest = createPayPalRestClient({
+        clientId: "test",
+        clientSecret: "test",
+        fetch: fetcher,
+      });
+      const response = await post(cookie, `/actions/${action.id}/approve`);
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({ error: "paypal_failed", code });
+      expect((await listReminderActions(t.db, id, 10))[0]).toMatchObject({
+        status: "failed",
+        error: code,
+      });
+      expect((await post(cookie, `/actions/${action.id}/approve`)).status).toBe(409);
+      expect((await post(cookie, `/actions/${action.id}/reject`)).status).toBe(rejectStatus);
+      expect((await listReminderActions(t.db, id, 10))[0]?.status).toBe(
+        rejectStatus === 409 ? "failed" : "rejected",
+      );
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(fetcher.mock.calls[1]?.[1]?.method).toBe("POST");
+    },
+  );
+
+  it.each(["network", "read"])(
+    "blocks resend/replacement after remote acceptance and a lost %s response, including restart",
+    async (failure) => {
+      const { cookie, id, invoice, candidate, action, drafts } = await proposedReminder();
+      const fetcher = vi.fn<typeof fetch>(async (url) => {
+        if (String(url).endsWith("/v1/oauth2/token"))
+          return Response.json({ access_token: "test-token", expires_in: 3600 });
+        if (failure === "network") throw new Error("lost response after acceptance");
+        const response = new Response(null, { status: 204 });
+        vi.spyOn(response, "text").mockRejectedValue(
+          new Error("lost response body after acceptance"),
+        );
+        return response;
+      });
+      const paypal = deps.paypal;
+      if (!paypal) throw new Error("Expected PayPal fake");
+      const restart = () => {
+        paypal.rest = createPayPalRestClient({
+          clientId: "test",
+          clientSecret: "test",
+          fetch: fetcher,
+        });
+        app = createApp(deps);
+      };
+      restart();
+      const response = await post(cookie, `/actions/${action.id}/approve`);
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({
+        error: "paypal_failed",
+        code: "reminder_outcome_unknown",
+      });
+      expect((await listReminderActions(t.db, id, 10))[0]).toMatchObject({
+        status: "failed",
+        error: "reminder_outcome_unknown",
+      });
+      restart();
+      for (const operation of ["approve", "reject"]) {
+        expect((await post(cookie, `/actions/${action.id}/${operation}`)).status).toBe(409);
+      }
+      const keys = await reminderKeys(t.db, id);
+      expect(reminderCandidates([invoice], keys)).toEqual([]);
+      expect(await proposeReminders(deps, id, [candidate], drafts)).toEqual({
+        proposed: [],
+        existing: 1,
+      });
+      expect(await listReminderActions(t.db, id, 10)).toHaveLength(1);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(fetcher.mock.calls[1]?.[1]).toMatchObject({ method: "POST", redirect: "error" });
+    },
+  );
+
+  it.each(["approved", "done", "failed"])(
+    "keeps crash safety when persisting %s fails",
+    async (failureStatus) => {
+      const { cookie, id, candidate, action, drafts } = await proposedReminder();
+      await t.db.execute(`CREATE FUNCTION niryat_test_reminder_fail() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.paypal_action = 'send_invoice_reminder' AND NEW.status = TG_ARGV[0] THEN
+        RAISE EXCEPTION 'synthetic status write failure'; END IF; RETURN NEW; END $$`);
+      try {
+        await t.db.execute(`CREATE TRIGGER niryat_test_reminder_fail BEFORE UPDATE ON agent_actions
+        FOR EACH ROW EXECUTE FUNCTION niryat_test_reminder_fail('${failureStatus}')`);
+        if (failureStatus === "failed") replies = [new Error("lost accepted response")];
+        const response = await post(cookie, `/actions/${action.id}/approve`);
+        expect(response.status).toBe(500);
+        expect(calls).toHaveLength(failureStatus === "approved" ? 0 : 1);
+        expect((await listReminderActions(t.db, id, 10))[0]?.status).toBe(
+          failureStatus === "approved" ? "proposed" : "approved",
+        );
+      } finally {
+        await t.db.execute("DROP TRIGGER IF EXISTS niryat_test_reminder_fail ON agent_actions");
+        await t.db.execute("DROP FUNCTION niryat_test_reminder_fail()");
+      }
+      app = createApp(deps);
+      if (failureStatus !== "approved") {
+        for (const operation of ["approve", "reject"]) {
+          expect((await post(cookie, `/actions/${action.id}/${operation}`)).status).toBe(409);
+        }
+      }
+      expect(await proposeReminders(deps, id, [candidate], drafts)).toEqual({
+        proposed: [],
+        existing: 1,
+      });
+      expect(calls).toHaveLength(failureStatus === "approved" ? 0 : 1);
+    },
+  );
+
+  it("leaves an interrupted claim blocked across application restart without dispatch", async () => {
+    const { cookie, id, action } = await proposedReminder();
+    expect(await actionStore(t.db).claim(action.id, id)).toBeDefined();
+    app = createApp(deps);
+    for (const operation of ["approve", "reject"]) {
+      expect((await post(cookie, `/actions/${action.id}/${operation}`)).status).toBe(409);
+    }
+    expect(calls).toEqual([]);
+    expect((await listReminderActions(t.db, id, 10))[0]?.status).toBe("approved");
+  });
 
   function filePath(invoice: Invoice) {
     if (invoice.pdfUrl === null) throw new Error("Expected an invoice PDF");

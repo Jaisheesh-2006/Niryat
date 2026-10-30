@@ -43,6 +43,7 @@ export interface PayPalRestClient {
     body: unknown,
     requestId: string,
     parse: (input: unknown) => T,
+    options?: { retry: false },
   ): Promise<T>;
 }
 
@@ -60,6 +61,7 @@ export function createPayPalRestClient(options: {
   async function exchange(
     path: string,
     init: RequestInit,
+    retry = true,
   ): Promise<{
     status: number;
     body: unknown;
@@ -71,13 +73,13 @@ export function createPayPalRestClient(options: {
         response = await fetcher(`${BASE_URL}${path}`, init);
         text = await response.text();
       } catch {
-        if (attempt === 0) {
+        if (retry && attempt === 0) {
           await setTimeout(500);
           continue;
         }
         throw new PayPalApiError(0, "NETWORK_ERROR");
       }
-      if (response.status >= 500 && attempt === 0) {
+      if (retry && response.status >= 500 && attempt === 0) {
         await setTimeout(500);
         continue;
       }
@@ -137,23 +139,28 @@ export function createPayPalRestClient(options: {
     path: PayPalRestPath,
     init: RequestInit,
     parse: (input: unknown) => T,
+    retry = true,
   ): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       const accessToken = await getToken();
       let result: { status: number; body: unknown };
       try {
-        result = await exchange(path, {
-          ...init,
-          headers: {
-            ...init.headers,
-            Accept: "application/json",
-            Authorization: `Bearer ${accessToken}`,
+        result = await exchange(
+          path,
+          {
+            ...init,
+            headers: {
+              ...init.headers,
+              Accept: "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
           },
-        });
+          retry,
+        );
       } catch (error) {
         if (error instanceof PayPalApiError && error.status === 401) {
           if (token?.value === accessToken) token = undefined;
-          if (attempt === 0) continue;
+          if (retry && attempt === 0) continue;
         }
         throw error;
       }
@@ -163,7 +170,7 @@ export function createPayPalRestClient(options: {
 
   return {
     get: (path, parse) => request(path, { method: "GET" }, parse),
-    post: (path, body, requestId, parse) => {
+    post: (path, body, requestId, parse, callOptions) => {
       const input = z.json().optional().safeParse(body);
       if (!input.success) return Promise.reject(new PayPalApiError(0, "INVALID_REQUEST"));
       const serialized = JSON.stringify(input.data);
@@ -173,8 +180,10 @@ export function createPayPalRestClient(options: {
           method: "POST",
           headers: { "Content-Type": "application/json", "PayPal-Request-Id": requestId },
           ...(serialized === undefined ? {} : { body: serialized }),
+          ...(callOptions?.retry === false ? { redirect: "error" } : {}),
         },
         parse,
+        callOptions?.retry !== false,
       );
     },
   };
