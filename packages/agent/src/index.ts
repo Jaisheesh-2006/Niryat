@@ -2,6 +2,22 @@ import type { ActionStatus, paypalActionNames } from "@niryat/shared";
 import { z } from "zod";
 
 export { type ActionStatus, actionStatusSchema } from "@niryat/shared";
+export { type AgentTool, type ClaudeRunner, createClaudeRunner } from "./claude";
+export {
+  type CloseAgentInput,
+  type CloseDataSource,
+  type CloseDrafts,
+  closeAgentTools,
+  runCloseAgent,
+  type ToolLog,
+} from "./close-agent";
+export { agentNoteSchema } from "./notes";
+export {
+  createToolkitReader,
+  PAYPAL_READ_TOOLS,
+  type PayPalReader,
+  paypalReadTools,
+} from "./paypal-tools";
 
 // Agent-initiated PayPal actions must pass the user's approval queue (spec 08); only PAYPAL_READ_TOOLS skip it (AGENTS.md).
 export type PayPalActionName = (typeof paypalActionNames)[number];
