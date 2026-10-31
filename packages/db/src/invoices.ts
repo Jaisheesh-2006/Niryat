@@ -133,7 +133,10 @@ export async function issueInvoice(
 ): Promise<Invoice> {
   return db
     .transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${userId}))`);
+      // All users share one configured PayPal seller and its financial-year sequence.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`invoice-number:${input.fy}`}))`,
+      );
       const [client] = await tx
         .select({ id: clients.id })
         .from(clients)
@@ -142,7 +145,7 @@ export async function issueInvoice(
       const [next] = await tx
         .select({ seq: sql<number>`coalesce(max(${invoices.seq}), 0) + 1` })
         .from(invoices)
-        .where(and(eq(invoices.userId, userId), eq(invoices.fy, input.fy)));
+        .where(eq(invoices.fy, input.fy));
       if (!next) throw new Error("Invoice save failed");
       const [draft] = await tx
         .insert(invoices)

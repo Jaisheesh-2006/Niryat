@@ -6,12 +6,12 @@ This commit is a scaffold. Product scope and ordering live in [PLAN](docs/PLAN.m
 
 ## Map
 
-- apps/web: Next.js App Router; sign-in, profile, health check, clients, invoices, tasks and FIRA pages.
+- apps/web: Next.js App Router; sign-in, profile, health check, clients, invoices, tasks, FIRA and monthly close pages.
 - apps/api: Hono on Node; auth, profiles, clients, invoices, approvals, PDF serving, payment webhooks and sync.
-- apps/worker: Render Workflows monthlyClose stub.
+- apps/worker: Render Workflows monthlyClose task and monthly trigger.
 - packages/rules: pure, cited legal/numeric logic; YAML logic names the implementing function.
 - packages/paypal: REST Invoicing, Server SDK ledger (search, captures, refunds), Disputes reader, webhook verification.
-- packages/agent: approval runner; future Claude + PayPal Toolkit.
+- packages/agent: approval runner and Claude agents (close, reminders, extraction; drafts only); scoped PayPal Toolkit reads.
 - packages/db: Drizzle schema, migrations, encrypted profile storage; packages/shared: shared zod request schemas.
 - packages/config: strict TypeScript base and safe zod environment parser.
 - docs/specs: thirteen ordered feature specs; status and acceptance ticks record implemented scope.

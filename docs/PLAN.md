@@ -163,7 +163,7 @@ Every feature below is **required for v1**. Build them in this order; each one l
 | Milestone / partial payment | invoice partial-payment configuration _(verify)_                     |
 
 **Done when:**
-- [ ] Extraction shows source text beside each extracted field; user confirms before saving
+- [x] Extraction shows source text beside each extracted field; user confirms before saving
 - [x] GST invoice PDF generated with all mandatory export fields
 - [x] One-time PayPal invoice created and sent from the India sandbox account to a US sandbox buyer
 - [x] Recurring series and partial-payment invoices work (or are documented as unavailable for India accounts)
@@ -206,26 +206,26 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 ### 8. Monthly close agent (acts in PayPal)
 
-**What:** An agent that runs on the 1st of every month (and on demand). It syncs PayPal, matches payments, updates GST data and tax estimates, and **proposes PayPal actions** — e.g. send a reminder, create next month's retainer invoice — which run only after the user approves. It also creates tasks (_"Upload October FIRA"_) and sends a summary.
+**What:** An agent scheduled on the 1st of every month and available on demand. Phase 5 syncs PayPal, reviews ledger/deadline/FIRA views, investigates with read-only tools and proposes standard PayPal reminders with send/hold advice. It creates tasks (_"Upload October FIRA"_) and an in-app summary. GST data and tax estimates belong to Phase 6; retainer-invoice proposals remain outside the Phase 5 scope.
 
-**How:** Claude agent using the **PayPal Agent Toolkit** plus Niryat tools (rules engine, FIRA matcher, GSTR-1 builder), scheduled via Render Workflows.
+**How:** Claude Agent SDK with five scoped **PayPal Agent Toolkit reads** plus Niryat read/draft tools; code persists proposals, and user approval executes REST reminders ([ADR 0004](decisions/0004-reminders-via-rest.md), [ADR 0005](decisions/0005-agent-boundary.md)). Monthly cron dispatches Render Workflows. Local scheduled acceptance used the API CLI fallback; hosted registration remains Phase 7.
 
 **Done when:**
-- [ ] Runs on schedule and via a "Close this month" button
-- [ ] Proposed PayPal actions shown as an approval list; nothing runs without approval
-- [ ] Every number in the summary comes from PayPal data and the rules engine
-- [ ] Every tool call is logged for transparency
+- [x] Runs on schedule and via a "Close this month" button
+- [x] Proposed PayPal actions shown as an approval list; nothing runs without approval
+- [x] Every number in the summary comes from PayPal data and the rules engine
+- [x] Every tool call is logged for transparency
 
 ### 9. RBI deadline tracker with PayPal reminders
 
-**What:** For every unpaid or partly paid invoice, count down to the RBI deadline for receiving export proceeds (configurable; 9 months from invoice date for services, or 12 months if invoiced or settled in INR, under the FEMA 2026 regulations from 1 Oct 2026; see [rules sources](rules-sources.md)). As the deadline approaches, the agent **sends PayPal invoice reminders** after the user approves, escalating politely.
+**What:** For every unpaid or partly paid invoice, count down to the RBI deadline for receiving export proceeds (configurable; 9 months from invoice date for services, or 12 months if invoiced or settled in INR, under the FEMA 2026 regulations from 1 Oct 2026; see [rules sources](rules-sources.md)). As the deadline approaches, code proposes standard reminders at the 60/30-day stages, with Claude's internal send/hold advice when available. A reminder is sent only after user approval; PayPal controls its wording.
 
-**How:** rules engine for the deadline (stored as a versioned rule); PayPal `send_invoice_reminder` for the action.
+**How:** `realisationDeadline` reads the period from versioned YAML params; the approved `send_invoice_reminder` action uses REST Invoicing v2 with one send attempt ([ADR 0004](decisions/0004-reminders-via-rest.md)).
 
 **Done when:**
-- [ ] Each unpaid invoice shows days remaining
-- [ ] Reminder proposals at 60 and 30 days before the deadline; sent via PayPal after approval
-- [ ] Deadline value changes in one place (the rules file)
+- [x] Each unpaid invoice shows days remaining
+- [x] Reminder proposals at 60 and 30 days before the deadline; sent via PayPal after approval
+- [x] Deadline value changes in one place (the rules file)
 
 ### 10. GSTR-1 export data
 
@@ -304,7 +304,7 @@ Build these **only after features 1–13 are polished** (target: Nov 5).
 | Writing plain-language explanations                                              | Advance-tax amounts and dates                    |
 | Natural-language dashboard questions                                             | Every number shown to the user                   |
 
-**Golden rule:** the AI never states a law or a number on its own, and never takes a PayPal action without user approval. Every legal statement and every figure comes from the rules engine, with a citation.
+**Golden rule:** the AI never invents legal or numeric facts and never executes a PayPal write or approves its own proposal. Every figure comes from PayPal-sourced records or the rules engine; legal statements carry rule citations. The user-approved 2026-10-30 exception permits only scoped, logged in-product Toolkit reads without approval ([ADR 0005](decisions/0005-agent-boundary.md)).
 
 ---
 
@@ -342,11 +342,10 @@ Frontend (Next.js / React)
 Backend API (Node.js / TypeScript)
  ├─ Rules engine (versioned YAML + unit tests)
  ├─ AI agent (Claude via Claude Agent SDK)
- │    tools: PayPal Agent Toolkit (invoices, recurring series,
- │           reminders, refunds, transactions),
- │           PayPal Disputes API, rules engine,
- │           FIRA parser, GSTR-1 builder
- ├─ Approval queue (every PayPal action needs user approval)
+ │    tools: five scoped PayPal Agent Toolkit reads,
+ │           Niryat ledger/rules/FIRA views and draft tools
+ │    writes: none; validated drafts become proposed actions
+ ├─ Approval queue (every PayPal write needs user approval)
  ├─ PDF generator (GST invoice)
  └─ PayPal webhook receiver (payments, refunds, disputes)
         │
@@ -407,22 +406,26 @@ A project can win at most one main prize and one sponsor prize; AG Studio is the
 
 ## 13. Data model
 
-| Table            | Key fields                                                                                                                                                                       |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `users`          | id, email, paypal_payer_id, created_at                                                                                                                                           |
-| `profiles`       | user_id, gst_registered, gstin, lut_number, lut_valid_from, lut_valid_to, work_type, purpose_code, pan_last4                                                                     |
-| `clients`        | id, user_id, name, address, country, email, export_check_result                                                                                                                  |
-| `invoices`       | id, user_id, client_id, type (one_time / recurring / milestone), number, fy, date, currency, amount, description, paypal_invoice_id, paypal_recurring_series_id, pdf_url, status |
-| `payments`       | id, invoice_id, paypal_txn_id, kind (payment / refund), gross, fee, net, currency, fx_rate, received_at                                                                          |
-| `disputes`       | id, invoice_id, paypal_dispute_id, amount, status, reason, outcome                                                                                                               |
-| `fira_documents` | id, user_id, month, file_url, parsed_at                                                                                                                                          |
-| `fira_lines`     | id, fira_document_id, date, amount, currency, reference, purpose_code                                                                                                            |
-| `matches`        | fira_line_id, payment_id, confidence, confirmed_by_user                                                                                                                          |
-| `agent_actions`  | id, user_id, paypal_action, payload, status (proposed / approved / rejected / done), created_at                                                                                  |
-| `tasks`          | id, user_id, type, due_date, status, source_rule_id                                                                                                                              |
-| `rule_versions`  | rule_id, version, effective_from, source, review                                                                                                                                 |
+| Table              | Key fields                                                                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`            | id, email, paypal_payer_id, created_at                                                                                                                                           |
+| `profiles`         | user_id, gst_registered, gstin, lut_number, lut_valid_from, lut_valid_to, work_type, purpose_code, pan_last4                                                                     |
+| `clients`          | id, user_id, name, address, country, email, export_check_result                                                                                                                  |
+| `invoices`         | id, user_id, client_id, type (one_time / recurring / milestone), number, fy, date, currency, amount, description, paypal_invoice_id, paypal_recurring_series_id, pdf_url, status |
+| `payments`         | id, invoice_id, paypal_txn_id, kind (payment / refund), gross, fee, net, currency, fx_rate, received_at                                                                          |
+| `disputes`         | id, invoice_id, paypal_dispute_id, amount, status, reason, outcome                                                                                                               |
+| `fira_documents`   | id, user_id, month, file_url, parsed_at                                                                                                                                          |
+| `fira_lines`       | id, fira_document_id, date, amount, currency, reference, purpose_code                                                                                                            |
+| `matches`          | fira_line_id, payment_id, confidence, confirmed_by_user                                                                                                                          |
+| `agent_actions`    | id, user_id, invoice_id, payment_id, paypal_action, payload, status (proposed / approved / rejected / done / failed), error, dedupe_key, created_at, updated_at                  |
+| `agent_runs`       | id, user_id, kind (monthly_close / reminders / extraction), trigger, month, as_of, status, error, summary, ai_status, ai_cost_usd, started_at, finished_at                       |
+| `agent_tool_calls` | id, run_id, seq, actor (system / agent), tool, input, output, ok, created_at; unique (run_id, seq)                                                                               |
+| `tasks`            | id, user_id, type, due_date, status, source_rule_id                                                                                                                              |
+| `rule_versions`    | rule_id, version, effective_from, source, review                                                                                                                                 |
 
 Sensitive fields (GSTIN, PAN fragments, addresses) are encrypted at rest.
+
+Agent runs permit one running row per user/kind. Reminder actions use an immutable `dedupe_key` scoped to user/invoice/stage; rejection retains that key. Extraction saves only run/cost metadata and found field names, not the pasted brief or extracted records. See [ADR 0005](decisions/0005-agent-boundary.md).
 
 ---
 

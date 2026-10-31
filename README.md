@@ -1,10 +1,16 @@
 # Niryat
 
-An AI agent planned for Indian freelancers paid from abroad through PayPal.
-It will turn invoices, payments, refunds and disputes into export-compliance records for CA review. Every PayPal action requires user approval; legal/numeric logic belongs to sourced rules.
+An AI agent for Indian freelancers paid from abroad through PayPal.
+It turns invoices, payments, refunds and disputes into export-compliance records for CA review. Every PayPal write requires user approval; legal/numeric logic belongs to sourced rules.
 
 Built for the PayPal AI Hackathon, due November 12, 2026.
-**Current status:** features through Phase 4 are implemented, with remaining acceptance evidence tracked in [build flow](docs/build-flow.md). Email and PayPal sign-in and all login-plan browser checks are user-confirmed (2026-10-30). The login follow-up is complete; Phase 5 agent implementation is next. Judge mode and hosted deployment remain pending.
+**Current status:** Phase 5 extraction, monthly close and deadline reminders are implemented and user-verified (2026-10-31). Phase 4 real-FIRA/refund evidence and deployment limits remain tracked in [build flow](docs/build-flow.md) and [verification](docs/verification.md). Judge mode, reports, sponsor UI and hosted deployment remain pending.
+
+## PayPal and AI
+
+Niryat uses the PayPal Developer Platform for approved Invoicing v2 invoice sends and standard reminders, Server SDK capture/refund reads and approved refunds, transaction-search reconciliation, REST Disputes reads and verified webhooks. The PayPal Agent Toolkit supplies five read-only tools, with responses filtered to the user's own records. One sandbox seller serves each deployment; [ADR 0004](docs/decisions/0004-reminders-via-rest.md) explains why approved reminders use REST.
+
+The Claude Agent SDK powers source-quoted invoice extraction and a monthly-close agent that investigates the ledger and PayPal, prioritises work, advises send/hold and drafts tasks. Code validates every draft and computes every figure. Claude has no PayPal write or approval tools; the user confirms forms and approves actions. A shared AI budget bounds spend, and deterministic proposals remain available when AI is unavailable. See [ADR 0005](docs/decisions/0005-agent-boundary.md).
 
 ## Setup
 
@@ -19,6 +25,8 @@ corepack pnpm dev
 On PowerShell with blocked ps1 scripts, use corepack.cmd pnpm or pnpm.cmd.
 Web: http://localhost:3000. API: http://localhost:3001/health returns status ok.
 The health endpoint and purpose-code catalogue work without credentials. Sign-in and saved records require the database and private configuration.
+
+If the combined development command does not bring up the API, run `corepack pnpm --filter @niryat/api dev` and `corepack pnpm --filter @niryat/web dev` in separate terminals. Confirm `/health` on port 3001 before using the web proxy. The combined-launch failure's cause remains unconfirmed.
 
 For invoice PDFs during development, use [local S3 storage in Docker](docs/local-storage.md).
 It works with the existing storage client and needs no AWS account.
@@ -47,7 +55,7 @@ The optional earlier command remains supported: node --env-file=.env scripts/sta
 
 ## Judge mode and hosting
 
-Judge mode, synthetic fixtures and hosted demo are TODOs; no judge credentials or button are shipped. render.yaml defines web, API, a Render Workflow and **paid** Postgres. Deployment needs an authorized Render account; no resources were provisioned by this scaffold. Workflow scheduling will be added with monthly close.
+Judge mode and hosted demo remain TODOs; no judge credentials or button are shipped. render.yaml defines web, API, a monthly-close Workflow, monthly trigger cron, nightly reconciliation and **paid** Postgres. The local scheduled path was verified using `corepack pnpm --filter @niryat/api close:run --as-of 2027-07-01`; Workflows dev and hosted scheduling are unverified. Deployment needs an authorized Render account and the [Phase 7 reliability checks](docs/build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58).
 
 AG Studio and Bryntum are deferred: start licence trials on/after November 1, 2026 and confirm coverage through December 15 judging.
 

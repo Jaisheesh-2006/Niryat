@@ -9,7 +9,10 @@ const env: FileStorageEnv = {
   FILE_STORAGE_REGION: "auto",
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 it("creates an unguessable URL-safe file token and the invoice object key", () => {
   const token = newFileToken();
@@ -85,4 +88,94 @@ it("uses the AWS client's two retries in the default transport", async () => {
     "File storage request failed: 503",
   );
   expect(fetcher).toHaveBeenCalledTimes(3);
+});
+
+it.each([
+  { method: "PUT", injected: false },
+  { method: "GET", injected: false },
+  { method: "PUT", injected: true },
+  { method: "GET", injected: true },
+])("aborts a stalled $method (injected transport: $injected)", async ({ method, injected }) => {
+  const deadline = new AbortController();
+  const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(deadline.signal);
+  const started = Promise.withResolvers<AbortSignal>();
+  const fetcher = vi.fn<typeof fetch>().mockImplementationOnce(async (request) => {
+    if (!(request instanceof Request)) throw new Error("Expected signed request");
+    const { signal } = request;
+    started.resolve(signal);
+    signal.throwIfAborted();
+    return new Promise<Response>((_, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    });
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const store = createS3FileStore(env, injected ? fetcher : undefined);
+  const pending =
+    method === "PUT"
+      ? store.put("invoice.pdf", new Uint8Array(), "application/pdf")
+      : store.get("invoice.pdf");
+  const rejected = expect(pending).rejects.toThrow(/^File storage request failed$/);
+  const signal = await started.promise;
+  expect(timeout).toHaveBeenCalledExactlyOnceWith(15_000);
+  deadline.abort(new DOMException("private storage detail", "TimeoutError"));
+  await rejected;
+  expect(signal.aborted).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  fetcher.mockResolvedValue(new Response(null, { status: 200 }));
+  await expect(store.put("next.pdf", new Uint8Array(), "application/pdf")).resolves.toBeUndefined();
+});
+
+it("keeps the same deadline across HTTP retries", async () => {
+  const deadline = new AbortController();
+  const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(deadline.signal);
+  const retryStarted = Promise.withResolvers<AbortSignal>();
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(new Response(null, { status: 503 }))
+    .mockImplementationOnce(async (request) => {
+      if (!(request instanceof Request)) throw new Error("Expected signed request");
+      const { signal } = request;
+      retryStarted.resolve(signal);
+      signal.throwIfAborted();
+      return new Promise<Response>((_, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      });
+    });
+  vi.stubGlobal("fetch", fetcher);
+  const rejected = expect(
+    createS3FileStore(env).put("invoice.pdf", new Uint8Array(), "application/pdf"),
+  ).rejects.toThrow(/^File storage request failed$/);
+  const signal = await retryStarted.promise;
+  expect(timeout).toHaveBeenCalledExactlyOnceWith(15_000);
+  deadline.abort();
+  await rejected;
+  expect(signal.aborted).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("aborts a stalled GET body after response headers arrive", async () => {
+  const deadline = new AbortController();
+  vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(deadline.signal);
+  const reading = Promise.withResolvers<void>();
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async (request) => {
+    if (!(request instanceof Request)) throw new Error("Expected signed request");
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          request.signal.addEventListener("abort", () => controller.error(request.signal.reason), {
+            once: true,
+          });
+        },
+        pull() {
+          reading.resolve();
+        },
+      }),
+    );
+  });
+  const rejected = expect(createS3FileStore(env, fetcher).get("invoice.pdf")).rejects.toThrow(
+    /^File storage request failed$/,
+  );
+  await reading.promise;
+  deadline.abort();
+  await rejected;
 });

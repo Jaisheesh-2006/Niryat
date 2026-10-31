@@ -2,6 +2,6 @@
 
 Status: accepted.
 
-Use the TypeScript Server SDK for transaction search/refunds, PayPal Agent Toolkit for AI-facing approved actions, and typed REST for Invoicing v2/Disputes v1. This covers the SDK gaps while preserving clear ownership of deterministic ledger access and agent actions.
+Use the TypeScript Server SDK for transaction search, capture/refund reads and approved refunds; the PayPal Agent Toolkit for scoped read-only agent tools ([ADR 0005](0005-agent-boundary.md)); and typed REST for Invoicing v2/Disputes v1. Approved reminders use REST and PayPal's standard wording ([ADR 0004](0004-reminders-via-rest.md)). This covers the SDK gaps while preserving ownership of deterministic ledger access and user-approved writes.
 
-Keep adapters unimplemented until their specs are selected. Every PayPal action requires user approval. Sandbox availability must be tested with an India seller; see [PayPal guide](../paypal.md).
+All three layers are implemented. Toolkit writes remain deferred. Every PayPal write requires user approval; the in-product read exception is scoped and logged under ADR 0005. Sandbox availability is tested with an India seller; see [PayPal guide](../paypal.md).

@@ -194,7 +194,7 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
     });
   });
 
-  it("allocates consecutive numbers per user and financial year and lists newest first", async () => {
+  it("shares financial-year numbering across users while keeping their invoices isolated", async () => {
     const a = await seller();
     const issued = [];
     for (let n = 0; n < 3; n++) {
@@ -215,8 +215,10 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
     });
     const b = await seller("b@example.com");
     expect((await issueInvoice(t.db, b.userId, b.input, finalize, numberFor)).number).toBe(
-      numberFor(1),
+      numberFor(4),
     );
+    expect(await listInvoices(t.db, a.userId)).toEqual([...issued].reverse());
+    expect(await listInvoices(t.db, b.userId)).toMatchObject([{ number: numberFor(4) }]);
     const nextYear = await issueInvoice(
       t.db,
       a.userId,
@@ -228,10 +230,14 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
     expect((await listInvoices(t.db, a.userId))[0]).toEqual(nextYear);
   });
 
-  it("serializes five concurrent issues without duplicate sequences", async () => {
+  it("serializes concurrent issues across users without duplicate sequences", async () => {
     const a = await seller();
+    const b = await seller("b@example.com");
     const issued = await Promise.all(
-      Array.from({ length: 5 }, () => issueInvoice(t.db, a.userId, a.input, finalize, numberFor)),
+      Array.from({ length: 5 }, (_, index) => {
+        const owner = index % 2 === 0 ? a : b;
+        return issueInvoice(t.db, owner.userId, owner.input, finalize, numberFor);
+      }),
     );
     expect(new Set(issued.map((row) => row.number))).toEqual(
       new Set([1, 2, 3, 4, 5].map(numberFor)),
@@ -239,6 +245,8 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
     expect(new Set((await t.db.select().from(invoices)).map((row) => row.seq))).toEqual(
       new Set([1, 2, 3, 4, 5]),
     );
+    expect(await listInvoices(t.db, a.userId)).toHaveLength(3);
+    expect(await listInvoices(t.db, b.userId)).toHaveLength(2);
   });
 
   it("rolls back a failed finalize without consuming the next number", async () => {

@@ -35,7 +35,7 @@ import { z } from "zod";
 import { actionHandlers } from "../actions";
 import { toInvoiceView } from "../compliance";
 import { ensureDeadlineTasks } from "../deadlines";
-import { type FileStore, pdfKey } from "../files";
+import { createS3FileStore, type FileStore, pdfKey } from "../files";
 import { createApp } from "../index";
 import { buildReminderPayload, proposeReminders, reminderCandidates } from "../reminders";
 import * as ruleClock from "../rules";
@@ -983,6 +983,68 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect(await response.json()).toEqual({ error: "file_storage_unavailable" });
     expect(await list(cookie)).toEqual([]);
     expect((await issue(cookie, input)).number).toBe(`${financialYear(invoiceDate)}/0001`);
+  });
+
+  it("releases the numbering lock for another user after a stalled upload times out", async () => {
+    const a = await setup();
+    const b = await signup("invoice-b@example.com");
+    await saveProfile(b.cookie);
+    const clientResponse = await post(b.cookie, "/clients", client);
+    expect(clientResponse.status).toBe(201);
+    const input = { ...a.input, clientId: clientSchema.parse(await clientResponse.json()).id };
+    const deadline = new AbortController();
+    vi.spyOn(AbortSignal, "timeout").mockReturnValueOnce(deadline.signal);
+    const started = Promise.withResolvers<AbortSignal>();
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementationOnce(async (request) => {
+        if (!(request instanceof Request)) throw new Error("Expected signed request");
+        const { signal } = request;
+        started.resolve(signal);
+        signal.throwIfAborted();
+        return new Promise<Response>((_, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+      })
+      .mockImplementation(async () => new Response(null, { status: 200 }));
+    deps.files = createS3FileStore(
+      {
+        FILE_STORAGE_URL: "https://storage.example/bucket",
+        FILE_STORAGE_ACCESS_KEY_ID: "test-access-key",
+        FILE_STORAGE_SECRET_ACCESS_KEY: "test-secret-key",
+        FILE_STORAGE_REGION: "auto",
+      },
+      fetcher,
+    );
+    const stalled = post(a.cookie, "/invoices", a.input);
+    let waiting: Promise<Response> | undefined;
+    try {
+      const signal = await started.promise;
+      waiting = Promise.resolve(post(b.cookie, "/invoices", input));
+      await vi.waitFor(async () => {
+        const waiters = await t.db.execute(`select 1 from pg_locks
+          where locktype = 'advisory' and not granted
+          and database = (select oid from pg_database where datname = current_database())`);
+        expect(waiters.rowCount).toBeGreaterThan(0);
+      });
+      expect(signal.aborted).toBe(false);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    } finally {
+      deadline.abort(new DOMException("private storage detail", "TimeoutError"));
+      await Promise.all([stalled, waiting]);
+    }
+    const response = await stalled;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "file_storage_unavailable" });
+    if (!waiting) throw new Error("Expected a waiting invoice request");
+    expect(await readInvoice(await waiting, 201)).toMatchObject({
+      number: `${financialYear(invoiceDate)}/0001`,
+      action: { status: "proposed" },
+    });
+    expect(await list(a.cookie)).toEqual([]);
+    expect(await list(b.cookie)).toHaveLength(1);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(calls).toEqual([]);
   });
 
   it("validates issue bodies and requires recurrence for recurring invoices", async () => {

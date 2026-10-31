@@ -44,7 +44,7 @@ Status key:
   - The number of HSN/SAC digits required depends on turnover. Not checked.
 - **INVOICE_NUMBERING**
   - Validate with `^[A-Za-z0-9/-]{1,16}$`. Characters such as `_` and `#` are not allowed.
-  - Niryat's format is `<FY>/<seq>` with a sequence padded to at least four digits, e.g. `2026-27/0001`; `invoiceNumberFor` implements the format and the database serializes allocation per user and financial year. This is the product's format within the rule's constraints.
+  - Niryat's format is `<FY>/<seq>` with a sequence padded to at least four digits, e.g. `2026-27/0001`; `invoiceNumberFor` implements the format and the database serializes allocation across all users per financial year because the deployment shares one PayPal seller. Allocation continues after the highest sequence stored in Niryat; invoices created outside this database are not reserved. This is the product's format within the rule's constraints.
   - Recurring PayPal invoices must take numbers from the same series.
   - P3-1 found that PayPal accepted a series invoice number but omitted it on read-back. P3-15's user screenshot (2026-10-27) lists the first invoice as `2026-27/0002` under an active monthly series; future-cycle numbering and cycle adoption into Niryat remain pending. See [verification V04](verification.md#v04-recurring-invoices); the full recurring-cycle numbering acceptance criterion stays open.
 - **CREDIT_NOTE**
@@ -61,6 +61,10 @@ Status key:
 
 ### RBI / FEMA
 
+- **RBI_REALISATION implementation (Phase 5, 2026-10-31)**
+  - `realisationDeadline` reads `params.months: 9` and `params.months_inr: 12` only from `packages/rules/rules/india-export.yaml`. INR is not an invoice input currency today; its separate period is tested. Missing or invalid params fail rather than use a hidden default.
+  - It adds calendar months to the invoice date, clamping to the target month's last day. Whole-day differences use ISO dates and UTC arithmetic; the caller supplies today's IST date or an explicit demo `asOf`. The deadline day counts as day zero, and overdue starts the next day. Clamping and this inclusive-day convention are product choices, not additional statutory wording.
+  - Reminder stage 60 covers 31–60 remaining days, stage 30 covers 0–30; dates outside those ranges have no stage. The 2025-11-14–2026-06-04 uncertainty window is inclusive and retains the bank-confirmation warning below. See [deadline tests](../packages/rules/src/rbi-deadline.test.ts), including a YAML-only period-change test.
 - **REALISATION_ADJUSTMENT**
   - Implemented by `realisationFor` (Phase 4) as `pending_bank` whenever refunds exist or a dispute is lost. Received through PayPal is payment gross less refunds, clamped at zero; shortfall is invoice value less that received amount, also clamped at zero. A lost dispute alone never subtracts money again. The bank-acceptance message stays visible; an adjustment does not assert that the AD bank has accepted a reduction or that proceeds reached India. FIRA status is separate. See [realisation and dispute tests](../packages/rules/src/realisation.test.ts). Refunds after repatriation remain unconfirmed in law.
 - **New regulations**

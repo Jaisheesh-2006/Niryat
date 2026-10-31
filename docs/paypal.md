@@ -1,24 +1,26 @@
 # PayPal integration
 
-Sandbox only. Use one India business seller and one US personal buyer created in the [Developer Dashboard](https://developer.paypal.com/dashboard/). Do not put their passwords, client secrets or access tokens in the repository. Through Phase 4, Niryat implements approved invoice/refund actions, deterministic payment/refund ingestion and dispute polling; automated checks use fakes rather than contacting PayPal.
+Sandbox only. Use one India business seller and one US personal buyer created in the [Developer Dashboard](https://developer.paypal.com/dashboard/). Do not put their passwords, client secrets or access tokens in the repository. Through Phase 5, Niryat implements approved invoice/refund/reminder actions, deterministic ingestion, dispute polling, source-quoted extraction and Claude investigation through scoped read tools. Automated checks use fakes rather than contacting PayPal.
 
-| Feature                | API or tool                                            | Verify on India sandbox                                           |
-| ---------------------- | ------------------------------------------------------ | ----------------------------------------------------------------- |
-| 01 Identity and health | Log in with PayPal; local profile/rules                | Complete: all login-plan browser checks user-confirmed 2026-10-30 |
-| 02 Purpose code        | Curated bank/RBI table; AI suggestion                  | Seller's current purpose code visibility                          |
-| 03 Export eligibility  | Pure rules                                             | No PayPal API needed                                              |
-| 04 Invoicing           | REST Invoicing v2; Toolkit create_invoice/send_invoice | One-time, recurring series, partial payments, PDF attachments     |
-| 05 Payments            | Webhooks; Server SDK transaction search                | Gross, fees, net, FX and invoice links                            |
-| 06 Refunds/disputes    | Server SDK refunds; webhook events; REST Disputes v1   | Refund and dispute test flows                                     |
-| 07 FIRA                | User-uploaded PDF matched against payment ledger       | Own redacted India FIRA sample                                    |
-| 08 Monthly close       | Claude Agent SDK + PayPal Agent Toolkit                | Approved actions only                                             |
-| 09 RBI reminders       | Toolkit send_invoice_reminder / Invoicing v2           | Reminder delivery                                                 |
-| 10 GSTR-1              | Rules over invoice/refund ledger                       | Reconciliation; no GST filing API                                 |
-| 11 Calendar            | Rules and invoice/dispute dates                        | Due-date availability                                             |
-| 12 Dashboard           | PayPal ledger; AG Studio later                         | Transaction coverage                                              |
-| 13 Advance tax         | Rules over receipts net of refunds                     | Receipt coverage; no filing API                                   |
+| Feature                | API or tool                                                    | Verify on India sandbox                                                                       |
+| ---------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 01 Identity and health | Log in with PayPal; local profile/rules                        | Complete: all login-plan browser checks user-confirmed 2026-10-30                             |
+| 02 Purpose code        | Curated bank/RBI table; AI suggestion                          | Seller's current purpose code visibility                                                      |
+| 03 Export eligibility  | Pure rules                                                     | No PayPal API needed                                                                          |
+| 04 Invoicing           | Claude extraction; approved REST Invoicing v2                  | Extraction and approved one-time delivery verified; recurring-cycle numbering remains open    |
+| 05 Payments            | Webhooks; Server SDK transaction search                        | Gross, fees, net, FX and invoice links                                                        |
+| 06 Refunds/disputes    | Server SDK refunds; webhook events; REST Disputes v1           | Refund and dispute test flows                                                                 |
+| 07 FIRA                | User-uploaded PDF matched against payment ledger               | Own redacted India FIRA sample                                                                |
+| 08 Monthly close       | Claude Agent SDK; five read-only Toolkit wrappers; Render task | CLI fallback and manual close verified; hosted scheduling is Phase 7                          |
+| 09 RBI reminders       | Approved REST Invoicing v2 standard reminder                   | Send/hold, stage dedupe and buyer sandbox notification verified; raw HTTP result not captured |
+| 10 GSTR-1              | Rules over invoice/refund ledger                               | Reconciliation; no GST filing API                                                             |
+| 11 Calendar            | Rules and invoice/dispute dates                                | Due-date availability                                                                         |
+| 12 Dashboard           | PayPal ledger; AG Studio later                                 | Transaction coverage                                                                          |
+| 13 Advance tax         | Rules over receipts net of refunds                             | Receipt coverage; no filing API                                                               |
 
-The [Server SDK](https://github.com/paypal/PayPal-TypeScript-Server-SDK) does not cover Invoicing/Disputes. The [Agent Toolkit](https://github.com/paypal/agent-toolkit) supplies future AI-facing actions; it is not the deterministic ledger adapter. The implemented REST client uses sandbox endpoints, caches OAuth tokens until five minutes before expiry, validates responses and retries transient failures once. Invoice create/send and series create/activate use stable per-action `PayPal-Request-Id` values and execute only after an owner-scoped approval claim. Created IDs survive retries. Disputes are read through REST Disputes v1. See [architecture](architecture.md).
+The [Server SDK](https://github.com/paypal/PayPal-TypeScript-Server-SDK) does not cover Invoicing/Disputes. The [Agent Toolkit](https://github.com/paypal/agent-toolkit) supplies five read-only agent tools under [ADR 0005](decisions/0005-agent-boundary.md); it is not the deterministic ledger adapter. The REST client uses sandbox endpoints, cached OAuth tokens and validated responses. Invoice create/send and series create/activate use stable per-action `PayPal-Request-Id` values and may retry transient failures once after an owner-scoped approval claim; created IDs survive retries. Disputes are read through REST Disputes v1. See [architecture](architecture.md).
+
+Standard reminders are the retry exception: the approved handler posts only `{ send_to_invoicer: false, send_to_recipient: true }`, without custom `subject`/`note`, and disables transport retries and refresh-and-resend. One approval claim permits one attempt; failed/interrupted attempts cannot resend. A request-ID header is sent, but endpoint idempotency is unverified. Claude's advice stays inside Niryat. Toolkit 1.11.0 can forward wording and a request-ID header, correcting the initial rationale without changing the user's REST decision. See [ADR 0004](decisions/0004-reminders-via-rest.md) and [V03 evidence](verification.md#v03-invoicing-and-reminders).
 
 Niryat refund proposals validate ownership and the remaining refundable capture balance, then save an immutable `refund_payment` action. Only user approval executes the Server SDK refund call, using `<actionId>-refund` as its request ID. A completed result enters `recordRefundById`; a pending result finishes the action while a later notification or sync records the refund. Rejection sends nothing. The approved handler is the only application caller of `refundCapture`.
 

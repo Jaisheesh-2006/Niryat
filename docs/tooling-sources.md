@@ -16,6 +16,10 @@ Stable npm versions were resolved from the registry during scaffolding on Octobe
 
 External checks and uncertainties are explicitly tracked in [verification](verification.md).
 
+## Storage timeout follow-up (2026-10-31)
+
+Context7 `/mhart/aws4fetch/v1.0.20` and the installed `dist/aws4fetch.esm.js` confirm that `AwsClient.sign` preserves standard request options and `fetch` reuses its `init` across HTTP 429/5xx retries; a rejected fetch is not retried. The [versioned source](https://github.com/mhart/aws4fetch/blob/v1.0.20/src/main.js) matches the installed package. The storage adapter now supplies one `AbortSignal.timeout(15_000)` per operation, including retries and GET body consumption, so a stalled upload cannot indefinitely retain the invoice numbering lock. Tests use fake fetch and controlled abort signals; no object-storage service was contacted.
+
 ## Phase 5 libraries (2026-10-30)
 
 P5-1 only: registry metadata, Context7 and static package inspection; no installation or product API calls. Claude and the Toolkit are not installed yet. Pin the versions below in P5-6, then check the installed declarations again. Dependency reasons remain: Claude runs the close, reminders and extraction agents (specs 08/04); the Toolkit supplies the five approved read tools (ADR 0002 and the golden-rule read exception).

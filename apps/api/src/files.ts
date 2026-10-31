@@ -18,6 +18,8 @@ export function createS3FileStore(env: FileStorageEnv, fetcher?: typeof fetch): 
   });
   async function request(key: string, init: RequestInit) {
     const url = `${env.FILE_STORAGE_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    // Bound storage waits while invoice issuance holds the shared numbering lock.
+    init = { ...init, signal: AbortSignal.timeout(15_000) };
     try {
       return await (fetcher ? fetcher(await client.sign(url, init)) : client.fetch(url, init));
     } catch {
