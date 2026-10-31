@@ -58,7 +58,7 @@ export default async function Gstr1({
       <h1>GSTR-1</h1>
       <form method="get">
         <label htmlFor="period">Reporting period</label>
-        <select id="period" name="period" defaultValue={preview.period}>
+        <select key={preview.period} id="period" name="period" defaultValue={preview.period}>
           {!preview.periods.some((period) => period.period === preview.period) && (
             <option value={preview.period}>{preview.label}</option>
           )}

@@ -1,4 +1,5 @@
 import { type Gstr1Preview, gstr1PreviewSchema } from "@niryat/shared";
+import { Children, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Gstr1Download } from "../../components/Gstr1Download";
@@ -109,6 +110,55 @@ it.each([
   expect(html).toContain(`<h2>${selected.label}</h2>`);
   expect(html.match(/<option /g)).toHaveLength(9);
   for (const period of periods) expect(html).toContain(`value="${period.period}"`);
+});
+
+it("changes selector identity when navigation changes the report period", async () => {
+  const keys: (string | null)[] = [];
+  const periods = [...preview.periods.slice(1), { period: "2026-02", label: "February 2026" }];
+  for (const selected of [
+    {
+      period: "2026-08",
+      label: "August 2026",
+      start: "2026-08-01",
+      end: "2026-08-31",
+      dueDate: "2026-09-11",
+    },
+    {
+      period: "2026-09",
+      label: "September 2026",
+      start: "2026-09-01",
+      end: "2026-09-30",
+      dueDate: "2026-10-11",
+    },
+  ]) {
+    fetcher.mockResolvedValue(
+      Response.json({
+        ...preview,
+        ...selected,
+        periods,
+        invoices: [],
+        refunds: [],
+        totals: [],
+      }),
+    );
+    const page = await Gstr1({
+      searchParams: Promise.resolve(
+        selected.period === "2026-08" ? { period: selected.period } : {},
+      ),
+    });
+    const form = Children.toArray(page.props.children).find(
+      (child) => isValidElement(child) && child.type === "form",
+    );
+    if (!isValidElement<{ children: ReactNode }>(form)) throw new Error("Expected period form");
+    const select = Children.toArray(form.props.children).find(
+      (child) => isValidElement(child) && child.type === "select",
+    );
+    if (!isValidElement<{ defaultValue: string }>(select))
+      throw new Error("Expected period selector");
+    expect(select.props.defaultValue).toBe(selected.period);
+    keys.push(select.key);
+  }
+  expect(keys[1]).not.toBe(keys[0]);
 });
 
 it("forwards the selected period and renders exclusions without requesting their rates", async () => {
