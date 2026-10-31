@@ -5,6 +5,7 @@ import { clientRoutes } from "./routes/clients";
 import { closeRoutes } from "./routes/close";
 import { extractRoutes } from "./routes/extract";
 import { firaRoutes } from "./routes/fira";
+import { gstr1Routes } from "./routes/gstr1";
 import { healthCheckRoutes } from "./routes/health-check";
 import { invoiceRoutes } from "./routes/invoices";
 import { profileRoutes } from "./routes/profile";
@@ -21,6 +22,7 @@ export function createApp(deps?: AppDeps): Hono {
   if (deps) {
     if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", firaRoutes(deps));
+    app.route("/", gstr1Routes(deps));
     app.route("/", clientRoutes(deps));
     app.route("/", closeRoutes(deps));
     app.route("/", extractRoutes(deps));

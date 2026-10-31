@@ -1,11 +1,61 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { cite } from "./cite";
-import { gstr1ExportRows, gstr1Period, gstr1PeriodsDueBetween, latestClosedPeriod } from "./gstr1";
+import {
+  gstr1ExportRows,
+  gstr1LutCovers,
+  gstr1Period,
+  gstr1PeriodsDueBetween,
+  gstr1RecentPeriods,
+  latestClosedPeriod,
+} from "./gstr1";
 import { parseRules, RULES_FILE_URL } from "./load";
 
 const yaml = readFileSync(RULES_FILE_URL, "utf8");
 const rules = parseRules(yaml);
+
+it.each([
+  [
+    "monthly",
+    "2026-11-01",
+    ["2026-10", "2026-09", "2026-08", "2026-07", "2026-06", "2026-05", "2026-04", "2026-03"],
+  ],
+  [
+    "quarterly",
+    "2026-10-31",
+    [
+      "2026-27-Q2",
+      "2026-27-Q1",
+      "2025-26-Q4",
+      "2025-26-Q3",
+      "2025-26-Q2",
+      "2025-26-Q1",
+      "2024-25-Q4",
+      "2024-25-Q3",
+    ],
+  ],
+] as const)("lists eight closed %s periods with rules labels", (frequency, today, expected) => {
+  const periods = gstr1RecentPeriods(frequency, today, rules);
+  expect(periods.map((row) => row.period)).toEqual(expected);
+  for (const row of periods) expect(row.label).toBe(gstr1Period(row.period, rules).label);
+});
+
+it.each([
+  ["2026-03-31", false],
+  ["2026-04-01", true],
+  ["2027-03-31", true],
+  ["2027-04-01", false],
+])("checks inclusive LUT coverage on %s", (date, expected) => {
+  expect(gstr1LutCovers(date, { from: "2026-04-01", to: "2027-03-31" })).toBe(expected);
+});
+
+it("validates LUT coverage without inventing rates", () => {
+  expect(gstr1LutCovers("2026-10-15", null)).toBe(false);
+  expect(() => gstr1LutCovers("2026-02-29", null)).toThrow("Invalid period");
+  expect(() => gstr1LutCovers("2026-10-15", { from: "2027-03-31", to: "2026-04-01" })).toThrow(
+    "Invalid period",
+  );
+});
 
 describe("GSTR-1 periods", () => {
   it.each([

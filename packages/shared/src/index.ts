@@ -386,6 +386,72 @@ export type Invoice = z.infer<typeof invoiceSchema>;
 export const invoiceViewSchema = invoiceSchema.extend({ compliance: complianceSchema });
 export type InvoiceView = z.infer<typeof invoiceViewSchema>;
 
+export const gstRateSchema = z
+  .string()
+  .regex(/^(?:\d{1,2}(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/)
+  .refine((value) => value === value.trim());
+
+export const gstr1PreviewSchema = z.object({
+  period: gstr1PeriodSchema,
+  periods: z.array(z.object({ period: gstr1PeriodSchema, label: z.string() })).length(8),
+  frequency: z.enum(["monthly", "quarterly"]),
+  label: z.string(),
+  start: z.iso.date(),
+  end: z.iso.date(),
+  dueDate: z.iso.date(),
+  invoices: z.array(
+    z.object({
+      invoiceId: z.uuid(),
+      number: z.string(),
+      date: z.iso.date(),
+      currency: z.enum(invoiceCurrencies),
+      amount: z.string(),
+      status: z.enum(invoiceStatuses),
+      lutCovered: z.boolean(),
+    }),
+  ),
+  refunds: z.array(
+    z.object({
+      refundId: z.string(),
+      invoiceNumber: z.string(),
+      date: z.iso.date(),
+      currency: z.string(),
+      amount: z.string(),
+      creditNote: creditNoteSchema.nullable(),
+    }),
+  ),
+  totals: z.array(
+    z.object({
+      currency: z.string(),
+      invoices: z.string(),
+      refunds: z.string(),
+      net: z.string(),
+    }),
+  ),
+  citation: ruleCitationSchema,
+});
+export type Gstr1Preview = z.infer<typeof gstr1PreviewSchema>;
+
+export const gstr1FileRequestSchema = z.strictObject({
+  period: gstr1PeriodSchema,
+  rates: z.record(z.uuid(), z.strictObject({ inrRate: inrRateSchema, gstRate: gstRateSchema })),
+});
+
+export const gstr1FileSchema = z.object({
+  fileName: z.string(),
+  csv: z.string(),
+  rows: z.number().int().nonnegative(),
+  excluded: z.array(
+    z.object({
+      invoiceId: z.uuid(),
+      number: z.string(),
+      date: z.iso.date(),
+      reason: z.literal("lut_not_valid"),
+    }),
+  ),
+  totalInr: z.string(),
+});
+
 export const taskTypes = [
   "refund_recorded",
   "dispute_opened",

@@ -14,6 +14,8 @@ import {
   firaDocumentSchema,
   firaLineSchema,
   firaMatchSchema,
+  gstRateSchema,
+  gstr1FileRequestSchema,
   gstr1PeriodSchema,
   identifierSchema,
   inrRateSchema,
@@ -31,6 +33,28 @@ import {
   taskSchema,
   toolCallSchema,
 } from "./index";
+
+it("requires separate INR and applicable GST rates without defaults", () => {
+  const id = "40000000-0000-4000-8000-000000000001";
+  const entry = { inrRate: "84.1234", gstRate: "18" };
+  const request = { period: "2026-10", rates: { [id]: entry } };
+  expect(gstr1FileRequestSchema.parse(request)).toEqual(request);
+  expect(gstr1FileRequestSchema.parse({ period: "2026-10", rates: {} }).rates).toEqual({});
+  for (const value of ["0", "0.00", "18", "18.25", "100", "100.00"]) {
+    expect(gstRateSchema.parse(value)).toBe(value);
+  }
+  for (const value of ["", "-1", "100.01", "18.001", "1e1", " 18", "18\n", null, 18]) {
+    expect(gstRateSchema.safeParse(value).success).toBe(false);
+  }
+  for (const value of [{}, { inrRate: "84" }, { gstRate: "18" }, { ...entry, extra: "field" }]) {
+    expect(gstr1FileRequestSchema.safeParse({ ...request, rates: { [id]: value } }).success).toBe(
+      false,
+    );
+  }
+  expect(gstr1FileRequestSchema.safeParse({ ...request, rates: { unknown: entry } }).success).toBe(
+    false,
+  );
+});
 
 it("validates agent run months and tool-call actors and JSON", () => {
   const run = {

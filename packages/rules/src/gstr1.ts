@@ -110,6 +110,29 @@ export function gstr1PeriodsDueBetween(
   return periods;
 }
 
+export function gstr1RecentPeriods(
+  frequency: Gstr1Frequency,
+  today: string,
+  rules: readonly RuleMetadata[],
+): { period: string; label: string }[] {
+  let before = today;
+  return Array.from({ length: 8 }, () => {
+    const period = latestClosedPeriod(frequency, before);
+    const { label, start } = gstr1Period(period, rules);
+    before = start;
+    return { period, label };
+  });
+}
+
+export function gstr1LutCovers(date: string, lut: { from: string; to: string } | null): boolean {
+  parseDate(date);
+  if (!lut) return false;
+  parseDate(lut.from);
+  parseDate(lut.to);
+  if (lut.from > lut.to) throw new RangeError("Invalid period");
+  return lut.from <= date && date <= lut.to;
+}
+
 const invoiceSchema = z.strictObject({
   invoiceId: z.string().min(1),
   number: z.string().refine((value) => INVOICE_NUMBER_PATTERN.exec(value)?.[0] === value),
@@ -159,10 +182,9 @@ export function gstr1ExportRows(
   for (const invoice of parsed.data.sort((a, b) =>
     a.number < b.number ? -1 : a.number > b.number ? 1 : 0,
   )) {
-    parseDate(invoice.date);
     toMinor(invoice.amount);
     const { invoiceId, number, date } = invoice;
-    if (!lut || date < lut.from || date > lut.to) {
+    if (!gstr1LutCovers(date, lut)) {
       excluded.push({
         invoiceId,
         number,
