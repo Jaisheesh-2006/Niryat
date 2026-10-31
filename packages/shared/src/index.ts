@@ -432,6 +432,37 @@ export const gstr1PreviewSchema = z.object({
 });
 export type Gstr1Preview = z.infer<typeof gstr1PreviewSchema>;
 
+export const advanceTaxSchema = z.object({
+  taxYear: z.string(),
+  receipts: z.array(
+    z.object({
+      currency: z.enum(invoiceCurrencies),
+      payments: z.string(),
+      refunds: z.string(),
+      net: z.string(),
+    }),
+  ),
+  grossReceiptsInr: z.string().nullable(),
+  eligibility: z.object({
+    state: z.enum(["eligible", "not_eligible", "uncertain"]),
+    reason: z.string().nullable(),
+    message: z.string(),
+    citation: ruleCitationSchema,
+  }),
+  deemedIncomeInr: z.string().nullable(),
+  estimatedTaxInr: z.string().nullable(),
+  notPayable: z.boolean(),
+  schedule: z.array(
+    z.object({
+      date: z.iso.date(),
+      cumulativePercent: z.number().int(),
+      amountInr: z.string().nullable(),
+    }),
+  ),
+  messages: z.array(z.string()),
+  citations: z.array(ruleCitationSchema),
+});
+
 export const gstr1FileRequestSchema = z.strictObject({
   period: gstr1PeriodSchema,
   rates: z.record(z.uuid(), z.strictObject({ inrRate: inrRateSchema, gstRate: gstRateSchema })),

@@ -1,5 +1,6 @@
 import { cite, PAYPAL_INDIA_PURPOSE_CODES } from "@niryat/rules";
 import { Hono } from "hono";
+import { advanceTaxRoutes } from "./routes/advance-tax";
 import { type AppDeps, authRoutes } from "./routes/auth";
 import { clientRoutes } from "./routes/clients";
 import { closeRoutes } from "./routes/close";
@@ -20,6 +21,7 @@ export function createApp(deps?: AppDeps): Hono {
     c.json({ citation: cite(rules, "PURPOSE_CODES"), codes: PAYPAL_INDIA_PURPOSE_CODES }),
   );
   if (deps) {
+    app.route("/", advanceTaxRoutes(deps));
     if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", firaRoutes(deps));
     app.route("/", gstr1Routes(deps));
