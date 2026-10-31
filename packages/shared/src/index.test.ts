@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import {
   actionSchema,
   actionStatusSchema,
+  agentRunKinds,
   agentRunSchema,
   clientInputSchema,
   closePageSchema,
@@ -13,7 +14,9 @@ import {
   firaDocumentSchema,
   firaLineSchema,
   firaMatchSchema,
+  gstr1PeriodSchema,
   identifierSchema,
+  inrRateSchema,
   invoiceBlockedSchema,
   invoiceInputSchema,
   invoiceSchema,
@@ -44,6 +47,8 @@ it("validates agent run months and tool-call actors and JSON", () => {
     toolCalls: [],
   };
   expect(agentRunSchema.parse(run)).toEqual(run);
+  expect(agentRunKinds).toContain("dashboard");
+  expect(agentRunSchema.parse({ ...run, kind: "dashboard" }).kind).toBe("dashboard");
   expect(agentRunSchema.safeParse({ ...run, month: "2026-13" }).success).toBe(false);
   const call = {
     seq: 1,
@@ -158,7 +163,8 @@ it.each([11, 129])("rejects a password of %i characters", (length) => {
 });
 
 it("accepts a complete profile and normalizes its fields", () => {
-  expect(profileInputSchema.parse(profile)).toEqual(profile);
+  const expected = { ...profile, gstr1Frequency: null, specifiedProfession: null };
+  expect(profileInputSchema.parse(profile)).toEqual(expected);
   expect(
     profileInputSchema.parse({
       ...profile,
@@ -168,7 +174,15 @@ it("accepts a complete profile and normalizes its fields", () => {
       purposeCode: " p0802 ",
       panLast4: " 234f ",
     }),
-  ).toEqual(profile);
+  ).toEqual(expected);
+});
+
+it.each([
+  { gstr1Frequency: "monthly", specifiedProfession: true },
+  { gstr1Frequency: "quarterly", specifiedProfession: false },
+  { gstr1Frequency: null, specifiedProfession: null },
+])("accepts profile report answers $gstr1Frequency / $specifiedProfession", (answers) => {
+  expect(profileInputSchema.parse({ ...profile, ...answers })).toEqual({ ...profile, ...answers });
 });
 
 it("accepts an incomplete profile with nullable fields", () => {
@@ -185,7 +199,11 @@ it("accepts an incomplete profile with nullable fields", () => {
     panLast4: null,
     expectedTurnoverInr: null,
   };
-  expect(profileInputSchema.parse(incomplete)).toEqual(incomplete);
+  expect(profileInputSchema.parse(incomplete)).toEqual({
+    ...incomplete,
+    gstr1Frequency: null,
+    specifiedProfession: null,
+  });
 });
 
 it.each([
@@ -194,12 +212,67 @@ it.each([
   { field: "lutValidTo", value: "2026-03-31" },
   { field: "expectedTurnoverInr", value: -1 },
   { field: "expectedTurnoverInr", value: 1.5 },
+  { field: "gstr1Frequency", value: "annual" },
+  { field: "specifiedProfession", value: "yes" },
 ])("rejects an invalid $field and identifies its path", ({ field, value }) => {
   const result = profileInputSchema.safeParse({ ...profile, [field]: value });
   expect(result.success).toBe(false);
   if (!result.success) {
     expect(result.error.issues.map((issue) => issue.path)).toContainEqual([field]);
   }
+});
+
+it.each(["1", "83.125", "0.0001", "9999.9999", "0001.0000"])(
+  "accepts INR rate %s without converting it",
+  (rate) => {
+    expect(inrRateSchema.parse(rate)).toBe(rate);
+  },
+);
+
+it.each([
+  "0",
+  "0.0000",
+  "0000.0000",
+  "-1",
+  "+1",
+  "1e2",
+  " 83",
+  "83 ",
+  "83\n",
+  ".5",
+  "1.",
+  "10000",
+  "1.12345",
+  "",
+  83,
+  null,
+])("rejects an invalid INR rate (%s)", (rate) => {
+  expect(inrRateSchema.safeParse(rate).success).toBe(false);
+});
+
+it.each(["2026-10", "2026-01", "2026-12", "2026-27-Q1", "2026-27-Q3", "2026-27-Q4"])(
+  "accepts GSTR-1 period %s",
+  (period) => {
+    expect(gstr1PeriodSchema.parse(period)).toBe(period);
+  },
+);
+
+it.each([
+  "2026-00",
+  "2026-13",
+  "2026-1",
+  "2026-27-Q0",
+  "2026-27-Q5",
+  "2026-Q3",
+  "2026-2027-Q3",
+  "2026-27-q3",
+  "2026-10-01",
+  " 2026-10",
+  "2026-10\n",
+  "",
+  2026,
+])("rejects an invalid GSTR-1 period (%s)", (period) => {
+  expect(gstr1PeriodSchema.safeParse(period).success).toBe(false);
 });
 
 const client = {

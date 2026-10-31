@@ -17,6 +17,8 @@ const input: Parameters<typeof prepareExportInvoice>[0] = {
     purposeCode: "P0802",
     panLast4: "234F",
     expectedTurnoverInr: 1_800_000,
+    gstr1Frequency: null,
+    specifiedProfession: null,
   },
   client: {
     name: "Acme Inc",

@@ -38,6 +38,8 @@ export const profiles = pgTable("profiles", {
   purposeCode: text("purpose_code"),
   panLast4: text("pan_last4"),
   expectedTurnoverInr: integer("expected_turnover_inr"),
+  gstr1Frequency: text("gstr1_frequency"),
+  specifiedProfession: boolean("specified_profession"),
 });
 export const clients = pgTable("clients", {
   id: uuid("id").primaryKey().defaultRandom(),

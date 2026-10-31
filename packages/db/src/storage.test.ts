@@ -91,6 +91,8 @@ const profile: ProfileInput = {
   purposeCode: "P0802",
   panLast4: "234F",
   expectedTurnoverInr: 1_800_000,
+  gstr1Frequency: null,
+  specifiedProfession: null,
 };
 
 describe("storage query failures", () => {
@@ -573,9 +575,27 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
       gstin: null,
       panLast4: null,
       workType: "Consulting",
+      gstr1Frequency: "monthly" as const,
+      specifiedProfession: true,
     };
     expect(await upsertProfile(t.db, user.id, updated, key)).toEqual(updated);
     expect(await getProfile(t.db, user.id, key)).toEqual(updated);
+    const quarterly = {
+      ...updated,
+      gstr1Frequency: "quarterly" as const,
+      specifiedProfession: false,
+    };
+    expect(await upsertProfile(t.db, user.id, quarterly, key)).toEqual(quarterly);
+    expect(await getProfile(t.db, user.id, key)).toEqual(quarterly);
+  });
+
+  it("reads unanswered report fields on an existing profile as null", async () => {
+    const user = await addUser();
+    await t.db.insert(profiles).values({ userId: user.id, gstRegistered: false });
+    expect(await getProfile(t.db, user.id, key)).toMatchObject({
+      gstr1Frequency: null,
+      specifiedProfession: null,
+    });
   });
 
   it("stores GSTIN, PAN fragment and address as ciphertext", async () => {

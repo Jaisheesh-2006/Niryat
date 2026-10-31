@@ -121,6 +121,37 @@ export function ProfileForm({
           </option>
         ))}
       </select>
+      <label htmlFor="gstr1Frequency">How do you file GSTR-1?</label>
+      <p id="gstr1Frequency-help">Only for GST-registered users.</p>
+      <select
+        id="gstr1Frequency"
+        name="gstr1Frequency"
+        aria-describedby="gstr1Frequency-help"
+        defaultValue={initial?.gstr1Frequency ?? ""}
+      >
+        <option value="monthly">Monthly</option>
+        <option value="quarterly">Quarterly (QRMP)</option>
+        <option value="">Not sure</option>
+      </select>
+      <label htmlFor="specifiedProfession">
+        Is your work a specified profession under the Income-tax Act 2025, such as information
+        technology? Ask your CA if unsure.
+      </label>
+      <select
+        id="specifiedProfession"
+        name="specifiedProfession"
+        defaultValue={
+          initial?.specifiedProfession === true
+            ? "yes"
+            : initial?.specifiedProfession === false
+              ? "no"
+              : ""
+        }
+      >
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+        <option value="">Not sure</option>
+      </select>
       <label htmlFor="panLast4">Last 4 characters of PAN</label>
       <input
         id="panLast4"

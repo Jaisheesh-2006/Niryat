@@ -5,6 +5,7 @@ import {
   exportConditionIds,
   extractionFieldNames,
   extractionResultSchema,
+  profileInputSchema,
 } from "@niryat/shared";
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -16,6 +17,7 @@ import { ExtractPanel } from "../components/ExtractPanel";
 import { FiraLineButtons } from "../components/FiraLineButtons";
 import { FiraUpload } from "../components/FiraUpload";
 import { InvoiceForm } from "../components/InvoiceForm";
+import { ProfileForm } from "../components/ProfileForm";
 import { RefundForm } from "../components/RefundForm";
 import { TaskDoneButton } from "../components/TaskDoneButton";
 import { apiGet } from "./api";
@@ -560,7 +562,73 @@ it("converts profile form fields to their request values", () => {
     purposeCode: null,
     panLast4: null,
     expectedTurnoverInr: 1800000,
+    gstr1Frequency: null,
+    specifiedProfession: null,
   });
+});
+
+it.each([
+  { frequency: "monthly", profession: "yes", expectedProfession: true },
+  { frequency: "quarterly", profession: "no", expectedProfession: false },
+  { frequency: "", profession: "", expectedProfession: null },
+])(
+  "maps profile report answers $frequency / $profession",
+  ({ frequency, profession, expectedProfession }) => {
+    const form = new FormData();
+    form.set("gstr1Frequency", frequency);
+    form.set("specifiedProfession", profession);
+    expect(profileBody(form)).toMatchObject({
+      gstr1Frequency: frequency || null,
+      specifiedProfession: expectedProfession,
+    });
+  },
+);
+
+it.each([
+  { gstRegistered: true, frequency: "monthly", profession: true, selectedProfession: "yes" },
+  { gstRegistered: false, frequency: "quarterly", profession: false, selectedProfession: "no" },
+  { gstRegistered: false, frequency: null, profession: null, selectedProfession: "" },
+])(
+  "renders the report questions and saved answers for $gstRegistered / $frequency / $profession",
+  ({ gstRegistered, frequency, profession, selectedProfession }) => {
+    const initial = profileInputSchema.parse({
+      legalName: null,
+      address: null,
+      gstRegistered,
+      gstin: null,
+      lutNumber: null,
+      lutValidFrom: null,
+      lutValidTo: null,
+      workType: null,
+      purposeCode: null,
+      panLast4: null,
+      expectedTurnoverInr: null,
+      gstr1Frequency: frequency,
+      specifiedProfession: profession,
+    });
+    const html = renderToStaticMarkup(createElement(ProfileForm, { initial, codes: [] }));
+    expect(html).toContain('<label for="gstr1Frequency">How do you file GSTR-1?</label>');
+    expect(html).toContain('aria-describedby="gstr1Frequency-help"');
+    expect(html).toContain("Only for GST-registered users.");
+    expect(html).toContain("Monthly");
+    expect(html).toContain("Quarterly (QRMP)");
+    expect(html).toContain(
+      "Is your work a specified profession under the Income-tax Act 2025, such as information technology? Ask your CA if unsure.",
+    );
+    const frequencyOptions = html.match(/<select id="gstr1Frequency"[^>]*>(.*?)<\/select>/)?.[1];
+    const professionOptions = html.match(
+      /<select id="specifiedProfession"[^>]*>(.*?)<\/select>/,
+    )?.[1];
+    expect(frequencyOptions).toContain(`<option value="${frequency ?? ""}" selected="">`);
+    expect(professionOptions).toContain(`<option value="${selectedProfession}" selected="">`);
+    expect(frequencyOptions).toContain("Not sure");
+    expect(professionOptions).toContain("Not sure");
+  },
+);
+
+it("shows both report questions as Not sure for a new profile", () => {
+  const html = renderToStaticMarkup(createElement(ProfileForm, { initial: null, codes: [] }));
+  expect(html.match(/<option value="" selected="">Not sure<\/option>/g)).toHaveLength(2);
 });
 
 it("keeps unanswered client questions null and trims the country", () => {

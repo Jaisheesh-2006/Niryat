@@ -30,6 +30,7 @@ const runLabels = {
   monthly_close: "Monthly close",
   reminders: "Reminders",
   extraction: "Extraction",
+  dashboard: "Dashboard",
 };
 const statusLabels = { running: "Running", completed: "Completed", failed: "Failed" };
 

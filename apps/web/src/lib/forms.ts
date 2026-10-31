@@ -30,6 +30,8 @@ export function profileBody(form: FormData): Record<string, unknown> {
     purposeCode: text(form, "purposeCode"),
     panLast4: text(form, "panLast4"),
     expectedTurnoverInr: wholeNumber(form, "expectedTurnoverInr"),
+    gstr1Frequency: text(form, "gstr1Frequency"),
+    specifiedProfession: yesNo(form, "specifiedProfession"),
   };
 }
 

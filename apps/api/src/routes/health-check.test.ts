@@ -20,6 +20,8 @@ describe.skipIf(!testDatabaseUrl)("health-check route", () => {
     purposeCode: "P1006",
     panLast4: "234F",
     expectedTurnoverInr: 1_800_000,
+    gstr1Frequency: null,
+    specifiedProfession: null,
   };
 
   beforeAll(async () => {

@@ -20,6 +20,8 @@ describe.skipIf(!testDatabaseUrl)("profile routes", () => {
     purposeCode: "P0802",
     panLast4: "234F",
     expectedTurnoverInr: 1_800_000,
+    gstr1Frequency: "monthly",
+    specifiedProfession: true,
   };
   const savedProfile = { ...profile, gstin: "27ABCDE1234F1Z5" };
 
@@ -87,12 +89,38 @@ describe.skipIf(!testDatabaseUrl)("profile routes", () => {
     const missing = await get(b.cookie);
     expect(missing.status).toBe(404);
     expect(await missing.json()).toEqual({ error: "not_found" });
-    const bProfile = { ...savedProfile, workType: "Design" };
+    const bProfile = {
+      ...savedProfile,
+      workType: "Design",
+      gstr1Frequency: "quarterly",
+      specifiedProfession: false,
+    };
     const saved = await put(b.cookie, bProfile);
     expect(saved.status).toBe(200);
     expect(await saved.json()).toEqual(bProfile);
     expect(await (await get(b.cookie)).json()).toEqual(bProfile);
     expect(await (await get(a.cookie)).json()).toEqual(savedProfile);
+  });
+
+  it("defaults omitted report answers to null for an old profile body", async () => {
+    const { cookie } = await signup();
+    const saved = await put(cookie, {
+      ...profile,
+      gstr1Frequency: undefined,
+      specifiedProfession: undefined,
+    });
+    const expected = { ...savedProfile, gstr1Frequency: null, specifiedProfession: null };
+    expect(saved.status).toBe(200);
+    expect(await saved.json()).toEqual(expected);
+    expect(await (await get(cookie)).json()).toEqual(expected);
+  });
+
+  it("rejects an invalid filing frequency with field names only", async () => {
+    const { cookie } = await signup();
+    const response = await put(cookie, { ...profile, gstr1Frequency: "annual" });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_request", fields: ["gstr1Frequency"] });
+    expect((await get(cookie)).status).toBe(404);
   });
 
   it("rejects an invalid GSTIN with field names only", async () => {

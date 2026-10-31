@@ -32,6 +32,8 @@ it.each(["P9999", "P0802", null])(
       lutValidFrom: null,
       lutValidTo: null,
       expectedTurnoverInr: 100000,
+      gstr1Frequency: null,
+      specifiedProfession: null,
       workType: "Software development",
       purposeCode,
       panLast4: null,

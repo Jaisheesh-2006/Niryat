@@ -40,12 +40,23 @@ export const profileInputSchema = z
       .regex(/^[0-9A-Z]{4}$/)
       .nullable(),
     expectedTurnoverInr: z.number().int().min(0).max(2_000_000_000).nullable(),
+    gstr1Frequency: z.enum(["monthly", "quarterly"]).nullable().default(null),
+    specifiedProfession: z.boolean().nullable().default(null),
   })
   .refine((p) => !p.lutValidFrom || !p.lutValidTo || p.lutValidFrom <= p.lutValidTo, {
     path: ["lutValidTo"],
     message: "lutValidTo must not be before lutValidFrom",
   });
 export type ProfileInput = z.infer<typeof profileInputSchema>;
+
+export const inrRateSchema = z
+  .string()
+  .regex(/^\d{1,4}(\.\d{1,4})?$/)
+  .refine((value) => value === value.trim() && Number(value) > 0);
+export const gstr1PeriodSchema = z
+  .string()
+  .regex(/^(\d{4}-(0[1-9]|1[0-2])|\d{4}-\d{2}-Q[1-4])$/)
+  .refine((value) => value === value.trim());
 
 // Phase 2 contracts. Response schemas let apps/web validate API JSON.
 export const CA_NOTE = "Verify with your CA.";
@@ -396,7 +407,7 @@ export const taskSchema = z.object({
 });
 export type Task = z.infer<typeof taskSchema>;
 
-export const agentRunKinds = ["monthly_close", "reminders", "extraction"] as const;
+export const agentRunKinds = ["monthly_close", "reminders", "extraction", "dashboard"] as const;
 export type AgentRunKind = (typeof agentRunKinds)[number];
 export const agentRunTriggers = ["manual", "scheduled", "nightly"] as const;
 export type AgentRunTrigger = (typeof agentRunTriggers)[number];
