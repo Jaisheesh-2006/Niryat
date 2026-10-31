@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { DashboardLlm } from "@niryat/agent";
 import { createUser, type Db, findUserByEmail, findUserById, signInWithPayPal } from "@niryat/db";
 import type { PayPalLedger, PayPalLogin, PayPalRestClient } from "@niryat/paypal";
 import { credentialsSchema } from "@niryat/shared";
@@ -19,7 +20,7 @@ export interface AppDeps {
   paypalLogin?: PayPalLogin;
   files?: FileStore;
   publicAppUrl?: string;
-  ai?: NonNullable<CloseDeps["ai"]>;
+  ai?: NonNullable<CloseDeps["ai"]> & { dashboard: DashboardLlm };
   runInBackground?: (work: () => Promise<void>) => void | Promise<void>;
 }
 

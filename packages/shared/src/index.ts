@@ -537,6 +537,124 @@ export const dashboardSchema = z.object({
 });
 export type Dashboard = z.infer<typeof dashboardSchema>;
 
+export const DASHBOARD_FIGURE_NOTE =
+  "Figures are shown in the widgets, calculated from your PayPal records.";
+// The AG Studio 3.0.0 wire subset Niryat accepts (current-phase-plan §4.6); other variants are rejected.
+const turnItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
+// Anthropic's tool-name pattern; AG's built-in names already match it, so names pass through unmapped.
+const toolNameSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/);
+const jsonObjectSchema = z.record(z.string(), z.json());
+const turnOutputMessageSchema = z.strictObject({
+  id: z.string(),
+  kind: z.literal("output"),
+  type: z.literal("message"),
+  role: z.literal("assistant"),
+  content: z.array(
+    z.strictObject({ type: z.literal("text"), text: z.string(), annotations: z.tuple([]) }),
+  ),
+  status: turnItemStatusSchema,
+});
+const turnToolCallSchema = z.strictObject({
+  id: z.string(),
+  kind: z.literal("output"),
+  type: z.literal("function_call"),
+  callId: z.string().min(1),
+  name: toolNameSchema,
+  arguments: z.string().refine((text) => {
+    try {
+      return jsonObjectSchema.safeParse(JSON.parse(text)).success;
+    } catch {
+      return false;
+    }
+  }),
+  status: turnItemStatusSchema.exactOptional(),
+  result: z.string().exactOptional(),
+});
+export const dashboardTurnRequestSchema = z
+  .strictObject({
+    input: z
+      .array(
+        z.union([
+          z.strictObject({
+            id: z.string(),
+            kind: z.literal("input"),
+            type: z.literal("message"),
+            role: z.enum(["user", "system"]),
+            content: z.array(z.strictObject({ type: z.literal("text"), text: z.string() })),
+            status: turnItemStatusSchema,
+          }),
+          turnOutputMessageSchema,
+          turnToolCallSchema,
+          z.strictObject({
+            type: z.literal("function_call_output"),
+            callId: z.string().min(1),
+            output: z.string(),
+            status: turnItemStatusSchema,
+            id: z.string().optional(),
+            kind: z.literal("input").optional(),
+          }),
+        ]),
+      )
+      .min(1)
+      .max(200),
+    instructions: z.string().optional(),
+    tools: z
+      .array(
+        z.strictObject({
+          name: toolNameSchema,
+          description: z.string(),
+          parameters: jsonObjectSchema,
+          kind: z.literal("client").optional(),
+        }),
+      )
+      .max(64)
+      .optional(),
+    toolChoice: z
+      .union([z.enum(["auto", "none", "required"]), z.strictObject({ name: toolNameSchema })])
+      .optional(),
+    responseFormat: z.strictObject({ type: z.literal("text") }),
+    // Validated but ignored: the server always uses its configured CLAUDE_MODEL.
+    model: z.strictObject({ id: z.string(), effort: z.string().optional() }).optional(),
+  })
+  .superRefine((request, ctx) => {
+    const names = request.tools?.map((tool) => tool.name) ?? [];
+    if (new Set(names).size !== names.length)
+      ctx.addIssue({ code: "custom", path: ["tools"], message: "duplicate_tool" });
+    if (typeof request.toolChoice === "object" && !names.includes(request.toolChoice.name))
+      ctx.addIssue({ code: "custom", path: ["toolChoice"], message: "unknown_tool" });
+    // One provider result per call, after the call, so call/result pairs stay intact.
+    const calls = new Set<string>();
+    const answered = new Set<string>();
+    for (const [index, item] of request.input.entries()) {
+      if (item.type === "function_call") {
+        if (calls.has(item.callId))
+          ctx.addIssue({ code: "custom", path: ["input", index], message: "duplicate_call" });
+        calls.add(item.callId);
+      } else if (item.type === "function_call_output") {
+        if (!calls.has(item.callId) || answered.has(item.callId))
+          ctx.addIssue({ code: "custom", path: ["input", index], message: "unmatched_result" });
+        answered.add(item.callId);
+      }
+    }
+  });
+export type DashboardTurnRequest = z.infer<typeof dashboardTurnRequestSchema>;
+export const dashboardTurnResponseSchema = z.strictObject({
+  id: z.string(),
+  createdAt: z.int().nonnegative(),
+  output: z.array(z.union([turnOutputMessageSchema, turnToolCallSchema])),
+  status: z.enum(["completed", "incomplete"]),
+  model: z.string().exactOptional(),
+  usage: z
+    .strictObject({
+      inputTokens: z.int().nonnegative(),
+      outputTokens: z.int().nonnegative(),
+      totalTokens: z.int().nonnegative().exactOptional(),
+    })
+    .exactOptional(),
+  incompleteDetails: z.strictObject({ reason: z.literal("max_output_tokens") }).exactOptional(),
+});
+export type DashboardTurnResponse = z.infer<typeof dashboardTurnResponseSchema>;
+
 export const gstr1FileRequestSchema = z.strictObject({
   period: gstr1PeriodSchema,
   rates: z.record(z.uuid(), z.strictObject({ inrRate: inrRateSchema, gstRate: gstRateSchema })),

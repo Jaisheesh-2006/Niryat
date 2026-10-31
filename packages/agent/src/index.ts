@@ -11,6 +11,7 @@ export {
   runCloseAgent,
   type ToolLog,
 } from "./close-agent";
+export { createDashboardLlm, type DashboardLlm } from "./dashboard-llm";
 export { extractionTool, runExtraction } from "./extraction";
 export { agentNoteSchema } from "./notes";
 export {

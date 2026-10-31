@@ -90,7 +90,15 @@ describe.skipIf(!testDatabaseUrl)("extraction service and routes with stored run
       encryptionKey: randomBytes(32),
       sessionSecret: "x".repeat(32),
       secureCookies: false,
-      ai: { runner: { run }, monthlyBudgetUsd: "5" },
+      ai: {
+        runner: { run },
+        dashboard: {
+          turn: async () => {
+            throw new Error("dashboard_unused");
+          },
+        },
+        monthlyBudgetUsd: "5",
+      },
     };
     app = createApp(deps);
     ({ userId, cookie } = await signup("extract-a@example.com"));
