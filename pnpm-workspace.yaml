@@ -3,6 +3,8 @@ packages:
   - packages/*
 
 allowBuilds:
+  "@bryntum/calendar-trial@7.3.8": true
+  "@bryntum/calendar-trial-lib@1.0.1": true
   esbuild: true
   lefthook: true
   sharp: true

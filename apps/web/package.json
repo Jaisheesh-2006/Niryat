@@ -4,14 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "next build --webpack",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "biome check .",
     "test": "vitest run",
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "next dev --webpack --hostname 0.0.0.0",
     "start": "next start --hostname 0.0.0.0"
   },
   "dependencies": {
+    "@bryntum/calendar": "npm:@bryntum/calendar-trial@7.3.8",
+    "@bryntum/calendar-react": "7.3.8",
     "@niryat/shared": "workspace:*",
     "next": "16.4.3",
     "react": "19.3.1",

@@ -39,6 +39,23 @@ Sources: exact manifests for [AG React](https://registry.npmjs.org/ag-studio-rea
 
 Keep D2's dependency reasons: AG Studio dashboard and Agent Framework (spec 12, PLAN §12); Bryntum compliance calendar (spec 11, PLAN §12). Add `ag-studio@3.0.0` directly when importing its types, `studioTheme`, `AgStudioAiModule` or `createAiHarness`. The later Bryntum alias is `@bryntum/calendar@npm:@bryntum/calendar-trial@7.3.8`, with the React wrapper at exactly 7.3.8. Trials still cannot start before November 1 or without V15 dates.
 
+#### P6-8 static hook review (2026-10-31)
+
+Read the existing P6-1 npm archives with `tar -xOf`; no package code or lifecycle hook was executed. SHA-256 identifies the reviewed bytes:
+
+| Archive                        | SHA-256                                                            |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `calendar-trial-7.3.8.tgz`     | `9328c4e38e2b9430af18ed9399835ed31b078ff3b240603f9efc07b597b8e5f2` |
+| `calendar-trial-lib-1.0.1.tgz` | `e7a544eb04f3474813df95d859cbbf99b508728c46d83d2d556250ea5c7d2dc6` |
+- Trial `postinstall.js` resolves `@bryntum/calendar-trial-lib/build.js` and calls it with `spawnSync('node', ...)`, inheriting stdio and the trial package's working directory. It does not check the child's exit status, so a successful parent hook alone cannot prove processing succeeded.
+- Helper `postinstall.js` reads its own `build.js`, replaces `%UUID%` with `crypto.randomUUID()`, and writes that file back. A preparation failure logs the error and exits with status 1.
+- Helper `build.js` recursively enumerates the current working directory using `readdirSync(..., { withFileTypes: true })`. It reads and rewrites each file whose name ends with `.js`, replacing `%LICENSE%` with the prepared UUID. Its scope depends on the working directory; no explicit package-root guard is present.
+- No network call or environment-variable read was found in these three scripts. This is a static review of these hooks, not a runtime test or an audit of the Calendar bundle. It does not establish trial dates or licence coverage.
+
+**User override and installation (2026-10-31):** after this review, the user approved the narrow D2 exception and said, "I will provide the keys later but implement it now. I approve you." This overrides the D1 wait for November 1 and recorded trial evidence for P6-8 implementation. `pnpm-workspace.yaml` now permits lifecycle builds only for the two exact reviewed Bryntum versions; existing unrelated permissions and the release-age policy are unchanged. Keys, actual trial start/expiry and judging coverage through December 15 remain unverified. No acceptance checkbox is satisfied by installation.
+
+Installed with Node 24.22.1 and pinned pnpm 12.15.0: `@bryntum/calendar@npm:@bryntum/calendar-trial@7.3.8` and `@bryntum/calendar-react@7.3.8`, with helper 1.0.1. Reason: Bryntum compliance calendar; spec 11; PLAN §12 sponsor. The sandbox denied npm network access; the approved install then succeeded with elevated network access. Both reviewed hooks completed, and no `%LICENSE%` placeholder remained in the installed trial's `.js` files. No new release-age exception or peer-policy override was needed. The lockfile also reconnects Next's existing optional `@opentelemetry/api@1.10.0` peer; no additional direct dependency was introduced. Exact version selectors in `allowBuilds` follow [pnpm's build settings](https://pnpm.io/settings/build#allowbuilds).
+
 ### AG Studio 3.0.0 rendering and data
 
 Cross-checked the [quick start](https://www.ag-grid.com/studio/react/quick-start/), [data modelling](https://www.ag-grid.com/studio/react/data-modelling/), [widget catalogue](https://www.ag-grid.com/studio/react/widget-catalogue/) and [theming](https://www.ag-grid.com/studio/react/theming/) against the official 3.0.0 npm archives. Declaration paths below are relative to `dist/types/` in those archives, not installed files.
@@ -73,13 +90,19 @@ Message/item statuses are `in_progress`, `completed` or `incomplete`. `AgLlmResp
 
 Built-in tool names are snake_case: static examples **`view_schema`**, **`execute_query`**, **`add_widget`**. The declaration accepts a string; this is not a guarantee that all future/custom names fit Anthropic. P6-10 validates names and preserves call/result IDs. The exact accepted Niryat subset and translation are frozen in current-phase-plan §4.6.
 
-### Bryntum Calendar 7.3.8 contract (installation blocked)
+### Bryntum Calendar 7.3.8 contract (installed for P6-8)
 
 Context7 `/llmstxt/bryntum_products_calendar_llms_txt`: [React integration](https://bryntum.com/products/calendar/docs-llm/guide/Calendar/integration/react/guide), [React events](https://bryntum.com/products/calendar/docs-llm/guide/Calendar/integration/react/events), [Calendar API](https://bryntum.com/products/calendar/docs-llm/api/Calendar/view/Calendar), [Next.js guide](https://bryntum.com/products/calendar/docs-llm/guide/Calendar/quick-start/nextjs), [data model](https://bryntum.com/products/calendar/docs-llm/guide/Calendar/understanding-data/introduction). Checked the 7.3.8 trial archive's `calendar.d.ts` and CSS filenames; online guides are not version-pinned.
 - Set **`readOnly: true`** to disable data-changing UI. Only provide month/list modes (`modes: { day: false, week: false, month: true, year: false, agenda: false, list: true }`, `mode: "month"`). There is no write API in P6-8. Browser acceptance must still prove create, drag, edit and delete are unavailable.
 - Events: `id`, `name`, `startDate`, `endDate`, `allDay`, `eventColor` and `cls`. Use `allDay: true`. Carry the Niryat link alongside its ID. `cls` applies the D12 state colours. Native listener **`eventClick`**, React prop **`onEventClick`**, with `eventRecord` for the clicked event.
 - Import **`@bryntum/calendar/calendar.css`** and a real theme path, e.g. **`@bryntum/calendar/svalbard-light.css`**. The archive also supplies `fontawesome/css/fontawesome.css` and `fontawesome/css/solid.css`. Do not assume an older `calendar.stockholm.css` filename.
 - No SSR: a client component loads the local wrapper through `next/dynamic(..., { ssr: false })`; the wrapper passes its `calendarRef` prop into `<BryntumCalendar ref={calendarRef} ... />`. Retain the server-rendered fallback list required by P6-8.
+
+P6-8 rechecked the installed `calendar.d.ts`, React wrapper's `lib/BryntumCalendar.d.ts` and CSS: `readOnly`, month/list modes, `onEventClick`'s `eventRecord.id`, `ref`, `EventModelConfig` dates/`allDay`/`cls`/`eventColor`, and the imported styles match the implementation. The wrapper owns its `calendarRef`. State classes apply to `.b-cal-event-wrap`; overrides target its `.b-cal-event` child. All-day events use local midnight strings with an exclusive next-day end, preserving the API's calendar date across browser time zones. Titles, states and links come from the validated API; the UI computes no legal deadline.
+
+The web `build` and `dev` scripts select Webpack using Next 16.4.3's supported `--webpack` flag ([CLI reference](https://nextjs.org/docs/app/api-reference/cli/next)). The initial Turbopack production compilation was stopped after 4m24s while still compiling, with about 18 GB of committed process memory; it did not pass. Bryntum's [Next.js guide](https://bryntum.com/products/calendar/docs-llm/guide/Calendar/quick-start/nextjs) also selects no Turbopack. No compiler dependency or configuration file was added. Development/browser behaviour remains for user verification.
+
+**Browser checks awaiting the user (P6-11):** start `corepack.cmd pnpm --filter @niryat/api dev` and `corepack.cmd pnpm --filter @niryat/web dev` in separate Windows terminals (use `corepack pnpm` on Linux). The API needs the user's existing database and session configuration. Sign in at `http://localhost:3000/login` with the sandbox user holding Phase 3–5 invoices, a GST profile and dated disputes. Open `http://localhost:3000/calendar`: check month/list switching, dated events, `Overdue`/`Upcoming`/`Past` prefixes and distinct colours in light/dark mode. Click an RBI event and a GSTR-1 event: expect that invoice and reporting period. Try double-click, drag, resize, context menu and Delete: no event may be created, changed or removed. Disable JavaScript and reload: every overdue event and the next ten upcoming events remain linked below the calendar. These checks and licence coverage remain unverified; P6-8 does not tick spec/PLAN acceptance boxes.
 
 ### Anthropic Messages API (documentation only)
 

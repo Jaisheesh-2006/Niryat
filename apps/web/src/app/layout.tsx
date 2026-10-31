@@ -23,6 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <Link href="/close">Monthly close</Link>
           <Link href="/gstr1">GSTR-1</Link>
           <Link href="/advance-tax">Advance tax</Link>
+          <Link href="/calendar">Calendar</Link>
           <SignOutButton />
         </nav>
         <main>{children}</main>
