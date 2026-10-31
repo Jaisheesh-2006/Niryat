@@ -162,7 +162,42 @@ Source check (2026-10-25): all twelve rules were checked against primary text (C
 
 ## V10 GSTR-1 format
 
-TODO(verify): Confirm the currently accepted Table 6A service-export CSV/JSON format against the [GST offline utilities](https://www.gst.gov.in/download/offlineutilities).
+**P6-1 GST detail collection complete (2026-10-31); generated-file import acceptance pending.** The user's screenshot of the [GST Returns download page](https://www.gst.gov.in/download/returns) shows **Returns Offline Tool V3.2.4**. The supplied `ReleaseNotes.txt` starts with release 3.2.4. Inspected the user's extracted files directly; the installer was not launched and no return was filed.
+
+Sources: the [official tool download page](https://www.gst.gov.in/download/returns) supplies the bundle; GSTN also publishes the [user manual](https://tutorial.gst.gov.in/downloads/invoiceuploadofflineutility.pdf). These URLs may serve newer files, not the inspected V3.2.4 snapshot. The page/cell references below identify the supplied copy; use the recorded hashes to match the templates. Keep the downloaded `gst_offline_tool/` folder local and ignored; the collected details belong in this document.
+
+**Exact CSV header, including capitalization and order:** `Section_wise_CSV_files/GSTR1/exp.csv` from that bundle, line 1:
+
+```csv
+Export Type,Invoice Number,Invoice date,Invoice Value,Port Code,Shipping Bill Number,Shipping Bill Date,Rate,Taxable Value,Cess Amount
+```
+
+Both bundled GSTR-1 Excel templates, V2.2 and V2.0, have this same ten-column header in `exp!A4:J4`. Use the bundle's `GSTR1_Excel_Workbook_Template_V2.2.xlsx` as the workbook reference. Its global `EXP` named range points to `master!B2:B3`: **`WOPAY`** (without payment of tax) and **`WPAY`** (with payment of tax), as explained in `'Help Instruction'!E144`. Niryat's Phase 6 scope remains `WOPAY` only; this collection adds no `WPAY` implementation.
+
+| Detail           | Evidence from the supplied files                                                                                                                                                                                                                                                | Niryat file decision / limit                                                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Dates            | V2.2 `'Help Instruction'!E146` prescribes `DD-MMM-YYYY`, e.g. `24-May-2017`. `exp!C5/G5` use Excel built-in format 15 (`d-mmm-yy`); CSV samples contain `14-Jul-17` / `15-Jul-17`. Manual p. 14 Q36 prescribes four-digit years, while its generic p. 80 note says `dd-mm-yyyy` | Keep D6's explicit English-month, four-digit-year output, e.g. `15-Oct-2026`, following the field-specific instructions. The supplied material is inconsistent; actual parser acceptance remains P6-11 evidence                                        |
+| Numbers          | V2.2 help `E147` and `E153`: invoice/taxable values have up to two decimal places. `exp` numeric columns D/H/I/J use Excel format `0.00`; CSV uses a decimal point and no grouping, e.g. `80048.36`, `5.00`, `78788.00`                                                         | Emit two decimal places without grouping for amounts. Rates are percentage numbers, not fractions; no currency symbols                                                                                                                                 |
+| Invoice number   | V2.2 help `E145`: at most sixteen characters; alphanumeric plus `/` and `-`. `exp!B5` is text-formatted                                                                                                                                                                         | Preserve Niryat's invoice-number string; do not coerce to a number                                                                                                                                                                                     |
+| Port/shipping    | V2.2 help `E148`: port code is not required for service exports. `E149` allows a missing shipping-bill number to be supplied later; `E150` says shipping-bill date is not required for services                                                                                 | Keep the three shipping fields empty for the service-export scope                                                                                                                                                                                      |
+| Rate             | V2.2 help `E152` says to enter the applicable integrated tax rate. WOPAY rows in the CSV use `5.00` and `12.00`; the manual's EXP example on p. 60 also has nonzero WOPAY rates                                                                                                 | **D6's universal `Rate = 0` assumption is unsupported.** Zero is a listed workbook rate, but `WOPAY` alone does not select it. Resolve a source-checked applicable-rate policy/input before P6-2; do not infer a service's tax rate from these samples |
+| Cess             | The CSV's first sample has `100.00`; subsequent samples leave the field empty. Both workbook headers retain `Cess Amount`                                                                                                                                                       | Keep the column. D6's blank cess for its scoped file is a product choice awaiting import acceptance, not a universal cess rule inferred from the template                                                                                              |
+| Extra help field | Workbook help mentions `Applicable % of Tax Rate` (`D151:E151`), but neither `exp!A4:J4` nor `exp.csv` has that column                                                                                                                                                          | Follow the actual ten-column template; do not add an eleventh column                                                                                                                                                                                   |
+
+The first two supplied CSV data rows are:
+
+```csv
+WOPAY,81510,14-Jul-17,80048.36,INB995,184298,15-Jul-17,5.00,78788.00,100.00
+WOPAY,81511,14-Jul-17,50990.00,INB996,184299,15-Jul-17,12.00,44545.00,
+```
+
+**CSV import support is documented for exports.** The bundled `Readme.txt` describes section-by-section CSV import. The supplied `FAQs and User Manual  Returns Offline Tool.pdf`, p. 15 Q39, lists Table 6A exports among supported CSV sections. Its p. 77 D.4 screenshot includes **`Exports Invoices - 6A`** in the import-section selector beside **`IMPORT CSV`**. Pages 78–79 describe file selection, confirmation and successful import. This is evidence from the supplied manual, not an observed V3.2.4 import.
+
+Source self-check passed: CSV and both XLSX export headers match; each of the seven CSV sample rows has ten fields; both export codes and the numeric sample formats match. The supplied CSV is ASCII-compatible UTF-8 without a BOM, with CRLF line endings. Fingerprints (SHA-256): `exp.csv` = `e46fb007873b92ad01bcc0143576f899ca2eda3623b353639d74eb6fc212dc84`; V2.2 workbook = `425084547928a31eab53123b9247bad9ded1ee421fbc9202d009260e5d9b18e5`.
+
+Collection checks: `corepack pnpm format`, `corepack pnpm verify` and `git diff --check` passed. Root verification executed 12 script tests; Turbo reported 27 successful tasks, all cached. No fresh DB integration suite or production build was run for these documentation-only changes.
+
+**P6-11 user acceptance still required:** install/open the supplied V3.2.4 tool; in a local GSTR-1 working return for the fixture's period, choose **IMPORT FILES → Exports Invoices - 6A → IMPORT CSV**, select the eventual Niryat-generated file and confirm the local import. Expected: success with no validation errors, and the invoice number, date, value, rate and taxable value preserved. Record the tool version and any errors. This check needs no Niryat server startup command; the generated-file path and exact fixture will be supplied by P6-5/P6-11. Keep spec 10 criterion 1 open until this succeeds; no browser check or import was performed during collection.
 
 ## V11 Hosted resources
 
@@ -189,3 +224,7 @@ TODO(verify): Observe the first GitHub Actions run on both Windows and Linux. Lo
 ## V15 Sponsor licences
 
 TODO(verify): Obtain AG Studio and Bryntum licences on/after Nov 1, 2026 and confirm coverage through Dec 15 judging before installing either package. [Sponsor requirements in PLAN](PLAN.md#12-sponsor-tools).
+
+**P6-1 user decisions (2026-10-31):** U6 is authorized for P6-9: an empty `AG_STUDIO_LICENSE_KEY` entry in `.env.example` and a browser-visible supplied licence key. No environment file was read or edited in P6-1. The user also authorized a separate review of Bryntum's exact postinstall hooks and consideration of a narrow D2 exception before P6-8; this is not permission to run the hooks or change build policy now.
+
+**Still awaiting user evidence:** AG Studio trial start/expiry; Bryntum trial start/expiry; and the sponsor/Discord answer confirming permission and licence validity throughout judging through **December 15, 2026**. This is software-licence coverage, not PayPal account access. Neither start may be earlier than November 1, 2026. No start, expiry or judging permission is assumed from an estimated trial duration. U2–U5 remain at the recommended choices; no overrides were supplied.
