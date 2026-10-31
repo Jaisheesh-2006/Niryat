@@ -13,19 +13,19 @@
       "Bash(git log *)",
       "PowerShell(git log *)",
       "Bash(git show *)",
-      "PowerShell(git show *)"
+      "PowerShell(git show *)",
+      "Read(**/dist/**)",
+      "Read(**/pnpm-lock.yaml)",
+      "Read(**/package-lock.json)"
     ],
     "deny": [
       "Read(**/.env*)",
       "Edit(**/.env*)",
       "Read(**/.next/**)",
-      "Read(**/dist/**)",
       "Read(**/build/**)",
       "Read(**/out/**)",
       "Read(**/coverage/**)",
       "Read(**/.turbo/**)",
-      "Read(**/pnpm-lock.yaml)",
-      "Read(**/package-lock.json)",
       "Read(**/yarn.lock)"
     ]
   },

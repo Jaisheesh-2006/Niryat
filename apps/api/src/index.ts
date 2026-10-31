@@ -5,6 +5,7 @@ import { type AppDeps, authRoutes } from "./routes/auth";
 import { calendarRoutes } from "./routes/calendar";
 import { clientRoutes } from "./routes/clients";
 import { closeRoutes } from "./routes/close";
+import { dashboardRoutes } from "./routes/dashboard";
 import { extractRoutes } from "./routes/extract";
 import { firaRoutes } from "./routes/fira";
 import { gstr1Routes } from "./routes/gstr1";
@@ -24,6 +25,7 @@ export function createApp(deps?: AppDeps): Hono {
   if (deps) {
     app.route("/", advanceTaxRoutes(deps));
     app.route("/", calendarRoutes(deps));
+    app.route("/", dashboardRoutes(deps));
     if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", firaRoutes(deps));
     app.route("/", gstr1Routes(deps));

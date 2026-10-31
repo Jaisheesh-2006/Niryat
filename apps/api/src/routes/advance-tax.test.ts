@@ -2,9 +2,8 @@ import { randomBytes, randomUUID } from "node:crypto";
 import * as db from "@niryat/db";
 import { advanceTaxSchedule } from "@niryat/rules";
 import { advanceTaxSchema, type Invoice, profileInputSchema } from "@niryat/shared";
-import { Hono } from "hono";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { startSession } from "../auth/session";
+import { cookieFor } from "../auth/testing";
 import { createApp } from "../index";
 import * as clock from "../rules";
 
@@ -60,17 +59,6 @@ const invoice: Invoice = {
   action: null,
   refundActions: [],
 };
-
-async function cookieFor(userId: string, secret: string) {
-  const auth = new Hono();
-  auth.get("/", async (c) => {
-    await startSession(c, userId, secret, false);
-    return c.json({ ok: true });
-  });
-  const cookie = (await auth.request("/")).headers.get("set-cookie")?.split(";")[0];
-  if (!cookie) throw new Error("Expected cookie");
-  return cookie;
-}
 
 describe("advance-tax route with a fake ledger", () => {
   const database = db.createDb("postgres://unused:unused@127.0.0.1:1/unused");

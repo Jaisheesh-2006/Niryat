@@ -482,6 +482,61 @@ export const advanceTaxSchema = z.object({
   citations: z.array(ruleCitationSchema),
 });
 
+// Decimal strings only; the browser converts them to numbers for display aggregation (D3).
+const decimalSchema = z.string().regex(/^-?\d+(\.\d+)?$/);
+export const dashboardSchema = z.object({
+  asOf: z.iso.date(),
+  health: healthReportSchema.nullable(),
+  payments: z.array(
+    z.object({
+      paymentId: z.uuid(),
+      kind: z.enum(["payment", "refund"]),
+      date: z.iso.date(),
+      month: z.string().regex(/^\d{4}-\d{2}$/),
+      financialYear: z.string(),
+      invoiceNumber: z.string(),
+      clientName: z.string(),
+      currency: z.string(),
+      gross: decimalSchema,
+      signedGross: decimalSchema,
+      fee: decimalSchema.nullable(),
+      net: decimalSchema.nullable(),
+      paypalFxRate: decimalSchema.nullable(),
+    }),
+  ),
+  invoices: z.array(
+    z.object({
+      invoiceId: z.uuid(),
+      number: z.string(),
+      date: z.iso.date(),
+      financialYear: z.string(),
+      clientName: z.string(),
+      status: z.enum(invoiceStatuses),
+      currency: z.enum(invoiceCurrencies),
+      amount: decimalSchema,
+      received: decimalSchema,
+      shortfall: decimalSchema,
+      deadline: z.iso.date().nullable(),
+      daysRemaining: z.int().nullable(),
+      overdue: z.boolean(),
+      firaStatus: z.enum(firaStatuses),
+    }),
+  ),
+  disputes: z.array(
+    z.object({
+      paypalDisputeId: z.string(),
+      invoiceNumber: z.string(),
+      clientName: z.string(),
+      status: z.string(),
+      reason: z.string(),
+      currency: z.string(),
+      amount: decimalSchema,
+      responseDueDate: z.iso.date().nullable(),
+    }),
+  ),
+});
+export type Dashboard = z.infer<typeof dashboardSchema>;
+
 export const gstr1FileRequestSchema = z.strictObject({
   period: gstr1PeriodSchema,
   rates: z.record(z.uuid(), z.strictObject({ inrRate: inrRateSchema, gstRate: gstRateSchema })),

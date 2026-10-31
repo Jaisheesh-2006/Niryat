@@ -41,6 +41,12 @@
   background-color: var(--niryat-event-color);
   color: var(--niryat-event-text);
 }
+.dashboard-studio {
+  height: 60rem;
+}
+main:has(.dashboard-studio) {
+  max-width: none;
+}
 body {
   margin: 0;
 }

@@ -9,7 +9,7 @@ import {
 } from "@niryat/shared";
 import { Hono } from "hono";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { startSession } from "../auth/session";
+import { cookieFor } from "../auth/testing";
 import { createApp } from "../index";
 import * as clock from "../rules";
 import { gstr1Routes } from "./gstr1";
@@ -63,17 +63,6 @@ function post(app: Hono, cookie: string, body: unknown) {
     headers: { Cookie: cookie, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-}
-
-async function cookieFor(user: string, secret: string) {
-  const auth = new Hono();
-  auth.get("/", async (c) => {
-    await startSession(c, user, secret, false);
-    return c.json({ ok: true });
-  });
-  const cookie = (await auth.request("/")).headers.get("set-cookie")?.split(";")[0];
-  if (!cookie) throw new Error("Expected cookie");
-  return cookie;
 }
 
 describe("GSTR-1 routes with a fake ledger", () => {
