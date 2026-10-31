@@ -13,6 +13,7 @@ export const ruleMetadataSchema = z.strictObject({
 });
 export type RuleMetadata = z.infer<typeof ruleMetadataSchema>;
 
+export * from "./advance-tax";
 export * from "./cite";
 export * from "./credit-note";
 export * from "./export-conditions";

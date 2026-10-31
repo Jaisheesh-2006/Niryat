@@ -73,10 +73,21 @@ rules:
     source: "Income-tax Act 2025 s. 58(2) Table Sl. 3, s. 58(11)(b), s. 62(4); 1961 Act s. 44ADA for tax years before 2026-04-01"
     effective_from: 2026-04-01
     review: source_checked
-    logic: TODO
+    logic: presumptiveEligibility
+    params:
+      deemed_percent: 50
+      limit_inr: 5000000
+      limit_low_cash_inr: 7500000
+      cash_percent_max: 5
   - id: ADVANCE_TAX_DATES
     description: "Cumulative 15% / 45% / 75% / 100% by 15 Jun / 15 Sep / 15 Dec / 15 Mar; s. 58 presumptive filers pay 100% by 15 Mar; not payable if tax for the year is under Rs 10,000"
     source: "Income-tax Act 2025 ss. 403, 404, 408 (interest ss. 424, 425); 1961 Act ss. 207-211, 234B, 234C for earlier years"
     effective_from: 2026-04-01
     review: source_checked
-    logic: TODO
+    logic: advanceTaxSchedule
+    params:
+      jun_15_percent: 15
+      sep_15_percent: 45
+      dec_15_percent: 75
+      mar_15_percent: 100
+      threshold_inr: 10000

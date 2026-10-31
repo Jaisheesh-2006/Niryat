@@ -14,6 +14,8 @@ const IMPLEMENTED: Record<string, string> = {
   REALISATION_ADJUSTMENT: "realisationFor",
   RBI_REALISATION: "realisationDeadline",
   GSTR1_6A: "gstr1ExportRows",
+  PRESUMPTIVE_TAX: "presumptiveEligibility",
+  ADVANCE_TAX_DATES: "advanceTaxSchedule",
 };
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {
@@ -54,6 +56,7 @@ describe("rule metadata table-driven pattern (no tax logic)", () => {
     const yaml = readFileSync(new URL("../rules/india-export.yaml", import.meta.url), "utf8");
     expect(yaml.match(/review: (unchecked|source_checked)/g)).toHaveLength(12);
     expect(yaml.match(/logic: /g)).toHaveLength(12);
+    expect(yaml).not.toMatch(/logic: TODO/);
     for (const rule of parseRules(yaml)) {
       expect(rule.logic).toBe(IMPLEMENTED[rule.id] ?? "TODO");
       if (rule.logic !== "TODO")
