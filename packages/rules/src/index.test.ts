@@ -13,6 +13,7 @@ const IMPLEMENTED: Record<string, string> = {
   CREDIT_NOTE: "creditNoteFor",
   REALISATION_ADJUSTMENT: "realisationFor",
   RBI_REALISATION: "realisationDeadline",
+  GSTR1_6A: "gstr1ExportRows",
 };
 
 describe("rule metadata table-driven pattern (no tax logic)", () => {

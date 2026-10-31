@@ -43,7 +43,10 @@ rules:
     source: "FORM GSTR-1 Table 6A and instructions 8, 11; CGST Act s. 37(1); CGST Rules r. 59; Notfn 83/2020-CT"
     effective_from: 2021-01-01
     review: source_checked
-    logic: TODO
+    logic: gstr1ExportRows
+    params:
+      monthly_due_day: 11
+      quarterly_due_day: 13
   - id: PURPOSE_CODES
     description: "Curated service purpose codes for inward remittances; code descriptions must come from the current FETERS Annex, not the withdrawn pre-2012 list"
     source: "FETERS purpose codes, Annex I to A.P. (DIR Series) Circular No. 84 dated 2012-02-29, as modified by A.P. (DIR Series) Circular No. 50 dated 2016-02-11"

@@ -17,6 +17,7 @@ export * from "./cite";
 export * from "./credit-note";
 export * from "./export-conditions";
 export * from "./export-invoice";
+export * from "./gstr1";
 export * from "./health";
 export * from "./invoice-number";
 export * from "./load";
