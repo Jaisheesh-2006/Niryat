@@ -386,6 +386,25 @@ export type Invoice = z.infer<typeof invoiceSchema>;
 export const invoiceViewSchema = invoiceSchema.extend({ compliance: complianceSchema });
 export type InvoiceView = z.infer<typeof invoiceViewSchema>;
 
+export const calendarEventSchema = z.object({
+  id: z.string(),
+  date: z.iso.date(),
+  kind: z.enum([
+    "lut_renewal",
+    "gstr1_due",
+    "advance_tax",
+    "rbi_deadline",
+    "credit_note_declare_by",
+    "dispute_response",
+    "recurring_invoice",
+  ]),
+  title: z.string(),
+  state: z.enum(["overdue", "upcoming", "past"]),
+  href: z.string().startsWith("/"),
+  ruleId: z.string().nullable(),
+});
+export type CalendarEvent = z.infer<typeof calendarEventSchema>;
+
 export const gstRateSchema = z
   .string()
   .regex(/^(?:\d{1,2}(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/)

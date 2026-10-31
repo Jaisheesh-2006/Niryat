@@ -2,6 +2,7 @@ import { cite, PAYPAL_INDIA_PURPOSE_CODES } from "@niryat/rules";
 import { Hono } from "hono";
 import { advanceTaxRoutes } from "./routes/advance-tax";
 import { type AppDeps, authRoutes } from "./routes/auth";
+import { calendarRoutes } from "./routes/calendar";
 import { clientRoutes } from "./routes/clients";
 import { closeRoutes } from "./routes/close";
 import { extractRoutes } from "./routes/extract";
@@ -22,6 +23,7 @@ export function createApp(deps?: AppDeps): Hono {
   );
   if (deps) {
     app.route("/", advanceTaxRoutes(deps));
+    app.route("/", calendarRoutes(deps));
     if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", firaRoutes(deps));
     app.route("/", gstr1Routes(deps));
