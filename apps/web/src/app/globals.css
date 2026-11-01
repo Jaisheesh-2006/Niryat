@@ -411,6 +411,55 @@ details[open] > summary {
 .card + .card {
   margin-top: var(--niryat-space-4);
 }
+.approval-card[data-status="proposed"] {
+  border-left: 3px solid var(--niryat-accent);
+}
+.approval-card[data-status="failed"] {
+  border-left: 3px solid var(--niryat-danger);
+}
+.approval-card:is([data-status="done"], [data-status="rejected"]),
+.approval-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--niryat-space-4);
+}
+.approval-card:is([data-status="done"], [data-status="rejected"]) :is(h3, p) {
+  margin: 0;
+}
+.approval-outcome {
+  order: -1;
+}
+.approval-kind,
+.approval-caption,
+.approval-card > time {
+  color: var(--niryat-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.approval-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--niryat-space-2);
+}
+.approval-controls > * {
+  flex-basis: 100%;
+}
+.approval-controls > :is(.btn, .approval-caption) {
+  flex-basis: auto;
+}
+.approval-controls > .approval-caption {
+  flex-grow: 1;
+  margin: 0;
+  order: 1;
+}
+.approval-controls > .btn[data-variant="secondary"] {
+  order: 2;
+}
+.approval-controls > .btn:is([data-variant="primary"], [data-variant="danger"]) {
+  order: 3;
+}
 .card-header,
 .page-header {
   display: flex;

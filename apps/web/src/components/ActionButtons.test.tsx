@@ -20,12 +20,19 @@ import Invoices from "../app/(app)/invoices/page";
 import Tasks from "../app/(app)/tasks/page";
 import { apiGet } from "../lib/api";
 import { ActionButtons } from "./ActionButtons";
+import { ApprovalCard } from "./ApprovalCard";
 import { CloseButton } from "./CloseButton";
 import { CloseRefresher } from "./CloseRefresher";
+import { TaskDoneButton } from "./TaskDoneButton";
 
 const { refresh, hooks } = vi.hoisted(() => ({
   refresh: vi.fn(),
-  hooks: { values: [] as unknown[], cursor: 0, effects: [] as EffectCallback[] },
+  hooks: {
+    values: [] as unknown[],
+    cursor: 0,
+    effects: [] as EffectCallback[],
+    transitionErrors: [] as unknown[],
+  },
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("../lib/api", () => ({ apiGet: vi.fn() }));
@@ -47,6 +54,25 @@ vi.mock("react", async (importOriginal) => ({
     return hooks.values[index];
   },
   useEffect: (effect: EffectCallback) => hooks.effects.push(effect),
+  useTransition: () => {
+    const index = hooks.cursor++;
+    if (!(index in hooks.values)) hooks.values[index] = false;
+    return [
+      hooks.values[index],
+      (fn: () => unknown) => {
+        try {
+          const result = fn();
+          if (!(result instanceof Promise)) return result;
+          hooks.values[index] = true;
+          return result.finally(() => {
+            hooks.values[index] = false;
+          });
+        } catch (error) {
+          hooks.transitionErrors.push(error);
+        }
+      },
+    ];
+  },
 }));
 
 afterEach(() => {
@@ -56,6 +82,7 @@ afterEach(() => {
   hooks.values = [];
   hooks.cursor = 0;
   hooks.effects = [];
+  hooks.transitionErrors = [];
 });
 
 const unknownOutcome =
@@ -108,6 +135,109 @@ function buttons(node: ReactNode): ReactElement<{
   });
 }
 
+it("disables a simple caller while its transition is pending", () => {
+  hooks.values[0] = true;
+  expect(buttons(TaskDoneButton({ taskId: action.id }))[0]?.props.disabled).toBe(true);
+});
+
+it.each(["proposed", "failed"] as const)("gives the approval card its %s edge hook", (status) => {
+  const html = renderToStaticMarkup(
+    <ApprovalCard
+      action={{ ...action, status }}
+      title="Send a reminder"
+      kind="Reminder · 60-day stage"
+      facts={[{ label: "Amount", value: "$1,200.00" }]}
+    />,
+  );
+  expect(html).toContain(`class="card approval-card" data-status="${status}"`);
+  expect(html).toContain("<h3>Send a reminder</h3>");
+  expect(html).toContain("Reminder · 60-day stage");
+  expect(html).toContain("<dt>Amount</dt><dd>$1,200.00</dd>");
+  expect(html).toContain('class="suggestion"');
+  expect(html).toContain("Suggestion from Claude");
+  expect(html).toContain('class="btn" data-variant="ghost"');
+  if (status === "proposed") {
+    expect(html.match(/Waiting for your approval/g)).toHaveLength(1);
+    expect(html).toContain("Nothing is sent to PayPal until you approve.");
+  }
+});
+
+it.each(["done", "rejected"] as const)(
+  "collapses a %s approval to its badge, title and date",
+  (status) => {
+    const html = renderToStaticMarkup(
+      <ApprovalCard
+        action={{ ...action, status }}
+        title="Send a reminder"
+        kind="Reminder · 60-day stage"
+        facts={[{ label: "Amount", value: "$1,200.00" }]}
+      />,
+    );
+    expect(html).toContain(`data-status="${status}"`);
+    expect(html).toContain(`>${status === "done" ? "Done" : "Rejected"}</span>`);
+    expect(html).toContain("<h3>Send a reminder</h3>");
+    expect(html).toContain('<time dateTime="2026-10-31T00:00:00Z">31 Oct 2026</time>');
+    expect(html).not.toMatch(/<button|<details|<dl|suggestion|60-day stage/);
+  },
+);
+
+it("uses danger for refund approval and secondary for rejection", () => {
+  const html = renderToStaticMarkup(renderAction({ ...action, paypalAction: "refund_payment" }));
+  expect(html).toContain('class="btn" data-variant="danger"');
+  expect(html).toContain('class="btn" data-variant="secondary"');
+});
+
+it.each(["approved", "done", "rejected"] as const)(
+  "focuses the %s outcome only after a decision in this instance",
+  async (status) => {
+    const value = { ...action, paypalAction: "send_invoice" } as const;
+    renderAction(value);
+    for (const effect of hooks.effects.splice(0)) effect();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    await buttons(renderAction(value))[0]?.props.onClick();
+    const tree = renderAction({ ...value, status });
+    if (!isValidElement<{ ref: { current: { focus: () => void } | null }; tabIndex: number }>(tree))
+      throw new Error("Expected an outcome");
+    const focus = vi.fn();
+    tree.props.ref.current = { focus };
+    expect(tree.props.tabIndex).toBe(-1);
+    for (const effect of hooks.effects.splice(0)) effect();
+    expect(focus).toHaveBeenCalledOnce();
+  },
+);
+
+it("does not focus an outcome on first render", () => {
+  const tree = renderAction({ ...action, paypalAction: "send_invoice", status: "done" });
+  if (!isValidElement<{ ref: { current: { focus: () => void } | null } }>(tree))
+    throw new Error("Expected an outcome");
+  const focus = vi.fn();
+  tree.props.ref.current = { focus };
+  for (const effect of hooks.effects.splice(0)) effect();
+  expect(focus).not.toHaveBeenCalled();
+});
+
+it("focuses a new error after a decision", async () => {
+  const value = { ...action, paypalAction: "send_invoice" } as const;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(Response.json({ error: "action_not_pending" }, { status: 409 })),
+  );
+  await buttons(renderAction(value))[0]?.props.onClick();
+  const tree = renderAction(value);
+  const message = Children.toArray(tree.props.children).find(
+    (child) => isValidElement<{ role?: string }>(child) && child.props.role === "alert",
+  );
+  if (
+    !isValidElement<{ ref: { current: { focus: () => void } | null }; tabIndex: number }>(message)
+  )
+    throw new Error("Expected an error message");
+  const focus = vi.fn();
+  message.props.ref.current = { focus };
+  expect(message.props.tabIndex).toBe(-1);
+  for (const effect of hooks.effects.splice(0)) effect();
+  expect(focus).toHaveBeenCalledOnce();
+});
+
 it.each([
   ["approved", null, inProgress, 0],
   ["failed", "reminder_outcome_unknown", unknownOutcome, 0],
@@ -132,6 +262,21 @@ it("shows the standard reminder, internal advice and only the PayPal reminder re
   const preview = html.match(/<pre>(.*?)<\/pre>/s)?.[1];
   expect(preview).not.toMatch(/agent|reason|subject|note|stage/);
   expect(html).not.toMatch(/email draft|email preview/i);
+});
+
+it("keeps standard reminders available without attributing missing advice to Claude", () => {
+  const html = renderToStaticMarkup(
+    renderAction({ ...action, payload: { ...action.payload, agent: null } }),
+  );
+  expect(html).not.toContain('class="suggestion"');
+  expect(html).not.toContain("Suggestion from Claude");
+  expect(html).toContain(
+    "PayPal sends its standard reminder. Claude&#x27;s advice stays in Niryat.",
+  );
+  expect(html).toContain("Send PayPal&#x27;s standard reminder");
+  expect(
+    buttons(renderAction({ ...action, payload: { ...action.payload, agent: null } })),
+  ).toHaveLength(2);
 });
 
 it.each([
@@ -177,6 +322,7 @@ it.each([
     );
   await pending;
   expect(refresh).toHaveBeenCalledOnce();
+  expect(hooks.transitionErrors).toEqual([]);
   const unchanged = renderAction({ ...action });
   expect(buttons(unchanged).every((button) => button.props.disabled)).toBe(true);
   expect(renderToStaticMarkup(unchanged)).toContain(reload);

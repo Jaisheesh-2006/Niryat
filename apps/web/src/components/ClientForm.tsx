@@ -2,7 +2,7 @@
 
 import { type Client, clientSchema } from "@niryat/shared";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import { clientBody, sendJson } from "../lib/forms";
 
 export function ClientForm({
@@ -16,7 +16,7 @@ export function ClientForm({
 }) {
   const prefix = useId();
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const questions = [
     ["supplierInIndia", "Do you supply this service from India?"],
@@ -37,21 +37,21 @@ export function ClientForm({
       onSubmit={async (event) => {
         event.preventDefault();
         const form = event.currentTarget;
-        setSubmitting(true);
-        setMessage("");
-        const url = client ? `/api/clients/${client.id}` : "/api/clients";
-        const method = client ? "PUT" : "POST";
-        const body = clientBody(new FormData(form));
-        const result =
-          onCreated && !client
-            ? await sendJson(url, method, body, clientSchema)
-            : await sendJson(url, method, body);
-        setSubmitting(false);
-        if (result.ok) {
-          if (result.data) onCreated?.(result.data);
-          if (!client) form.reset();
-          router.refresh();
-        } else setMessage(result.message);
+        return startTransition(async () => {
+          setMessage("");
+          const url = client ? `/api/clients/${client.id}` : "/api/clients";
+          const method = client ? "PUT" : "POST";
+          const body = clientBody(new FormData(form));
+          const result =
+            onCreated && !client
+              ? await sendJson(url, method, body, clientSchema)
+              : await sendJson(url, method, body);
+          if (result.ok) {
+            if (result.data) onCreated?.(result.data);
+            if (!client) form.reset();
+            startTransition(() => router.refresh());
+          } else setMessage(result.message);
+        });
       }}
     >
       <label htmlFor={`${prefix}-name`}>Client name</label>
@@ -108,7 +108,7 @@ export function ClientForm({
           />
         </fieldset>
       ))}
-      <button type="submit" disabled={submitting}>
+      <button type="submit" disabled={isPending}>
         Check and save
       </button>
       {message && <p role="alert">{message}</p>}

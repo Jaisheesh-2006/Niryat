@@ -35,6 +35,7 @@ import {
 } from "./forms";
 
 const { refresh, setState } = vi.hoisted(() => ({ refresh: vi.fn(), setState: vi.fn() }));
+const transition = vi.hoisted(() => ({ pending: false, actions: [] as Promise<unknown>[] }));
 const panelState = vi.hoisted(() => ({
   values: [] as unknown[],
   hooks: null as unknown[] | null,
@@ -46,6 +47,14 @@ vi.mock("./api", () => ({ apiGet: vi.fn() }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useId: () => "refund-amount",
+  useTransition: () => [
+    transition.pending,
+    (fn: () => unknown) => {
+      const result = fn();
+      if (result instanceof Promise) transition.actions.push(result);
+    },
+  ],
+  useEffect: () => {},
   useState: (initial: unknown) => {
     const hooks = panelState.hooks;
     if (!hooks) return [panelState.values.length ? panelState.values.shift() : initial, setState];
@@ -72,6 +81,8 @@ afterEach(() => {
   panelState.values = [];
   panelState.hooks = null;
   panelState.cursor = 0;
+  transition.pending = false;
+  transition.actions = [];
 });
 
 it.each([
@@ -317,6 +328,7 @@ it("uses a validated created client callback to prefill the invoice and leaves S
   )
     throw new Error("Expected client form");
   await element.props.onSubmit({ preventDefault: vi.fn(), currentTarget: form });
+  await Promise.all(transition.actions);
   expect(onCreated).toHaveBeenCalledExactlyOnceWith(client);
   panelState.values = ["email", false, "", extraction, true, client];
   const html = renderToStaticMarkup(createElement(ExtractPanel, { clients: [] }));
@@ -424,6 +436,7 @@ it.each(["current extraction", "new extraction", "discard"] as const)(
     if (action === "discard") click("Discard");
     saved.resolve(Response.json(extractedClient, { status: 201 }));
     await pendingSave;
+    await Promise.all(transition.actions);
     if (pendingExtraction) {
       nextExtraction.resolve(Response.json(betaExtraction));
       await pendingExtraction;
@@ -457,6 +470,24 @@ it("keeps the refund amount as a decimal string", () => {
   expect(refundBody(form)).toEqual({ amount: "40.00" });
 });
 
+it.each([false, true])(
+  "uses the transition flag for refund, task and FIRA buttons: %s",
+  (pending) => {
+    transition.pending = pending;
+    for (const element of [
+      RefundForm({ paymentId: "payment-id", currency: "USD" }),
+      TaskDoneButton({ taskId: "task-id" }),
+      FiraUpload(),
+      FiraLineButtons({ lineId: "line-id" }),
+    ]) {
+      const html = renderToStaticMarkup(element);
+      const buttons = html.match(/<button\b[^>]*>/g) ?? [];
+      expect(buttons.length).toBeGreaterThan(0);
+      expect(buttons.every((button) => button.includes('disabled=""') === pending)).toBe(true);
+    }
+  },
+);
+
 it.each([true, false])("proposes a refund and handles success: %s", async (success) => {
   vi.stubGlobal(
     "FormData",
@@ -481,6 +512,7 @@ it.each([true, false])("proposes a refund and handles success: %s", async (succe
     throw new Error("Expected refund form");
   expect(fetch).not.toHaveBeenCalled();
   await element.props.onSubmit(event);
+  await Promise.all(transition.actions);
   expect(event.preventDefault).toHaveBeenCalledOnce();
   expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/payments/payment-id/refunds", {
     method: "POST",
@@ -488,7 +520,6 @@ it.each([true, false])("proposes a refund and handles success: %s", async (succe
     body: '{"amount":"40.00"}',
   });
   expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
-  expect(setState).toHaveBeenCalledWith(false);
   if (!success)
     expect(setState).toHaveBeenLastCalledWith(
       "A refund for this payment is already waiting for your approval.",
@@ -512,13 +543,13 @@ it.each([true, false])("marks a task done and handles success: %s", async (succe
     throw new Error("Expected task button");
   expect(fetch).not.toHaveBeenCalled();
   await button.props.onClick();
+  await Promise.all(transition.actions);
   expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/tasks/task-id/done", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",
   });
   expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
-  expect(setState).toHaveBeenCalledWith(false);
   if (!success) expect(setState).toHaveBeenLastCalledWith("Not found. Refresh the page.");
 });
 
@@ -890,13 +921,13 @@ it.each([true, false])("uploads a consented FIRA and handles success: %s", async
   const element = FiraUpload();
   expect(fetch).not.toHaveBeenCalled();
   await element.props.onSubmit({ preventDefault: vi.fn(), currentTarget: {} });
+  await Promise.all(transition.actions);
   expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/fira", {
     method: "POST",
     headers: { "Content-Type": "application/pdf", "X-Niryat-Consent": "own-fira" },
     body: file,
   });
   expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
-  expect(setState).toHaveBeenCalledWith(false);
   if (!success) expect(setState).toHaveBeenLastCalledWith("This FIRA was already uploaded.");
 });
 
@@ -946,13 +977,13 @@ it.each([
     throw new Error("Expected match button");
   expect(fetch).not.toHaveBeenCalled();
   await button.props.onClick();
+  await Promise.all(transition.actions);
   expect(fetch).toHaveBeenCalledExactlyOnceWith(`/api/fira/lines/line-id/${decision}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",
   });
   expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
-  expect(setState).toHaveBeenCalledWith(false);
   if (!success)
     expect(setState).toHaveBeenLastCalledWith(
       "This line has no suggested match to confirm or reject. Refresh the page.",

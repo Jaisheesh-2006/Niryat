@@ -1,29 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { sendJson } from "../lib/forms";
 
 export function TaskDoneButton({ taskId }: { taskId: string }) {
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
 
   return (
     <>
       <button
         type="button"
-        disabled={submitting}
+        disabled={isPending}
         onClick={async () => {
-          setSubmitting(true);
-          setMessage("");
-          const result = await sendJson(`/api/tasks/${taskId}/done`, "POST", {});
-          setSubmitting(false);
-          if (result.ok) router.refresh();
-          else setMessage(result.message);
+          return startTransition(async () => {
+            setMessage("");
+            const result = await sendJson(`/api/tasks/${taskId}/done`, "POST", {});
+            if (result.ok) startTransition(() => router.refresh());
+            else setMessage(result.message);
+          });
         }}
       >
-        {submitting ? "Saving…" : "Mark done"}
+        {isPending ? "Saving…" : "Mark done"}
       </button>
       {message && <p role="alert">{message}</p>}
     </>

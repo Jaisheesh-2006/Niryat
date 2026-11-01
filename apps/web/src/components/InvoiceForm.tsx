@@ -2,7 +2,7 @@
 
 import { type Client, invoiceCurrencies } from "@niryat/shared";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import { invoiceBody, sendJson } from "../lib/forms";
 
 export function InvoiceForm({
@@ -16,7 +16,7 @@ export function InvoiceForm({
 }) {
   const prefix = useId();
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [reasons, setReasons] = useState<string[]>([]);
 
@@ -26,18 +26,18 @@ export function InvoiceForm({
       onSubmit={async (event) => {
         event.preventDefault();
         const form = event.currentTarget;
-        setSubmitting(true);
-        setMessage("");
-        setReasons([]);
-        const result = await sendJson("/api/invoices", "POST", invoiceBody(new FormData(form)));
-        setSubmitting(false);
-        if (result.ok) {
-          form.reset();
-          router.refresh();
-        } else {
-          setMessage(result.message);
-          setReasons(result.reasons ?? []);
-        }
+        return startTransition(async () => {
+          setMessage("");
+          setReasons([]);
+          const result = await sendJson("/api/invoices", "POST", invoiceBody(new FormData(form)));
+          if (result.ok) {
+            form.reset();
+            startTransition(() => router.refresh());
+          } else {
+            setMessage(result.message);
+            setReasons(result.reasons ?? []);
+          }
+        });
       }}
     >
       <label htmlFor={`${prefix}-clientId`}>Client</label>
@@ -119,8 +119,8 @@ export function InvoiceForm({
         <label htmlFor={`${prefix}-totalCycles`}>Number of invoices</label>
         <input id={`${prefix}-totalCycles`} name="totalCycles" type="number" min={1} max={36} />
       </fieldset>
-      <button type="submit" disabled={submitting}>
-        {submitting ? "Issuing…" : "Issue invoice"}
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Issuing…" : "Issue invoice"}
       </button>
       {message && <p role="alert">{message}</p>}
       {reasons.length > 0 && (

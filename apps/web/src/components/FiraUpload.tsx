@@ -1,13 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import { sendPdf } from "../lib/forms";
 
 export function FiraUpload() {
   const id = useId();
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
 
   return (
@@ -27,12 +27,12 @@ export function FiraUpload() {
           );
           return;
         }
-        setSubmitting(true);
-        setMessage("");
-        const result = await sendPdf("/api/fira", file);
-        setSubmitting(false);
-        if (result.ok) router.refresh();
-        else setMessage(result.message);
+        return startTransition(async () => {
+          setMessage("");
+          const result = await sendPdf("/api/fira", file);
+          if (result.ok) startTransition(() => router.refresh());
+          else setMessage(result.message);
+        });
       }}
     >
       <label htmlFor={id}>FIRA PDF</label>
@@ -41,8 +41,8 @@ export function FiraUpload() {
         <input name="consent" type="checkbox" required />
         This is my own FIRA. I consent to Niryat storing it.
       </label>
-      <button type="submit" disabled={submitting}>
-        {submitting ? "Reading…" : "Upload FIRA"}
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Reading…" : "Upload FIRA"}
       </button>
       {message && <p role="alert">{message}</p>}
     </form>

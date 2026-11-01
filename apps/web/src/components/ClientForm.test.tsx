@@ -7,12 +7,22 @@ import { ClientForm } from "./ClientForm";
 import { InvoiceForm } from "./InvoiceForm";
 
 const { refresh, setState } = vi.hoisted(() => ({ refresh: vi.fn(), setState: vi.fn() }));
+const transition = vi.hoisted(() => ({ pending: false, actions: [] as Promise<unknown>[] }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useId: () => "client-form",
   useState: (initial: unknown) => [initial, setState],
+  useRef: (initial: unknown) => ({ current: initial }),
+  useEffect: () => {},
+  useTransition: () => [
+    transition.pending,
+    (fn: () => unknown) => {
+      const result = fn();
+      if (result instanceof Promise) transition.actions.push(result);
+    },
+  ],
 }));
 
 const client: Client = {
@@ -43,7 +53,11 @@ const client: Client = {
 };
 
 beforeEach(() => vi.clearAllMocks());
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  transition.pending = false;
+  transition.actions = [];
+});
 
 it.each([
   { mode: "create", editing: false, success: true },
@@ -96,8 +110,8 @@ it.each([
   expect(formData).toHaveBeenCalledExactlyOnceWith(form);
   expect(form.reset).not.toHaveBeenCalled();
   expect(refresh).not.toHaveBeenCalled();
-  expect(setState).toHaveBeenCalledWith(true);
   await pending;
+  await Promise.all(transition.actions);
 
   expect(fetch).toHaveBeenCalledExactlyOnceWith(
     editing ? `/api/clients/${client.id}` : "/api/clients",
@@ -120,8 +134,7 @@ it.each([
   );
   expect(form.reset).toHaveBeenCalledTimes(success && !editing ? 1 : 0);
   expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
-  expect(setState).toHaveBeenCalledWith(false);
-  expect(setState).toHaveBeenLastCalledWith(success ? false : "Check these fields: Country code.");
+  expect(setState).toHaveBeenLastCalledWith(success ? "" : "Check these fields: Country code.");
 });
 
 it("prefills client email and address when editing", () => {
@@ -130,6 +143,20 @@ it("prefills client email and address when editing", () => {
   expect(html).toContain('value="billing@example.com"');
   expect(html).toContain("Client address</textarea>");
 });
+
+it.each([false, true])(
+  "uses the transition flag to disable client and invoice submits: %s",
+  (pending) => {
+    transition.pending = pending;
+    for (const form of [ClientForm({ client }), InvoiceForm({ clients: [client] })]) {
+      const button = Children.toArray(form.props.children).find(
+        (child) => isValidElement(child) && child.type === "button",
+      );
+      if (!isValidElement<{ disabled: boolean }>(button)) throw new Error("Expected submit button");
+      expect(button.props.disabled).toBe(pending);
+    }
+  },
+);
 
 const action: Action = {
   paymentId: null,
@@ -246,6 +273,7 @@ it.each([true, false])("handles invoice issuance (success: %s)", async (success)
   if (!isValidElement<{ onSubmit: (submitEvent: typeof event) => Promise<void> }>(element))
     throw new Error("Expected invoice form");
   await element.props.onSubmit(event);
+  await Promise.all(transition.actions);
   expect(fetch).toHaveBeenCalledWith("/api/invoices", expect.objectContaining({ method: "POST" }));
   expect(form.reset).toHaveBeenCalledTimes(success ? 1 : 0);
   expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
