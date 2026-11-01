@@ -560,6 +560,28 @@ details[open] > summary {
 .brand-mark rect {
   fill: var(--niryat-primary);
 }
+.brand-link {
+  display: inline-flex;
+  height: 56px;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  color: var(--niryat-text);
+  font-size: 18px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.public-header {
+  display: flex;
+  height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--niryat-space-2);
+}
+.public-header > div {
+  display: flex;
+  gap: var(--niryat-space-2);
+}
 .app-shell {
   min-height: 100dvh;
 }
@@ -635,9 +657,42 @@ details[open] > summary {
 .nav-item[aria-current="page"] > svg {
   color: var(--niryat-primary);
 }
+.nav-item + .nav-item {
+  margin-top: 2px;
+}
+.nav-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  border-radius: var(--niryat-radius-pill);
+  padding-inline: var(--niryat-space-1);
+  background: var(--niryat-accent);
+  color: var(--niryat-on-accent);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
 .nav-group {
   margin: 20px 10px var(--niryat-space-2);
   color: var(--niryat-muted);
+}
+.nav-account {
+  margin-top: auto;
+  border-top: 1px solid var(--niryat-border);
+  padding-top: var(--niryat-space-4);
+}
+.account-email {
+  overflow: hidden;
+  margin-bottom: var(--niryat-space-2);
+  color: var(--niryat-muted);
+  font-size: 13px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sandbox-pill {
   display: inline-flex;
@@ -706,6 +761,22 @@ button:has(.spinner)::before {
   border-radius: var(--niryat-radius-control);
   background: var(--niryat-sunken);
   animation: pulse 1.5s ease-out infinite;
+}
+.loading-header {
+  margin-bottom: var(--niryat-space-5);
+  padding-top: var(--niryat-space-6);
+}
+.loading-title {
+  width: 40%;
+  height: 30px;
+  margin-bottom: var(--niryat-space-2);
+}
+.loading-description {
+  width: 60%;
+  height: var(--niryat-space-4);
+}
+.loading-card {
+  height: var(--niryat-space-8);
 }
 .visually-hidden {
   position: absolute;

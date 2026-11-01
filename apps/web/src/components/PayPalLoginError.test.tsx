@@ -1,8 +1,8 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";
-import Login from "../app/login/page";
-import Signup from "../app/signup/page";
+import Login from "../app/(public)/login/page";
+import Signup from "../app/(public)/signup/page";
 import { PayPalLoginError } from "./PayPalLoginError";
 
 vi.mock("./AuthForm", () => ({ AuthForm: () => createElement("form") }));

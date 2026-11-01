@@ -15,9 +15,9 @@ import {
 } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
-import Close from "../app/close/page";
-import Invoices from "../app/invoices/page";
-import Tasks from "../app/tasks/page";
+import Close from "../app/(app)/close/page";
+import Invoices from "../app/(app)/invoices/page";
+import Tasks from "../app/(app)/tasks/page";
 import { apiGet } from "../lib/api";
 import { ActionButtons } from "./ActionButtons";
 import { CloseButton } from "./CloseButton";

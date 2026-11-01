@@ -1,7 +1,7 @@
 import type { ProfileInput, PurposeCodeEntry } from "@niryat/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
-import Home from "./app/page";
+import Home from "./app/(public)/page";
 import { AuthForm } from "./components/AuthForm";
 import { ProfileForm } from "./components/ProfileForm";
 import { profileBody } from "./lib/forms";

@@ -10,6 +10,9 @@ export const credentialsSchema = z.object({
 });
 export type Credentials = z.infer<typeof credentialsSchema>;
 
+export const sessionUserSchema = z.object({ id: z.uuid(), email: z.email() });
+export type SessionUser = z.infer<typeof sessionUserSchema>;
+
 export const PDF_TEXT_PATTERN = /^[\x20-\x7E\u00A0-\u00FF\n]*$/;
 
 export const profileInputSchema = z

@@ -10,7 +10,7 @@ import {
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
-import Fira from "../app/fira/page";
+import Fira from "../app/(app)/fira/page";
 import { ActionButtons } from "../components/ActionButtons";
 import { ClientForm } from "../components/ClientForm";
 import { ExtractPanel } from "../components/ExtractPanel";

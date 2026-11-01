@@ -30,9 +30,18 @@ import {
   refundSchema,
   reminderActionSchema,
   reminderStageSchema,
+  sessionUserSchema,
   taskSchema,
   toolCallSchema,
 } from "./index";
+
+it("requires a valid session user id and email", () => {
+  const user = { id: "40000000-0000-4000-8000-000000000001", email: "seller@example.com" };
+  expect(sessionUserSchema.parse(user)).toEqual(user);
+  expect(sessionUserSchema.safeParse({ id: user.id }).success).toBe(false);
+  expect(sessionUserSchema.safeParse({ ...user, email: "invalid" }).success).toBe(false);
+  expect(sessionUserSchema.safeParse({ ...user, id: "invalid" }).success).toBe(false);
+});
 
 it("requires separate INR and applicable GST rates without defaults", () => {
   const id = "40000000-0000-4000-8000-000000000001";

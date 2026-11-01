@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { sendJson } from "../lib/forms";
+import { LogOut } from "./icons";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -12,6 +13,8 @@ export function SignOutButton() {
     <>
       <button
         type="button"
+        className="btn"
+        data-variant="ghost"
         onClick={async () => {
           const result = await sendJson("/api/auth/logout", "POST", {});
           if (!result.ok) {
@@ -22,6 +25,7 @@ export function SignOutButton() {
           router.refresh();
         }}
       >
+        <LogOut />
         Sign out
       </button>
       {message && <p role="alert">{message}</p>}
