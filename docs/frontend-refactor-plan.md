@@ -1,6 +1,6 @@
 # Frontend refactor plan
 
-Status: planned 2026-11-01. No task started. This plan changes how `apps/web` looks and behaves. It does not change rules, API contracts or the approval workflow. The one exception is the optional one-line redirect in U1.
+Status: F1 implemented, including its three review fixes (2026-11-01); final validation is deferred to F12. The earlier Google Fonts build failure remains pending. This plan changes how `apps/web` looks and behaves. It does not change rules, API contracts or the approval workflow. The one exception is the optional one-line redirect in U1.
 
 Sources of truth:
 - [Frontend plan](frontend-plan.md) ("FP" below). §4 is the visual specification: tokens, type, spacing, component looks and page blueprints. This plan does not repeat its values; tasks cite FP sections. Where this plan's §2 decisions differ from FP, **this plan wins**. F12 then updates FP to match.
@@ -8,7 +8,7 @@ Sources of truth:
 - [build flow](build-flow.md): feature freeze **Nov 8**; Phase 7 (hosting, judge mode) runs Nov 5–8 in parallel and must not be blocked.
 - `AGENTS.md` (root and [apps/web](../apps/web/AGENTS.md)), especially **Golden rules** and **Design (LLD)**.
 
-**Exit gate:** the full demo script (PLAN §16) runs through the restyled UI. `pnpm verify` and `pnpm build` pass, and the user has confirmed the §8 manual checks.
+**Exit gate (F12 only):** the full demo script (PLAN §16) runs through the restyled UI. `pnpm verify` and `pnpm build` pass, and the user has confirmed the §8 manual checks.
 
 ---
 
@@ -253,13 +253,14 @@ startTransition(async () => {
 - Accessibility (FP §3.5): one `<h1>` per page; a text label on every status; `aria-current`; visible `outline` focus; `aria-describedby` on field errors where the component already shows them; `prefers-reduced-motion`; existing `role="alert"` stays.
 - Nothing new reaches the browser except the account email. AG Studio and Bryntum imports stay in `Dashboard.tsx`, `CalendarView.tsx` and their `lib/` adapters; the shell and layouts must not import them.
 - Keep the D13 strings. When a task changes a §4.7 assertion, change only that assertion and say so in the commit.
-- No browser checks, MCP browser tools or dev-server screenshots. List the manual steps for the user instead.
+- No browser checks, MCP browser tools or dev-server screenshots by the agent. Hand the §8 manual checks to the user in F12.
 - Touch only the files a task lists. If another file must change, stop and say why. Quote paths with parentheses in the shell (`'apps/web/src/app/(app)'`).
-- `pnpm format`, then `pnpm --filter @niryat/web test`, `pnpm verify` and `pnpm build` (use `corepack.cmd pnpm` on restricted PowerShell). One commit per task. Tick no spec checkbox: this work has no spec criteria.
+- **Final checks run only in F12 (user decision, 2026-11-01).** Defer formatting commands, test runs, lint/typechecks, `pnpm verify`, `pnpm build`, import-graph checks and user browser checks until F12; do not run them during F0–F11. Implement each task's specified tests with its code, but report validation as pending until F12. Use `corepack.cmd pnpm` on restricted PowerShell.
+- Keep one commit per task when commits are requested. Tick no spec checkbox: this work has no spec criteria.
 
 ## 6. Prerequisites
 
-- The working tree is committed or stashed (the current uncommitted docs and advance-tax edits belong to Phase 6). `pnpm verify` and `pnpm build` pass on that baseline.
+- Keep unrelated work separate and retain any recorded baseline check results. New validation runs are deferred to F12.
 - **(user)** U1–U4 answered, or the recommended answers accepted; U5 baseline screenshots taken.
 
 ## 7. Tasks (in order)
@@ -287,7 +288,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 2. With U2 approval: add the `next-devtools` server, pinned to an exact version, to both configs, and record the version and date in tooling-sources.
 3. **(user)** Baseline screenshots (U5).
 
-**Done when:** `pnpm verify` passes.
+**Done when:** the tooling edits are implemented. Validation is deferred to F12.
 
 ---
 
@@ -302,7 +303,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 - Keep the calendar and dashboard rules working. `main` keeps a sensible max width until F5 replaces it with `.content`.
 - Re-measure contrast for any token value you change (FP §4.2 lists the measured pairs). With no changes, the FP ratios stand.
 
-**Done when:** web tests pass unchanged, and `pnpm verify` and `pnpm build` pass. The user's spot-check is in §8 (any two pages, light and dark).
+**Done when:** F1 requirements are implemented without changing web tests. Validation and the user's two-page light/dark spot-check are deferred to F12.
 
 ---
 
@@ -314,7 +315,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** §4.3 tests 1–6. `approvalTitle` for all four `paypalAction`s, including the stage caption. `actionTone` for all five statuses matches FP §4.3. The invoice maps cover every enum value (type-level `Record` plus one runtime check).
 
-**Done when:** web tests and `pnpm verify` pass. No page uses the libraries yet.
+**Done when:** the libraries and specified tests are implemented; no page uses the libraries yet. Validation is deferred to F12.
 
 ---
 
@@ -328,7 +329,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** `StatusBadge` renders its text and `data-tone`; with `busy`, it renders the spinner and `aria-busy`. `PageHeader` renders exactly one `<h1>`. One test that `CardBoundary`'s fallback text contains no error message (render the fallback function directly).
 
-**Done when:** web tests and `pnpm verify` pass.
+**Done when:** the components and specified tests are implemented. Validation is deferred to F12.
 
 ---
 
@@ -338,7 +339,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Requirements:** no layout files yet, no markup change and no URL change. `vi.mock` paths must match the paths the moved pages import.
 
-**Done when:** web tests pass with the same count as before, and `pnpm verify` and `pnpm build` pass. `pnpm build` lists the same 12 routes.
+**Done when:** the route move preserves existing URLs, markup and test assertions. In F12, compare existing test and route coverage with the pre-move baseline, accounting for additions required by later tasks.
 
 ---
 
@@ -357,7 +358,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** `NavLinks` (mock `next/navigation`'s `usePathname`): `/invoices` marks only Invoices `aria-current="page"`; `/invoices/x` too; `/overview` marks Today; group labels and item order match §4.6; the badge slot renders next to Monthly close. `ApprovalsBadge`: count 0 renders nothing; 2 renders the visible `2` and the hidden `2 approvals waiting`; 1 is singular; only `proposed` statuses are counted. Shared: `sessionUserSchema` rejects a missing email.
 
-**Done when:** web and shared tests, `pnpm verify` and `pnpm build` pass. Check the import graph: no file under `app/(app)/layout.tsx`'s imports reaches `ag-studio` or `@bryntum`.
+**Done when:** the shell, auth gate and specified web/shared tests are implemented. Validation is deferred to F12, including the import-graph check: no file under `app/(app)/layout.tsx`'s imports reaches `ag-studio` or `@bryntum`.
 
 ---
 
@@ -369,7 +370,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** add one test (in `ActionButtons.test.tsx`, using its hook cursor) showing a simple caller's button is `disabled` while `isPending` is true (mock `useTransition` to return `[true, fn]`). Existing reminder tests unchanged.
 
-**Done when:** web tests and `pnpm verify` pass.
+**Done when:** the transition changes and specified tests are implemented. Validation is deferred to F12.
 
 ---
 
@@ -386,7 +387,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** the card shows a `data-status`-driven edge; the refund approve button uses the danger variant; done/rejected render the compact line; existing tests still pass.
 
-**Done when:** web tests and `pnpm verify` pass.
+**Done when:** the approval card, button changes and specified tests are implemented. Validation is deferred to F12.
 
 ---
 
@@ -403,7 +404,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests** (mock `apiGet` per path): tile values for typical data; no-profile health tile; zero approvals shows the empty state and no accent edge; overdue count badge; recent invoices are capped at 5 in API order; `deadlineList` keeps all overdue events plus N upcoming. Use fake timers for the header date.
 
-**Done when:** web tests (and API tests with U1), `pnpm verify` and `pnpm build` pass.
+**Done when:** the overview, landing changes and specified tests (including API tests with U1) are implemented. Validation is deferred to F12.
 
 ---
 
@@ -417,7 +418,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** home has the headline `<h1>` and the `/signup`, `/login` and PayPal hrefs; disclaimer contains the PLAN §23 sentences; existing login, signup and PayPal error tests pass.
 
-**Done when:** web tests, `pnpm verify` and `pnpm build` pass.
+**Done when:** the public-page changes and specified tests are implemented. Validation is deferred to F12.
 
 ---
 
@@ -435,7 +436,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** the §4.7 assertions for these pages; the invoice card keeps `id="invoice-<id>"`; the `New invoice` details is open only with zero invoices; flags are sorted; the health bar's aria-label; the FIRA flagged-line badge and reason.
 
-**Done when:** web tests, `pnpm verify` and `pnpm build` pass.
+**Done when:** the demo-path page changes and specified tests are implemented. Validation is deferred to F12.
 
 ---
 
@@ -455,7 +456,7 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Tests:** the §4.7 assertions; the tasks IST boundary cases with the new format; GSTR-1 and advance-tax tests still find every Phase 6 string.
 
-**Done when:** web tests, `pnpm verify` and `pnpm build` pass.
+**Done when:** the remaining page changes and specified tests are implemented. Validation is deferred to F12.
 
 ---
 
@@ -465,13 +466,13 @@ F2, F3 and F4 are independent after F1. F8–F11 can run in parallel after F7.
 
 **Steps**
 1. Review the diff with `design:accessibility-review` against FP §3.5 and `design:ux-copy` against FP §4.15. Fix the findings.
-2. Check the import graph again (F5 Done when).
+2. Check the import graph (F5 Done when) and the preserved route/test coverage (F4 Done when).
 3. Reduced-motion: the spinner and skeleton stop; their text labels remain.
 4. Hand the §8 checklist to the user. Report it as awaiting user verification.
 
-**Done when:** `pnpm verify` and `pnpm build` pass and the docs match the shipped behaviour.
+**Done when:** run `pnpm format`, `pnpm --filter @niryat/web test`, `pnpm --filter @niryat/shared test`, API tests with U1 (`pnpm --filter @niryat/api test`), `pnpm verify` and `pnpm build`, in that order. All automated checks pass, all F0–F11 acceptance targets are satisfied, and the docs match the shipped behaviour. Apply D1 if Google Fonts still cannot be fetched. The phase exit gate remains open until the user confirms §8.
 
-## 8. Manual checks for the user (browser)
+## 8. Manual checks for the user (browser, F12 only)
 
 Start the API and web as usual (`pnpm dev`, or separate API and web terminals; web http://localhost:3000, API :3001). Sign in with a sandbox account that has invoices, a FIRA and a pending reminder.
 - [ ] Logged out, `/` shows the public page with no app chrome; `/invoices` redirects to `/login`.
@@ -482,7 +483,11 @@ Start the API and web as usual (`pnpm dev`, or separate API and web terminals; w
 - [ ] Amounts read `$1,234.00` / `₹1,23,456.00`, with aligned digits in tables. Dates read like `12 Aug 2026` everywhere (September shows as `Sept`). `₹` renders properly in Plex or a fallback font.
 - [ ] A calendar or task link to `/invoices#invoice-<id>` scrolls to a visible, outlined invoice card.
 - [ ] Every badge has a text label; the Claude suggestion block is visibly distinct from facts.
+- [ ] In light mode on `/calendar`, the `Past` legend text uses the muted token and meets 4.5:1 contrast against the page background.
+- [ ] On `/profile`, `/clients` and `/invoices`, radio labels sit beside their controls; clicking a label selects its control.
+- [ ] On `/invoices`, paste six lines into `Client email or brief`: all six fit before scrolling, and vertical resizing works.
 - [ ] Dark mode (OS setting): text, badges, AG Studio and the Bryntum frame are legible.
+- [ ] With the OS reduced-motion setting enabled, spinners and skeletons stop animating and their text labels remain.
 - [ ] At 390px wide: `Menu` opens the nav sheet; choosing a link closes it; Escape and a backdrop click close it; tables scroll inside their card; nothing scrolls the page sideways.
 - [ ] Keyboard only: the skip link, nav, forms and approval buttons are reachable, with a visible focus ring.
 - [ ] Run the full PLAN §16 demo script at 1440×900 in light mode.

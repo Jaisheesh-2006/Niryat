@@ -432,7 +432,7 @@ Today                                             Sunday, 1 Nov 2026
 ▌ Nothing is sent to PayPal until you approve.        [Reject] [Send reminder]
 ```
 
-(`[bulb]` is the `lightbulb` icon.)
+(The lightbulb is the `lightbulb` icon, not an emoji.)
 - A card with a 3px left edge in `accent` while `proposed`, `danger` when `failed`, none otherwise.
 - Header: the status badge, plus the action kind in Caption on the right.
 - Title in H3: a verb plus object, built only from fields the action and invoice carry.
