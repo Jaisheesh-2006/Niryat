@@ -2,6 +2,8 @@
 
 Follow the root AGENTS.md and the selected feature spec.
 Use App Router and server components by default; add client boundaries only when needed.
+Before using a Next.js API, read its guide in `node_modules/next/dist/docs/` (version-matched).
+Visual design source of truth: docs/frontend-plan.md §4; implementation order and contracts: docs/frontend-refactor-plan.md.
 Biome owns formatting/linting. No ESLint or Prettier.
 Keep legal/numeric decisions in packages/rules, reached through validated API contracts.
 Pages include dashboard, calendar, GSTR-1 and advance tax alongside the earlier profile/invoice/close flows.
