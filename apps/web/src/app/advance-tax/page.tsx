@@ -42,7 +42,8 @@ export default async function AdvanceTax({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = querySchema.safeParse(await searchParams);
+  // Next's development searchParams proxy needs a plain copy for record validation.
+  const query = querySchema.safeParse({ ...(await searchParams) });
   const params = new URLSearchParams();
   if (query.success) {
     if (query.data.taxYear) params.set("taxYear", query.data.taxYear);

@@ -229,47 +229,47 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 ### 10. GSTR-1 export data
 
-**What:** Generate the export section of GSTR-1 (Table 6A, zero tax under LUT), net of refunds, for the selected month/quarter as a file the user uploads to the GST portal.
+**What:** Generate a WOPAY Table 6A CSV for LUT-covered invoices in a selected month/quarter, plus invoice/refund/net reconciliation per currency. Refund credit-note data is listed for Table 9B outside this file. INR rates and applicable GST percentages are supplied per invoice, never inferred or stored. Offline-tool import acceptance remains open; see [spec 10](specs/10-gstr1-export.md).
 
 **How:** rules engine only, using PayPal invoice and refund data.
 
 **Done when:**
 - [ ] Output matches the GST offline tool format (CSV/JSON — format to be verified on Day 1)
-- [ ] Totals reconcile with PayPal invoices and refunds for the period
-- [ ] Shown only for GST-registered users
+- [x] Totals reconcile with PayPal invoices and refunds for the period
+- [x] Shown only for GST-registered users
 
 ### 11. Compliance calendar
 
-**What:** One calendar with every deadline: LUT renewal, GSTR-1 due dates, advance-tax dates, RBI deadlines per invoice, recurring invoice dates, FIRA uploads, dispute response dates.
+**What:** A read-only calendar of LUT expiry, GSTR-1 and advance-tax dates, invoice RBI/credit-note deadlines, expected recurring invoices and dispute response dates. FIRA upload tasks remain in Tasks/monthly close. P6-11 rendering, state styling and navigation are user-confirmed (2026-11-01); licence coverage remains open.
 
 **How:** rules engine and PayPal data produce events; **Bryntum Calendar** displays them.
 
 **Done when:**
-- [ ] Events generated automatically from profile, PayPal invoices, disputes and rules
-- [ ] Overdue and upcoming items are visually distinct
-- [ ] Clicking an event opens the related invoice/task
+- [x] Events generated automatically from profile, PayPal invoices, disputes and rules
+- [x] Overdue and upcoming items are visually distinct
+- [x] Clicking an event opens the related invoice/task
 
 ### 12. Dashboard with plain-English questions
 
-**What:** Income in USD and INR, PayPal fees paid, FX loss, refunds and disputes, health score, FIRA status, unpaid invoices — plus natural-language questions such as _"Show my PayPal fees by client this year"_ that generate live widgets.
+**What:** Income and fees by currency, PayPal-supplied FX/INR values when available, refunds/disputes, health score, FIRA status and unpaid invoices, plus plain-English questions that generate widgets. FX loss is not computed without bank-credit data. P6-11 widgets/theme, the requested 9/9 fresh-session question check and budget fallback are user-confirmed (2026-11-01); see [V16](verification.md#v16-phase-6-acceptance).
 
 **How:** **AG Studio** (AG Grid) dashboard with custom widgets and theming, powered by PayPal data; AG Studio's agent framework for natural-language questions.
 
 **Done when:**
-- [ ] Core widgets: income, PayPal fees, FX, refunds/disputes, health score, FIRA status, unpaid invoices
-- [ ] At least three natural-language questions work reliably in the demo
-- [ ] Custom theme matching Niryat branding
+- [x] Core widgets: income, PayPal fees, FX, refunds/disputes, health score, FIRA status, unpaid invoices
+- [x] At least three natural-language questions work reliably in the demo
+- [x] Custom theme matching Niryat branding
 
 ### 13. Advance tax estimator
 
-**What:** Estimate income tax on export income (from PayPal receipts, net of refunds) and show what to pay by each due date. Presumptive-scheme users (if eligible) pay in full by 15 March; others pay in instalments (15 Jun, 15 Sep, 15 Dec, 15 Mar).
+**What:** Check presumptive eligibility/deemed income from profile and invoice-linked PayPal receipts net of refunds, then show rules-derived instalment dates and amounts using the user's estimated tax. Niryat does not calculate income-tax liability or slabs. Rates are user-entered per currency and request-only. Profile persistence, estimate/threshold behavior, labels and calendar dates are user-confirmed (2026-11-01).
 
-**How:** rules engine only; section references updated for the Income-tax Act 2025 (verify on Day 1).
+**How:** versioned PRESUMPTIVE_TAX and ADVANCE_TAX_DATES rules, user-entered rates and estimated tax, with source/effective-date citations and the CA estimate label.
 
 **Done when:**
-- [ ] Eligibility for presumptive taxation determined from profile and receipts
-- [ ] Amount and dates shown; dates appear in the compliance calendar
-- [ ] Clear "estimate — confirm with your CA" label
+- [x] Eligibility for presumptive taxation determined from profile and receipts
+- [x] Amount and dates shown; dates appear in the compliance calendar
+- [x] Clear "estimate — confirm with your CA" label
 
 ---
 
@@ -406,22 +406,22 @@ A project can win at most one main prize and one sponsor prize; AG Studio is the
 
 ## 13. Data model
 
-| Table              | Key fields                                                                                                                                                                       |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `users`            | id, email, paypal_payer_id, created_at                                                                                                                                           |
-| `profiles`         | user_id, gst_registered, gstin, lut_number, lut_valid_from, lut_valid_to, work_type, purpose_code, pan_last4                                                                     |
-| `clients`          | id, user_id, name, address, country, email, export_check_result                                                                                                                  |
-| `invoices`         | id, user_id, client_id, type (one_time / recurring / milestone), number, fy, date, currency, amount, description, paypal_invoice_id, paypal_recurring_series_id, pdf_url, status |
-| `payments`         | id, invoice_id, paypal_txn_id, kind (payment / refund), gross, fee, net, currency, fx_rate, received_at                                                                          |
-| `disputes`         | id, invoice_id, paypal_dispute_id, amount, status, reason, outcome                                                                                                               |
-| `fira_documents`   | id, user_id, month, file_url, parsed_at                                                                                                                                          |
-| `fira_lines`       | id, fira_document_id, date, amount, currency, reference, purpose_code                                                                                                            |
-| `matches`          | fira_line_id, payment_id, confidence, confirmed_by_user                                                                                                                          |
-| `agent_actions`    | id, user_id, invoice_id, payment_id, paypal_action, payload, status (proposed / approved / rejected / done / failed), error, dedupe_key, created_at, updated_at                  |
-| `agent_runs`       | id, user_id, kind (monthly_close / reminders / extraction), trigger, month, as_of, status, error, summary, ai_status, ai_cost_usd, started_at, finished_at                       |
-| `agent_tool_calls` | id, run_id, seq, actor (system / agent), tool, input, output, ok, created_at; unique (run_id, seq)                                                                               |
-| `tasks`            | id, user_id, type, due_date, status, source_rule_id                                                                                                                              |
-| `rule_versions`    | rule_id, version, effective_from, source, review                                                                                                                                 |
+| Table              | Key fields                                                                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`            | id, email, paypal_payer_id, created_at                                                                                                                                                            |
+| `profiles`         | user_id, gst_registered, gstin, lut_number, lut_valid_from, lut_valid_to, work_type, purpose_code, pan_last4, gstr1_frequency (monthly / quarterly / null), specified_profession (boolean / null) |
+| `clients`          | id, user_id, name, address, country, email, export_check_result                                                                                                                                   |
+| `invoices`         | id, user_id, client_id, type (one_time / recurring / milestone), number, fy, date, currency, amount, description, paypal_invoice_id, paypal_recurring_series_id, pdf_url, status                  |
+| `payments`         | id, invoice_id, paypal_txn_id, kind (payment / refund), gross, fee, net, currency, fx_rate, received_at                                                                                           |
+| `disputes`         | id, invoice_id, paypal_dispute_id, amount, status, reason, outcome                                                                                                                                |
+| `fira_documents`   | id, user_id, month, file_url, parsed_at                                                                                                                                                           |
+| `fira_lines`       | id, fira_document_id, date, amount, currency, reference, purpose_code                                                                                                                             |
+| `matches`          | fira_line_id, payment_id, confidence, confirmed_by_user                                                                                                                                           |
+| `agent_actions`    | id, user_id, invoice_id, payment_id, paypal_action, payload, status (proposed / approved / rejected / done / failed), error, dedupe_key, created_at, updated_at                                   |
+| `agent_runs`       | id, user_id, kind (monthly_close / reminders / extraction / dashboard), trigger, month, as_of, status, error, summary, ai_status, ai_cost_usd, started_at, finished_at                            |
+| `agent_tool_calls` | id, run_id, seq, actor (system / agent), tool, input, output, ok, created_at; unique (run_id, seq)                                                                                                |
+| `tasks`            | id, user_id, type, due_date, status, source_rule_id                                                                                                                                               |
+| `rule_versions`    | rule_id, version, effective_from, source, review                                                                                                                                                  |
 
 Sensitive fields (GSTIN, PAN fragments, addresses) are encrypted at rest.
 

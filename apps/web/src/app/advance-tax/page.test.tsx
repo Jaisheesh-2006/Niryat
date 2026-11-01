@@ -32,6 +32,33 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+it.each([
+  {},
+  { taxYear: "2026-27", USD: "83.00", estimatedTax: "20000" },
+  { taxYear: "2026-27", USD: "83.00", estimatedTax: "9000" },
+])("accepts Next development searchParams: %j", async (fields) => {
+  // Next's development proxy binds function properties, including the inherited constructor.
+  const searchParams = new Proxy(fields, {
+    get(target, key, receiver) {
+      const value: unknown = Reflect.get(target, key, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  const html = renderToStaticMarkup(
+    await AdvanceTax({ searchParams: Promise.resolve(searchParams) }),
+  );
+  expect(html).toContain('method="get"');
+  expect(html).not.toContain("Reset estimate");
+  const params = new URLSearchParams();
+  if (fields.taxYear) params.set("taxYear", fields.taxYear);
+  if (fields.estimatedTax) params.set("estimatedTax", fields.estimatedTax);
+  if (fields.USD) params.set("rates", `USD:${fields.USD}`);
+  expect(fetcher).toHaveBeenCalledExactlyOnceWith(
+    new URL(`/advance-tax?${params}`, "http://localhost:3001"),
+    { headers: { cookie: "session=test" }, cache: "no-store" },
+  );
+});
+
 it.each(invoiceCurrencies)(
   "rejects a second currency embedded in the %s rate field",
   async (currency) => {

@@ -2,21 +2,21 @@
 
 Sandbox only. Use one India business seller and one US personal buyer created in the [Developer Dashboard](https://developer.paypal.com/dashboard/). Do not put their passwords, client secrets or access tokens in the repository. Through Phase 5, Niryat implements approved invoice/refund/reminder actions, deterministic ingestion, dispute polling, source-quoted extraction and Claude investigation through scoped read tools. Automated checks use fakes rather than contacting PayPal.
 
-| Feature                | API or tool                                                    | Verify on India sandbox                                                                       |
-| ---------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 01 Identity and health | Log in with PayPal; local profile/rules                        | Complete: all login-plan browser checks user-confirmed 2026-10-30                             |
-| 02 Purpose code        | Curated bank/RBI table; AI suggestion                          | Seller's current purpose code visibility                                                      |
-| 03 Export eligibility  | Pure rules                                                     | No PayPal API needed                                                                          |
-| 04 Invoicing           | Claude extraction; approved REST Invoicing v2                  | Extraction and approved one-time delivery verified; recurring-cycle numbering remains open    |
-| 05 Payments            | Webhooks; Server SDK transaction search                        | Gross, fees, net, FX and invoice links                                                        |
-| 06 Refunds/disputes    | Server SDK refunds; webhook events; REST Disputes v1           | Refund and dispute test flows                                                                 |
-| 07 FIRA                | User-uploaded PDF matched against payment ledger               | Own redacted India FIRA sample                                                                |
-| 08 Monthly close       | Claude Agent SDK; five read-only Toolkit wrappers; Render task | CLI fallback and manual close verified; hosted scheduling is Phase 7                          |
-| 09 RBI reminders       | Approved REST Invoicing v2 standard reminder                   | Send/hold, stage dedupe and buyer sandbox notification verified; raw HTTP result not captured |
-| 10 GSTR-1              | Rules over invoice/refund ledger                               | Reconciliation; no GST filing API                                                             |
-| 11 Calendar            | Rules and invoice/dispute dates                                | Due-date availability                                                                         |
-| 12 Dashboard           | PayPal ledger; AG Studio later                                 | Transaction coverage                                                                          |
-| 13 Advance tax         | Rules over receipts net of refunds                             | Receipt coverage; no filing API                                                               |
+| Feature                | API or tool                                                        | Verify on India sandbox                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| 01 Identity and health | Log in with PayPal; local profile/rules                            | Complete: all login-plan browser checks user-confirmed 2026-10-30                                                             |
+| 02 Purpose code        | Curated bank/RBI table; AI suggestion                              | Seller's current purpose code visibility                                                                                      |
+| 03 Export eligibility  | Pure rules                                                         | No PayPal API needed                                                                                                          |
+| 04 Invoicing           | Claude extraction; approved REST Invoicing v2                      | Extraction and approved one-time delivery verified; recurring-cycle numbering remains open                                    |
+| 05 Payments            | Webhooks; Server SDK transaction search                            | Gross, fees, net, FX and invoice links                                                                                        |
+| 06 Refunds/disputes    | Server SDK refunds; webhook events; REST Disputes v1               | Refund and dispute test flows                                                                                                 |
+| 07 FIRA                | User-uploaded PDF matched against payment ledger                   | Own redacted India FIRA sample                                                                                                |
+| 08 Monthly close       | Claude Agent SDK; five read-only Toolkit wrappers; Render task     | CLI fallback and manual close verified; hosted scheduling is Phase 7                                                          |
+| 09 RBI reminders       | Approved REST Invoicing v2 standard reminder                       | Send/hold, stage dedupe and buyer sandbox notification verified; raw HTTP result not captured                                 |
+| 10 GSTR-1              | GET /gstr1; POST /gstr1/file; rules over invoice/refund ledger     | Reconciliation/registration gate user-confirmed 2026-11-01; offline-tool import blocked before CSV parsing; no filing API     |
+| 11 Calendar            | GET /calendar; rules and invoice/dispute dates; Bryntum 7.3.8      | Rendering/state/link checks user-confirmed 2026-11-01; dispute recovered by manual sync; licence coverage unverified          |
+| 12 Dashboard           | GET /dashboard; AG Studio 3.0.0; POST /dashboard/turn Claude proxy | Widgets/theme, requested 9/9 question check and budget fallback user-confirmed 2026-11-01; no PayPal tools in this agent      |
+| 13 Advance tax         | GET /advance-tax; rules over receipts net of refunds               | Estimate/threshold/labels and calendar dates user-confirmed 2026-11-01; user-entered rates/tax; no slab calculation or filing |
 
 The [Server SDK](https://github.com/paypal/PayPal-TypeScript-Server-SDK) does not cover Invoicing/Disputes. The [Agent Toolkit](https://github.com/paypal/agent-toolkit) supplies five read-only agent tools under [ADR 0005](decisions/0005-agent-boundary.md); it is not the deterministic ledger adapter. The REST client uses sandbox endpoints, cached OAuth tokens and validated responses. Invoice create/send and series create/activate use stable per-action `PayPal-Request-Id` values and may retry transient failures once after an owner-scoped approval claim; created IDs survive retries. Disputes are read through REST Disputes v1. See [architecture](architecture.md).
 

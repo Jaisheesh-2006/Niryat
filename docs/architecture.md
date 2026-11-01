@@ -1,6 +1,6 @@
 # Architecture
 
-The [product plan](PLAN.md) owns scope. Through Phase 5, Niryat implements email/password and PayPal sign-in, profiles, cited health/export checks, clients, invoice PDFs, approved sandbox invoicing/refunds/reminders, payment/refund ingestion, dispute polling, tasks, deterministic FIRA matching, source-quoted invoice extraction and Claude-assisted monthly close. Login acceptance is user-confirmed (2026-10-30), and Phase 5's manual/CLI flows are user-confirmed (2026-10-31). FIRA parsing remains verified only against a synthetic fixture. Hosted deployment and reliability checks remain Phase 7; see [verification](verification.md).
+The [product plan](PLAN.md) owns scope. Through Phase 6, Niryat implements sign-in, profiles, health/export checks, clients, invoice PDFs, approved sandbox invoicing/refunds/reminders, ledger ingestion, dispute polling, tasks, FIRA matching, source-quoted extraction, monthly close, GSTR-1 preview/CSV, advance-tax estimates, a compliance calendar and an AI-assisted dashboard. Phase 6 local acceptance is user-confirmed (2026-11-01), except the blocked CSV-import check; sponsor licence coverage remains unverified. FIRA parsing remains verified only against a synthetic fixture. Hosting and reliability remain Phase 7; see [verification](verification.md).
 
 ## Components and flow
 
@@ -22,7 +22,7 @@ flowchart LR
   API --> Files[Document storage]
 ```
 
-Verified PayPal events and transaction backfill populate the ledger. Issuing an invoice creates a PDF and persistent proposal; user approval permits PayPal execution. Refund/dispute records feed cited messages and tasks. Uploaded FIRA PDFs are parsed and matched without AI; uncertain matches require user confirmation. Claude investigates and drafts; reports and sponsor UI remain future phases.
+Verified PayPal events and transaction backfill populate the ledger. Issuing an invoice creates a PDF and persistent proposal; user approval permits PayPal execution. Refund/dispute records feed cited messages, tasks and reports. Uploaded FIRA PDFs are parsed and matched without AI; uncertain matches require confirmation. Claude investigates/drafts and configures dashboard widgets; it does not compute compliance figures.
 
 ## Sign-in
 
@@ -50,7 +50,7 @@ FIRA upload requires a session, `application/pdf`, explicit storage consent and 
 
 Every PayPal write requires explicit user approval. Issuing saves an immutable invoice/PDF and proposed `agent_actions` payload without calling PayPal. The authenticated approve route checks ownership, then the runner atomically claims a proposed or failed invoice/refund action before execution. Created PayPal IDs survive retries with stable `<actionId>-<step>` request IDs. Reminders can claim only `proposed`, permit one attempt and cannot resend after failure or interruption; unknown outcomes also cannot be rejected as unsent. Success finishes as done; rejection is final. Webhook verification/reconciliation are deterministic ingestion paths. The in-product agent may use only scoped, logged Toolkit reads without approval ([ADR 0005](decisions/0005-agent-boundary.md)); it has no write or approval tools.
 
-Zod validates external inputs and environment values. Rules are pure, versioned and cited; implemented AI handles extraction, investigation and explanations, never legal or numeric truth. FIRA matching remains deterministic. A YAML `logic` function names implemented rules logic; three rules remain `TODO` for Phase 6.
+Zod validates external inputs and environment values. Rules are pure, versioned and cited; AI handles extraction, investigation, explanations and widget configuration, never legal or numeric truth. FIRA matching remains deterministic. All twelve YAML `logic` entries now name implemented functions; none remains `TODO`.
 
 ## Agents, close and extraction
 
@@ -64,12 +64,26 @@ The SDK has no built-in tools, filesystem settings or persisted sessions, and se
 
 Extraction sends the brief once to a separate Claude draft tool. Code checks each field against its verbatim quote, including full amount/email tokens and negative signs, before showing it. Logs retain found field names and run/cost metadata, not the brief. `Use these values` only prefills forms; existing-client matching is explicit, export answers and SAC stay with the user, and Discard saves no client, invoice or action. Form submission issues the invoice, and user approval separately permits its PayPal send. Missing/budget-exhausted AI leaves manual forms available.
 
+## Reports, calendar and dashboard
+
+`GET /gstr1` supplies `/gstr1` with rules-derived periods/due dates, LUT coverage and per-currency invoice/refund/net reconciliation. `POST /gstr1/file` emits the ten-column WOPAY CSV with user-entered per-invoice INR rates and applicable GST percentages. Refund credit-note data is listed separately for Table 9B. GST registration and filing frequency gate the report. Offline-tool parser acceptance remains blocked before import.
+
+`GET /advance-tax` supplies the server-rendered GET form at `/advance-tax`. Invoice-linked payments/refunds are selected by IST receipt date in the tax year; rates are supplied per currency. Rules determine presumptive eligibility/deemed income and instalment dates/amounts from the user's estimated tax. No income-tax liability or slabs are computed. Rates remain request-only in both report flows.
+
+`GET /calendar` supplies `/calendar` with rule/profile/invoice/dispute events. Bryntum Calendar/React 7.3.8 runs client-only in read-only month/list modes, with state prefixes and colours. A server-rendered list links every overdue event and the next ten upcoming ones. Recurring dates remain expectations because series cycles are unlinked.
+
+`GET /dashboard` projects owner-scoped ledger/health rows without client email/address fields or health-flag citations. AG Studio/React 3.0.0 renders the seven required widget groups with Niryat theme tokens; refunds and disputes use separate tiles. Display sums may use floating point; compliance figures come from rules/PayPal records. Missing PayPal FX remains missing, and bank FX loss is not computed. Edit mode exposes the AI Assistant and layout controls.
+
+AG Studio's Agent Framework uses a browser adapter to `POST /dashboard/turn`. The API validates the bounded text/tool wire subset, session, deployment-wide budget and per-user concurrency, records a charged `dashboard` run and calls the server-only Claude Messages adapter. Tools execute in the dashboard; no PayPal tools are exposed. Digit-containing model prose becomes a figure note; arguments remain intact. Logs keep tool names/argument keys and sanitized status codes, never prompts, argument values, model text or keys. Replies are buffered and replayed as AG events, not server-streamed. Client names and projected ledger data go to Anthropic. Thinking blocks remain unsupported; model-compatibility guidance preceded successful user question checks. See [V16](verification.md#v16-phase-6-acceptance).
+
+`AG_STUDIO_LICENSE_KEY` is read by the web server and passed to the browser by design; absent keys use trial behavior. Bryntum uses the trial alias; `BRYNTUM_LICENSE_KEY` is a hosting declaration, not read by the wrapper. Installation/rendering do not prove trial dates or judging permission; [V15](verification.md#v15-sponsor-licences) remains open.
+
 ## Storage and runtime
 
 apps/web uses Next.js App Router; apps/api uses Hono on Node 24. Shared packages export TypeScript source; their build step checks types, while Next produces production assets. apps/worker registers the `monthlyClose` task with Render's SDK and a 900-second timeout, validates input and calls the shared close composition root.
 
 The web app proxies /api/* to the API through Next rewrites, so the session cookie stays same-origin.
 
-Drizzle declares the fourteen tables from PLAN section 13, including runs and tool calls (migration `0005`). Migrations live in packages/db/drizzle; createDb in packages/db/src/client.ts; GSTIN, PAN fragments and profile/client addresses are AES-GCM encrypted. Invoice PDFs use private S3-compatible storage (local SeaweedFS in development). The API streams them through `/files/:token`, exposed by the web proxy as `/api/files/:token`; the PDF link is included in the PayPal invoice note. FIRA PDFs use the same private store under `fira/<userId>/<documentId>.pdf`, with no public token or link; source text is stored in plaintext in Postgres. `seed:fira-demo` creates a demo ledger only for an account with no invoices. See [local storage](local-storage.md) for setup and its development-only encryption limitation.
+Drizzle declares the fourteen tables from PLAN section 13. Migration `0005` adds runs/tool calls; `0006` adds nullable profile `gstr1_frequency` and `specified_profession` and permits the `dashboard` run kind. Migrations live in packages/db/drizzle; createDb in packages/db/src/client.ts; GSTIN, PAN fragments and profile/client addresses are AES-GCM encrypted. Invoice PDFs use private S3-compatible storage (local SeaweedFS in development). The API streams them through `/files/:token`, exposed by the web proxy as `/api/files/:token`; the PDF link is included in the PayPal invoice note. FIRA PDFs use the same private store under `fira/<userId>/<documentId>.pdf`, with no public token or link; source text is stored in plaintext in Postgres. `seed:fira-demo` creates a demo ledger only for an account with no invoices. See [local storage](local-storage.md) for setup and its development-only encryption limitation.
 
-The Render Blueprint defines two web services, a workflow service, paid Postgres and two crons. `niryat-sync` runs the seven-day reconciliation at `30 20 * * *` UTC (02:00 IST). `niryat-monthly-close` runs at `30 1 1 * *` UTC (07:00 IST on the first), dispatching `niryat-worker/monthlyClose` with the SDK; the task itself has no schedule. Local P5-13 acceptance used the API CLI fallback, not Workflows dev. Hosted task registration, both crons, webhook delivery, sync freshness and restart recovery remain [Phase 7 checks](build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58). AG Studio and Bryntum remain deferred dependencies.
+The Render Blueprint defines two web services, a workflow service, paid Postgres and two crons. `niryat-sync` runs the seven-day reconciliation at `30 20 * * *` UTC (02:00 IST). `niryat-monthly-close` runs at `30 1 1 * *` UTC (07:00 IST on the first), dispatching `niryat-worker/monthlyClose` with the SDK; the task itself has no schedule. Local P5-13 acceptance used the API CLI fallback, not Workflows dev. Hosted task registration, both crons, webhook delivery, sync freshness and restart recovery remain [Phase 7 checks](build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58).

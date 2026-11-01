@@ -4,7 +4,7 @@ An AI agent for Indian freelancers paid from abroad through PayPal.
 It turns invoices, payments, refunds and disputes into export-compliance records for CA review. Every PayPal write requires user approval; legal/numeric logic belongs to sourced rules.
 
 Built for the PayPal AI Hackathon, due November 12, 2026.
-**Current status:** Phase 5 extraction, monthly close and deadline reminders are implemented and user-verified (2026-10-31). Phase 4 real-FIRA/refund evidence and deployment limits remain tracked in [build flow](docs/build-flow.md) and [verification](docs/verification.md). Judge mode, reports, sponsor UI and hosted deployment remain pending.
+**Current status:** Phase 6 reports, calendar and dashboard are implemented; P6-11 local acceptance is recorded (2026-11-01). Table 6A import is blocked before CSV validation, and sponsor trial/judging coverage is unverified. Phase 4 real-FIRA/refund evidence and Phase 7 judge mode/hosting/reliability remain open in [build flow](docs/build-flow.md) and [verification](docs/verification.md#v16-phase-6-acceptance).
 
 ## PayPal and AI
 
@@ -57,7 +57,9 @@ The optional earlier command remains supported: node --env-file=.env scripts/sta
 
 Judge mode and hosted demo remain TODOs; no judge credentials or button are shipped. render.yaml defines web, API, a monthly-close Workflow, monthly trigger cron, nightly reconciliation and **paid** Postgres. The local scheduled path was verified using `corepack pnpm --filter @niryat/api close:run --as-of 2027-07-01`; Workflows dev and hosted scheduling are unverified. Deployment needs an authorized Render account and the [Phase 7 reliability checks](docs/build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58).
 
-AG Studio and Bryntum are deferred: start licence trials on/after November 1, 2026 and confirm coverage through December 15 judging.
+AG Studio/React 3.0.0 powers the dashboard's seven widget groups and Agent Framework. Claude builds widgets through Niryat's authenticated `/api/dashboard/turn` proxy, with a shared monthly budget and no browser-visible AI key or PayPal tools. The current adapter supports text/tool calls, not thinking blocks; P6-11 model-compatibility guidance recommended Sonnet 4.6 after Sonnet 5.5 response validation failures. `AG_STUDIO_LICENSE_KEY` is a deliberately browser-visible sponsor licence key.
+
+Bryntum Calendar/React 7.3.8 displays read-only compliance events, state labels and links, with an accessible server-rendered fallback list. It currently uses the trial package alias; the hosting `BRYNTUM_LICENSE_KEY` declaration is not wired to that wrapper. Both sponsor packages are installed, but actual trial dates/expiry and permission through December 15 judging remain unverified in [V15](docs/verification.md#v15-sponsor-licences).
 
 ## Read next
 

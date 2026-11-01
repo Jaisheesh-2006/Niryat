@@ -30,6 +30,7 @@ export function Dashboard({
     <AgStudioProvider modules={modules} {...(licenseKey === undefined ? {} : { licenseKey })}>
       <div className="dashboard-studio">
         <AgStudio
+          mode="edit"
           data={dashboardSources(dashboard)}
           initialState={dashboardInitialState}
           theme={theme}

@@ -6,8 +6,8 @@ This commit is a scaffold. Product scope and ordering live in [PLAN](docs/PLAN.m
 
 ## Map
 
-- apps/web: Next.js App Router; sign-in, profile, health check, clients, invoices, tasks, FIRA and monthly close pages.
-- apps/api: Hono on Node; auth, profiles, clients, invoices, approvals, PDF serving, payment webhooks and sync.
+- apps/web: Next.js App Router; sign-in, profile, health check, clients, invoices, tasks, FIRA, monthly close, GSTR-1, advance tax, calendar and dashboard pages.
+- apps/api: Hono on Node; auth, profiles, clients, invoices, approvals, PDF serving, payment webhooks/sync, reports, calendar and dashboard/Claude proxy routes.
 - apps/worker: Render Workflows monthlyClose task and monthly trigger.
 - packages/rules: pure, cited legal/numeric logic; YAML logic names the implementing function.
 - packages/paypal: REST Invoicing, Server SDK ledger (search, captures, refunds), Disputes reader, webhook verification.
@@ -72,7 +72,7 @@ Browser verification is performed by the user. Do not run browser verification o
 ## Gotchas
 
 The Server SDK lacks Invoicing and Disputes. India sandbox results are in docs/paypal-sandbox-findings.md: recurring invoices work; partial payments, domestic recipients and attachment upload do not.
-AG Studio and Bryntum licences come from environment configuration; start trials on/after Nov 1, 2026 so they cover judging. Neither package is installed yet.
+AG Studio/React 3.0.0 and Bryntum Calendar/React 7.3.8 are installed (Bryntum uses the trial alias). AG_STUDIO_LICENSE_KEY is read by the web server and deliberately passed to the browser; absent keys use trial behavior. BRYNTUM_LICENSE_KEY is only a hosting declaration, not consumed by the trial wrapper. Actual trial dates and judging coverage remain unverified; see V15.
 Rules carry review: source_checked (matches primary law, docs/rules-sources.md) or unchecked; no CA review is planned for the hackathon, which is a stated limitation. Do not treat plan estimates as law.
 Shared packages export source; their build step typechecks. Next alone produces production assets.
 Node/pnpm version pins are intentional; pnpm records exact release-age exceptions for the verified stable Next release.

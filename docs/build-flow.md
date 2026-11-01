@@ -125,6 +125,10 @@ The revised hold test disputes paid invoice 0006, then holds unpaid invoice 0008
 
 ## Phase 6: Reports and sponsor tools: specs 10–13 (Nov 1–7)
 
+**Status: implemented; P6-11 local acceptance recorded (2026-11-01), with the CSV-import and licence limits below.** The user confirmed profile persistence, GSTR-1 reconciliation and registration gating, advance-tax estimates, calendar events/navigation, the seven dashboard widget groups/theme, the requested 9/9 fresh-session question check, and budget exhaustion/restoration. Specs 10–13 and PLAN carry matching ticks for those results. See [V16](verification.md#v16-phase-6-acceptance) for the step-by-step evidence and automated checks.
+
+Table 6A CSV parser acceptance remains open: Returns Offline Tool V3.2.4 rejected the synthetic GSTIN before import, and December was unavailable for the selected quarter. This is blocked setup, not a CSV rejection or import pass. AG Studio/Bryntum packages are installed, but actual trial start/expiry and permission through December 15 remain unverified (V15). A local dispute appeared after manual sync; webhook freshness/recovery remains Phase 7. No hosted acceptance is claimed.
+
 **Goal:** the figures a CA needs, plus the sponsor integrations. Start the AG Studio and Bryntum trials **on or after Nov 1** so they cover judging.
 - [10 GSTR-1 export](specs/10-gstr1-export.md): Table 6A file in the verified format, net of refunds.
 - [11 Compliance calendar](specs/11-compliance-calendar.md): Bryntum; events from rules, invoices and disputes.
