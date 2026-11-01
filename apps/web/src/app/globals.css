@@ -735,9 +735,6 @@ button:has(.spinner)::before {
 .calendar-legend li {
   margin: 0;
 }
-.calendar-legend .niryat-past {
-  color: var(--niryat-muted);
-}
 .niryat-overdue {
   color: var(--niryat-overdue);
   --niryat-event-color: var(--niryat-overdue);
@@ -749,6 +746,9 @@ button:has(.spinner)::before {
 .niryat-past {
   color: var(--niryat-past);
   --niryat-event-color: var(--niryat-past);
+}
+.calendar-legend .niryat-past {
+  color: var(--niryat-muted);
 }
 .b-cal-event-wrap:is(.niryat-overdue, .niryat-upcoming, .niryat-past) .b-cal-event {
   background-color: var(--niryat-event-color);
