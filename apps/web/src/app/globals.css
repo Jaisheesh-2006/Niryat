@@ -554,6 +554,12 @@ details[open] > summary {
 .stat-tile[data-tone="attention"] {
   border-left: 3px solid var(--niryat-accent);
 }
+.brand-mark {
+  color: var(--niryat-accent);
+}
+.brand-mark rect {
+  fill: var(--niryat-primary);
+}
 .app-shell {
   min-height: 100dvh;
 }
