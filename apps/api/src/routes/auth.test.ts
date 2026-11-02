@@ -183,7 +183,7 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
   it("creates a PayPal user and starts a session, then reuses the linked account", async () => {
     const response = await paypalCallback();
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe("http://localhost:3000/profile");
+    expect(response.headers.get("location")).toBe("http://localhost:3000/overview");
     const cookies = response.headers.getSetCookie();
     const session = cookies.find((cookie) => cookie.startsWith("niryat_session="))?.split(";")[0];
     if (!session) throw new Error("Expected session");
@@ -192,7 +192,7 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
     expect(await me.json()).toEqual({ id: expect.any(String), email: credentials.email });
     const first = await findUserByEmail(t.db, credentials.email);
     identify.mockResolvedValue({ ok: true, paypalId: "PAYER-1", email: undefined });
-    expect((await paypalCallback()).headers.get("location")).toBe("http://localhost:3000/profile");
+    expect((await paypalCallback()).headers.get("location")).toBe("http://localhost:3000/overview");
     expect(await findUserByEmail(t.db, credentials.email)).toEqual(first);
   });
 

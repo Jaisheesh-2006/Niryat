@@ -1,7 +1,10 @@
 import type { ProfileInput, PurposeCodeEntry } from "@niryat/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
+import Disclaimer, { metadata as disclaimerMetadata } from "./app/(public)/disclaimer/page";
+import Login, { metadata as loginMetadata } from "./app/(public)/login/page";
 import Home from "./app/(public)/page";
+import Signup, { metadata as signupMetadata } from "./app/(public)/signup/page";
 import { AuthForm } from "./components/AuthForm";
 import { ProfileForm } from "./components/ProfileForm";
 import { profileBody } from "./lib/forms";
@@ -15,9 +18,51 @@ afterEach(() => {
 
 it("renders the home page with sign-up and sign-in links without external services", () => {
   const html = renderToStaticMarkup(<Home />);
-  expect(html).toContain("<h1>Niryat</h1>");
+  expect(html).toContain(
+    '<h1 class="display">Run your export business on PayPal. Niryat keeps it legal in India.</h1>',
+  );
   expect(html).toContain('href="/signup"');
   expect(html).toContain('href="/login"');
+  expect(html).toContain('href="/api/auth/paypal/start"');
+});
+
+it.each([
+  { Page: Login, metadata: loginMetadata, title: "Sign in", switchHref: "/signup" },
+  { Page: Signup, metadata: signupMetadata, title: "Create account", switchHref: "/login" },
+])(
+  "$title keeps keyboard order aligned with email, PayPal and the account switch",
+  async ({ Page, metadata, title, switchHref }) => {
+    const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({}) }));
+    expect(metadata.title).toBe(title);
+    expect(html).toContain('class="card auth-card"');
+    expect(html).toContain('class="auth-divider">or</div>');
+    expect(html.indexOf('type="submit"')).toBeLessThan(
+      html.indexOf('href="/api/auth/paypal/start"'),
+    );
+    expect(html.indexOf('href="/api/auth/paypal/start"')).toBeLessThan(
+      html.indexOf(`href="${switchHref}"`),
+    );
+  },
+);
+
+it("renders the PLAN section 23 disclaimer without a session", () => {
+  const html = renderToStaticMarkup(<Disclaimer />);
+  const text = html.replace(/<[^>]*>/g, "").replaceAll("&#x27;", "'");
+  expect(disclaimerMetadata.title).toBe("Disclaimer");
+  expect(html).toContain("<h1>Disclaimer</h1>");
+  expect(text).toContain(
+    "Niryat prepares information and documents to help users and their chartered accountants.",
+  );
+  expect(text).toContain(
+    "It does not provide tax or legal advice, does not file returns on anyone's behalf, and only takes PayPal actions (such as sending invoices or reminders) after the user approves them.",
+  );
+  expect(text).toContain(
+    "Rules are sourced, versioned and checked against official primary texts, but have not been reviewed by a chartered accountant; this is a known limitation of the hackathon build.",
+  );
+  expect(text).toContain(
+    "Each deployment also acts on one PayPal seller account; connecting each user's own PayPal account (Partner Referrals) is future work (findings).",
+  );
+  expect(text).toContain("Confirm anything you act on with a qualified CA.");
 });
 
 it.each(["P9999", "P0802", null])(
@@ -60,6 +105,10 @@ it.each(["login", "signup"] as const)(
     expect(html.match(/<form\b[^>]*>/)?.[0]).toContain('method="post"');
     expect(html).toContain('name="email"');
     expect(html).toContain('name="password"');
+    expect(html).toContain('autoComplete="email"');
+    expect(html).toContain(
+      `autoComplete="${mode === "login" ? "current-password" : "new-password"}"`,
+    );
   },
 );
 

@@ -2,16 +2,11 @@ import { calendarEventSchema } from "@niryat/shared";
 import Link from "next/link";
 import { ComplianceCalendar } from "../../../components/ComplianceCalendar";
 import { apiGet } from "../../../lib/api";
+import { deadlineList } from "../../../lib/calendar";
 
 export default async function Calendar() {
   const events = (await apiGet("/calendar", calendarEventSchema.array())) ?? [];
-  const sorted = [...events].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
-  );
-  const deadlines = [
-    ...sorted.filter((event) => event.state === "overdue"),
-    ...sorted.filter((event) => event.state === "upcoming").slice(0, 10),
-  ];
+  const deadlines = deadlineList(events, 10);
   return (
     <>
       <h1>Compliance calendar</h1>

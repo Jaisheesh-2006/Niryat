@@ -606,6 +606,72 @@ details[open] > summary {
 .brand-mark {
   color: var(--niryat-accent);
 }
+.public-hero {
+  max-width: 40rem;
+  padding-block: var(--niryat-space-8);
+}
+.public-hero > p {
+  color: var(--niryat-muted);
+  font-size: 18px;
+  line-height: 28px;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--niryat-space-3);
+}
+.hero-actions > .btn {
+  min-height: 44px;
+}
+.how-it-works,
+.trust-grid {
+  display: grid;
+  gap: var(--niryat-space-5);
+  margin-block: var(--niryat-space-6);
+}
+.how-it-works {
+  padding: 0;
+  list-style: none;
+}
+.how-it-works p {
+  color: var(--niryat-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.trust-grid > .card {
+  margin-top: 0;
+}
+.auth-card {
+  display: flex;
+  width: 100%;
+  max-width: 400px;
+  margin: var(--niryat-space-8) auto;
+  flex-direction: column;
+}
+.auth-card .btn {
+  width: 100%;
+}
+.auth-form > button {
+  margin-top: var(--niryat-space-4);
+}
+.auth-switch {
+  margin-bottom: 0;
+  text-align: center;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--niryat-space-3);
+  margin-block: var(--niryat-space-4);
+  color: var(--niryat-muted);
+}
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  background: var(--niryat-border);
+  content: "";
+  flex: 1;
+}
 .brand-mark rect {
   fill: var(--niryat-primary);
 }
@@ -888,6 +954,12 @@ main:has(.dashboard-studio, .calendar-card),
   }
 }
 @media (min-width: 1024px) {
+  .how-it-works {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .trust-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .app-shell {
     display: grid;
     grid-template-columns: 248px minmax(0, 1fr);

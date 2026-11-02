@@ -1,5 +1,9 @@
+import Link from "next/link";
 import { AuthForm } from "../../../components/AuthForm";
+import { BrandMark } from "../../../components/icons";
 import { PayPalLoginError } from "../../../components/PayPalLoginError";
+
+export const metadata = { title: "Sign in" };
 
 export default async function Login({
   searchParams,
@@ -8,13 +12,18 @@ export default async function Login({
 }) {
   const { error } = await searchParams;
   return (
-    <>
+    <div className="card auth-card">
+      <BrandMark />
       <h1>Sign in</h1>
       <PayPalLoginError error={error} />
       <AuthForm mode="login" />
-      <p>
-        <a href="/api/auth/paypal/start">Log in with PayPal</a>
+      <div className="auth-divider">or</div>
+      <a href="/api/auth/paypal/start" className="btn" data-variant="secondary">
+        Log in with PayPal
+      </a>
+      <p className="auth-switch">
+        <Link href="/signup">New here? Create an account</Link>
       </p>
-    </>
+    </div>
   );
 }

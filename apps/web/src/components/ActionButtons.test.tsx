@@ -23,6 +23,7 @@ import { ActionButtons } from "./ActionButtons";
 import { ApprovalCard } from "./ApprovalCard";
 import { CloseButton } from "./CloseButton";
 import { CloseRefresher } from "./CloseRefresher";
+import { OverviewApprovals } from "./OverviewApprovals";
 import { TaskDoneButton } from "./TaskDoneButton";
 
 const { refresh, hooks } = vi.hoisted(() => ({
@@ -214,6 +215,107 @@ it("does not focus an outcome on first render", () => {
   tree.props.ref.current = { focus };
   for (const effect of hooks.effects.splice(0)) effect();
   expect(focus).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["done", null, "Reminder request accepted by PayPal."],
+  ["rejected", null, "Rejected. Nothing was sent to PayPal."],
+  ["approved", null, inProgress],
+  ["failed", "INVALID_REQUEST", failed],
+  ["failed", "reminder_outcome_unknown", unknownOutcome],
+] as const)(
+  "keeps Today’s %s/%s outcome mounted and focusable after refresh",
+  async (status, error, message) => {
+    function renderOverview(approvals: readonly ReminderAction[]) {
+      hooks.cursor = 0;
+      const list = OverviewApprovals({ approvals });
+      const cards = Children.toArray(list.props.children).filter(
+        (child) => isValidElement<{ action: ReminderAction }>(child) && child.type === ApprovalCard,
+      );
+      const card = cards[0];
+      if (!isValidElement<{ action: ReminderAction }>(card))
+        throw new Error("Expected retained card");
+      const controls = ActionButtons({ action: card.props.action, inCard: true });
+      if (typeof controls.type !== "function") throw new Error("Expected reminder controls");
+      const tree: unknown = Reflect.apply(controls.type, undefined, [controls.props]);
+      if (
+        !isValidElement<{
+          children?: ReactNode;
+          outcomeRef?: { current: { focus: () => void } | null };
+        }>(tree)
+      )
+        throw new Error("Expected outcome");
+      return { cards, card, tree };
+    }
+
+    const others = [2, 3, 4].map((index) => ({
+      ...action,
+      id: `10000000-0000-4000-8000-00000000000${index}`,
+    }));
+    const before = renderOverview([action, ...others]);
+    expect(before.cards).toHaveLength(3);
+    for (const effect of hooks.effects.splice(0)) effect();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          status === "failed"
+            ? Response.json({ error: "paypal_failed", code: error }, { status: 502 })
+            : new Response(null, { status: 200 }),
+        ),
+    );
+    await buttons(before.tree)[status === "rejected" ? 1 : 0]?.props.onClick();
+    expect(refresh).toHaveBeenCalledOnce();
+
+    const after = renderOverview([{ ...action, status, error }, ...others]);
+    expect(after.cards).toHaveLength(3);
+    expect(after.card.key).toBe(before.card.key);
+    expect(after.card.props.action.status).toBe(status);
+    expect(renderToStaticMarkup(after.tree)).toContain(message);
+    const target = Children.toArray(after.tree.props.children).find(
+      (child) =>
+        isValidElement<{ tabIndex?: number; ref?: unknown }>(child) &&
+        child.props.tabIndex === -1 &&
+        child.props.ref,
+    );
+    const ref =
+      after.tree.props.outcomeRef ??
+      (isValidElement<{ ref: { current: { focus: () => void } | null } }>(target)
+        ? target.props.ref
+        : undefined);
+    if (!ref) throw new Error("Expected focusable outcome");
+    const focus = vi.fn();
+    ref.current = { focus };
+    for (const effect of hooks.effects.splice(0)) effect();
+    expect(focus).toHaveBeenCalled();
+    if (status === "approved" || error === "reminder_outcome_unknown")
+      expect(buttons(after.tree)).toHaveLength(0);
+  },
+);
+
+it("fills spare Today slots with new proposals without dropping displayed outcomes", () => {
+  hooks.cursor = 0;
+  OverviewApprovals({ approvals: [] });
+  hooks.cursor = 0;
+  const first = OverviewApprovals({ approvals: [action] });
+  hooks.cursor = 0;
+  const next = OverviewApprovals({
+    approvals: [
+      { ...action, id: "10000000-0000-4000-8000-000000000003" },
+      { ...action, status: "done" },
+    ],
+  });
+  const cards = Children.toArray(next.props.children);
+  expect(cards).toHaveLength(2);
+  const retained = cards.find(
+    (card) =>
+      isValidElement<{ action: ReminderAction }>(card) && card.props.action.id === action.id,
+  );
+  const original = Children.toArray(first.props.children)[0];
+  expect(
+    isValidElement(retained) && isValidElement(original) && retained.key === original.key,
+  ).toBe(true);
 });
 
 it("focuses a new error after a decision", async () => {

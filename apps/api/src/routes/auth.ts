@@ -68,7 +68,7 @@ export function authRoutes(deps: AppDeps): Hono {
       const result = await signInWithPayPal(deps.db, identity);
       if (!result.ok) return c.redirect(`${appUrl}/login?error=${result.reason}`, 302);
       await startSession(c, result.user.id, deps.sessionSecret, deps.secureCookies);
-      return c.redirect(`${appUrl}/profile`, 302);
+      return c.redirect(`${appUrl}/overview`, 302);
     } catch {
       console.error("PayPal sign-in unavailable");
       return c.redirect(`${appUrl}/login?error=paypal_unavailable`, 302);

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { sendJson } from "../lib/forms";
@@ -12,6 +11,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <form
+      className="auth-form"
       method="post"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -23,7 +23,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           password: form.get("password"),
         });
         setSubmitting(false);
-        if (result.ok) router.push("/profile");
+        if (result.ok) router.push("/overview");
         else setMessage(result.message);
       }}
     >
@@ -39,15 +39,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         autoComplete={mode === "login" ? "current-password" : "new-password"}
         required
       />
-      <button type="submit" disabled={submitting}>
+      <button type="submit" className="btn" data-variant="primary" disabled={submitting}>
         {mode === "login" ? "Sign in" : "Create account"}
       </button>
-      {message && <p role="alert">{message}</p>}
-      <p>
-        <Link href={mode === "login" ? "/signup" : "/login"}>
-          {mode === "login" ? "New here? Create an account" : "Already registered? Sign in"}
-        </Link>
-      </p>
+      {message && (
+        <p role="alert" className="banner" data-tone="danger">
+          {message}
+        </p>
+      )}
     </form>
   );
 }

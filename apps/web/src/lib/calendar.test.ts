@@ -1,6 +1,6 @@
 import { type CalendarEvent, calendarEventSchema } from "@niryat/shared";
 import { expect, it } from "vitest";
-import { toBryntumEvents } from "./calendar";
+import { deadlineList, toBryntumEvents } from "./calendar";
 
 it.each(["overdue", "upcoming", "past"] as const)(
   "maps an all-day %s event and preserves its title and link",
@@ -32,4 +32,27 @@ it.each(["overdue", "upcoming", "past"] as const)(
 
 it("maps an empty calendar", () => {
   expect(toBryntumEvents([])).toEqual([]);
+});
+
+it("keeps every overdue event and only N upcoming events, sorted by date then id", () => {
+  function event(id: string, date: string, state: CalendarEvent["state"]): CalendarEvent {
+    return { id, date, state, kind: "rbi_deadline", title: id, href: "/invoices", ruleId: null };
+  }
+  const events = [
+    event("upcoming-c", "2026-11-04", "upcoming"),
+    event("overdue-b", "2026-10-30", "overdue"),
+    event("past", "2026-10-01", "past"),
+    event("upcoming-b", "2026-11-02", "upcoming"),
+    event("overdue-a", "2026-10-29", "overdue"),
+    event("upcoming-a", "2026-11-02", "upcoming"),
+  ];
+  expect(deadlineList(events, 2).map((event) => event.id)).toEqual([
+    "overdue-a",
+    "overdue-b",
+    "upcoming-a",
+    "upcoming-b",
+  ]);
+  expect(deadlineList(events, 0).map((event) => event.id)).toEqual(["overdue-a", "overdue-b"]);
+  expect(events[0]?.id).toBe("upcoming-c");
+  expect(deadlineList([], 5)).toEqual([]);
 });

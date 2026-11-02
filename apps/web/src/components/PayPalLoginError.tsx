@@ -20,5 +20,9 @@ export function PayPalLoginError({ error }: { error: string | string[] | undefin
     default:
       return null;
   }
-  return <p role="alert">{message}</p>;
+  return (
+    <p role="alert" className="banner" data-tone="danger">
+      {message}
+    </p>
+  );
 }
