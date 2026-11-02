@@ -19,6 +19,7 @@ export function ProfileForm({
   return (
     <form
       method="post"
+      aria-describedby={message ? "profile-error" : undefined}
       onSubmit={async (event) => {
         event.preventDefault();
         const body = profileBody(new FormData(event.currentTarget));
@@ -189,7 +190,11 @@ export function ProfileForm({
       <button type="submit" disabled={submitting}>
         Save profile
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p id="profile-error" role="alert">
+          {message}
+        </p>
+      )}
     </form>
   );
 }

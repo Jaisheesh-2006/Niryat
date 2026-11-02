@@ -13,8 +13,11 @@ export function CloseButton() {
   return (
     <>
       <button
+        className="btn"
+        data-variant="primary"
         type="button"
         disabled={isPending}
+        aria-busy={isPending}
         onClick={async () => {
           if (pending.current || isPending) return;
           pending.current = true;
@@ -27,7 +30,7 @@ export function CloseButton() {
           });
         }}
       >
-        {isPending ? "Closing…" : "Close this month"}
+        {isPending ? "Closing…" : "Run monthly close"}
       </button>
       {message && <p role="alert">{message}</p>}
     </>

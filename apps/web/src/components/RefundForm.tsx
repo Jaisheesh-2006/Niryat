@@ -25,11 +25,22 @@ export function RefundForm({ paymentId, currency }: { paymentId: string; currenc
       }}
     >
       <label htmlFor={id}>Refund amount ({currency})</label>
-      <input id={id} name="amount" type="text" inputMode="decimal" required />
+      <input
+        id={id}
+        name="amount"
+        type="text"
+        inputMode="decimal"
+        aria-describedby={message ? `${id}-error` : undefined}
+        required
+      />
       <button type="submit" disabled={isPending}>
         {isPending ? "Proposing…" : "Propose refund"}
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p id={`${id}-error`} role="alert">
+          {message}
+        </p>
+      )}
     </form>
   );
 }

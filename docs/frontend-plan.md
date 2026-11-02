@@ -2,6 +2,8 @@
 
 How to turn Niryat's working-but-plain web app into a product a judge remembers, in the days left before the **Nov 8 feature freeze**. [PLAN](PLAN.md) and [build flow](build-flow.md) still own scope and dates; this plan changes how pages look and behave, never what the rules, API or approval workflow do. §4 is the design specification: agents and people implement against it.
 
+Implementation contracts and task order live in [frontend-refactor-plan](frontend-refactor-plan.md), whose locked decisions take precedence. F12 source review corrections are reflected below; browser acceptance remains with the user under that plan's §8.
+
 ## 1. Why, and what not to do
 
 **Design is one of five equally weighted judging criteria:** "a complete, coherent product experience — not just a technical proof of concept" ([rules](paypal-hackathon-rules.md)). Judges may score from the video alone, so **the 3-minute demo path ([PLAN §16](PLAN.md#16-demo-script-3-minutes)) is the design brief**. Every page on that path must look like one product; off-path pages only need to not look broken.
@@ -34,7 +36,7 @@ What switching would cost here:
 
 **Decision:** plain CSS for the hackathon. Revisit after judging if the product gains complex widgets (a CA dashboard, multiple users). The §4 tokens map one-to-one to Tailwind v4's `@theme inline { --color-primary: var(--niryat-primary); … }`, so nothing here is thrown away.
 
-## 2. What exists today (Nov 1)
+## 2. Pre-refactor baseline (Nov 1)
 
 - **12 routes**, all async server components that fetch through `apiGet` (cookie forwarded, zod-parsed, 401 → `/login`). 17 small client components handle mutations. This architecture is sound; keep it.
 - **One 106-line `globals.css`.** It has colour tokens with dark-mode variants (`--niryat-primary` green `#1f6f5c`, `--niryat-accent` saffron `#e07a1f`, `--niryat-overdue`, `--niryat-upcoming`, `--niryat-past`, `--niryat-event-text`) and element-level styles, but no layout system, spacing scale, type scale or component classes.
@@ -61,28 +63,30 @@ Group the 12 routes by the job the user is doing, in demo order, not by feature:
 
 The pending-approvals count belongs in the nav (a badge on Monthly close), because user approval is the product's core promise.
 
+User browser follow-up (2026-11-02): the desktop sidebar is now resizable by dragging its right edge or using Left/Right/Home/End on the separator (224–384px, default 248). Its dynamic CSS width property is authorized for this interaction; mobile keeps the native popover. Email sign-in/sign-up wait for hydration and start a fresh document navigation after success. The public container is centered, app content fills its column, and a flex main keeps the footer at the bottom of short pages without covering long content. These corrections supersede the original fixed-width layout below.
+
 ### 3.2 Routing and layouts (App Router)
 
 - **Route groups** `app/(app)/` for signed-in pages and `app/(public)/` for `/`, `/login`, `/signup` and `/disclaimer`. URLs do not change. Moving files changes relative imports and moves the colocated `page.test.tsx` files with them, so update both in the same commit.
-- **The `(app)/layout.tsx` calls `apiGet("/auth/me", …)` once.** On a 401 it redirects to `/login` before any app chrome renders; on success it supplies the account email shown in the sidebar. The email may be absent for PayPal-only sign-in, so check the `users` row shape and parse it with a zod schema in `packages/shared`. The approvals badge reads `/close` inside its own `<Suspense>`, so the shell never waits for it. `router.refresh()` after an approval re-renders the layout, so the badge stays current.
-- **One `loading.tsx` and one `error.tsx` in `(app)`** cover every page: streaming feedback on navigation, and a recoverable error with a retry (`reset`). They show no response bodies or values, matching the "errors name keys without values" rule. Add one `not-found.tsx`.
-- **`/overview` as the signed-in home** (AuthForm pushes there instead of `/profile`). It fetches from existing endpoints in parallel, one `<Suspense>` boundary per card: approvals (`/close`), deadlines (`/calendar`), health (`/health-check`), tasks (`/tasks`), recent invoices (`/invoices`). Add no new API unless a card needs data no endpoint returns. The Phase 7 "last successful sync" indicator goes here when it exists.
+- **The `(app)/layout.tsx` calls `apiGet("/auth/me", sessionUserSchema)` once.** A 401 or missing session redirects to `/login` before any app chrome renders; on success it supplies the required account email shown in the sidebar. Email is always present, including for PayPal sign-in, and the shared zod schema validates it. The reminder-only approvals badge reads `/close` inside its own `CardBoundary` and `<Suspense>`, so the shell never waits for it and a badge failure renders nothing. `router.refresh()` after an approval re-renders the layout, so the badge stays current.
+- **`(app)/loading.tsx`, root `app/error.tsx` and root `app/not-found.tsx`** provide streaming feedback, a recoverable error with `retry`, and the missing-page screen. The root error boundary also covers failures in the app layout's own fetch; an error boundary inside `(app)` would not. It shows no error fields, response bodies or values. Every overview tile and card has its own `CardBoundary` and `<Suspense>`.
+- **`/overview` as the signed-in home** (email and PayPal sign-in both land here). It fetches from existing endpoints in parallel, one `<Suspense>` boundary per card: approvals (`/close`), deadlines (`/calendar`), health (`/health-check`), tasks (`/tasks`), recent invoices (`/invoices`). No new API is needed. The Phase 7 "last successful sync" indicator goes here when it exists.
 - **`metadata.title.template`** (`"%s · Niryat"`) and a `title` per page, so tabs and the video read clearly.
-- **`next/font/google`** for the typefaces in §4.4: self-hosted at build time, no layout shift. The build needs network access to fetch them once (Render has it). If an offline build fails, use `next/font/local` with the same files.
+- **`next/font/google`** for the typefaces in §4.4: self-hosted at build time, no layout shift. The build needs network access to fetch them once. If Google Fonts cannot be fetched, stop and report; switching to local font files requires the user's approval (D1).
 
 ### 3.3 Shared components (only those already used three or more times)
 
 | Component                           | Replaces                                                                            | Used on                                                                                             |
 | ----------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `StatusBadge`                       | the `statusLabels` / `firaLabels` maps rendered as plain text; tone mapping in §4.3 | invoices, close, tasks, FIRA, clients, health check                                                 |
-| `Money`                             | `{currency} {amount}` strings; `Intl.NumberFormat("en-IN", { style: "currency" })`  | invoices, overview, GSTR-1, advance tax                                                             |
+| `formatMoney` (lib function)        | `{currency} {amount}` strings; `Intl.NumberFormat("en-IN", { style: "currency" })`  | invoices, overview, GSTR-1, advance tax                                                             |
 | `formatDate` (lib, not a component) | the mixed `en-CA` / `en-IN` calls; one IST formatter (§4.11)                        | close, FIRA, tasks, invoices, overview                                                              |
 | `PageHeader`                        | bare `<h1>` + intro `<p>`                                                           | every page                                                                                          |
 | `EmptyState`                        | "No PayPal actions to approve." style lines                                         | close, invoices, tasks, dashboard, clients                                                          |
 | `NavLinks` (client)                 | the layout's flat `<Link>` list                                                     | sidebar and mobile menu (`usePathname` for `aria-current`, closes the mobile popover on navigation) |
 | `Icon` set (`components/icons.tsx`) | none yet                                                                            | nav, buttons, empty states (§4.12)                                                                  |
 
-`Money` and `formatDate` are display formatting only. Any number the user relies on still comes from `packages/rules` through the API.
+`lib/format.ts` exports `formatMoney(amount, currency)`, `formatDate`, `formatMonth` and `formatDateTime`; these are display formatting only. Money stays a validated decimal string, without conversion through `Number`. Already currency-prefixed credit-note strings from rules retain their formatting. Any compliance figure still comes from `packages/rules` through the API.
 
 ### 3.4 Approval behaviour
 
@@ -95,7 +99,7 @@ The pending-approvals count belongs in the nav (a badge on Monthly close), becau
 - **Accessibility:** a skip link, `aria-current="page"` on the active nav item, a visible focus ring, WCAG AA contrast in both themes (measured in §4.2), status never shown by colour alone, labelled form errors through `aria-describedby`, and `prefers-reduced-motion` respected. Existing semantics stay.
 - **Security:** nothing new reaches the browser beyond the account email; server components keep fetching with the forwarded cookie.
 - **Performance:** AG Studio and Bryntum stay route-scoped. Compare `pnpm build` route sizes before and after; the shell must not import either.
-- **Tests:** existing component tests keep passing unchanged in behaviour. Add a test only for new logic: `formatDate`, `Money` (currency, Indian grouping, rounding), `NavLinks` active state, and the `useTransition` pending state in one form.
+- **Tests:** existing component tests keep passing unchanged in behaviour. Test new logic and accessibility regressions: formatting (currency, Indian grouping, rounding and IST boundaries), `NavLinks` active state, approval focus, and pending forms. Preserve the pre-move route and test coverage.
 
 ## 4. Design specification
 
@@ -147,19 +151,19 @@ Keep every existing `--niryat-*` name: AG Studio and Bryntum already read them. 
 
 Four tones only (`success`, `attention`, `danger`, `neutral`), each a badge with a soft background, strong text and a 6px leading dot. Every badge also carries its text label, so colour is never the only signal.
 
-| Data (enum in `packages/shared`) | success                     | attention                                | danger                                         | neutral                                           |
-| -------------------------------- | --------------------------- | ---------------------------------------- | ---------------------------------------------- | ------------------------------------------------- |
-| Invoice status                   | `paid`                      | `partially_paid`, `partially_refunded`   | —                                              | `issued`, `sent`, `refunded`                      |
-| Invoice FIRA status              | `matched`                   | —                                        | `missing`                                      | `pending`                                         |
-| Close FIRA coverage              | `covered`                   | —                                        | `missing`                                      | `not_due`, `not_needed`                           |
-| FIRA line                        | `matched`                   | `needs_confirmation`                     | —                                              | —                                                 |
-| Approval (`actionStatusSchema`)  | `done`                      | `proposed` ("Waiting for your approval") | `failed`                                       | `approved` ("Sending…", with spinner), `rejected` |
-| Health flag severity             | —                           | `medium`                                 | `high`                                         | `low`                                             |
-| Export condition                 | `pass`                      | `unknown`                                | `fail`                                         | —                                                 |
-| Advance-tax state                | `eligible`                  | `uncertain`                              | —                                              | `not_eligible`                                    |
-| Agent run                        | `completed`                 | —                                        | `failed`                                       | `running` (spinner)                               |
-| Task                             | `done`                      | —                                        | overdue `open` (from the API's days remaining) | `open`                                            |
-| Calendar event state             | `upcoming` (existing green) | —                                        | `overdue`                                      | `past`                                            |
+| Data (enum in `packages/shared`) | success                     | attention                                | danger               | neutral                                           |
+| -------------------------------- | --------------------------- | ---------------------------------------- | -------------------- | ------------------------------------------------- |
+| Invoice status                   | `paid`                      | `partially_paid`, `partially_refunded`   | —                    | `issued`, `sent`, `refunded`                      |
+| Invoice FIRA status              | `matched`                   | —                                        | `missing`            | `pending`                                         |
+| Close FIRA coverage              | `covered`                   | —                                        | `missing`            | `not_due`, `not_needed`                           |
+| FIRA line                        | `matched`                   | `needs_confirmation`                     | no match ("Flagged") | —                                                 |
+| Approval (`actionStatusSchema`)  | `done`                      | `proposed` ("Waiting for your approval") | `failed`             | `approved` ("Sending…", with spinner), `rejected` |
+| Health flag severity             | —                           | `medium`                                 | `high`               | `low`                                             |
+| Export condition                 | `pass`                      | `unknown`                                | `fail`               | —                                                 |
+| Advance-tax state                | `eligible`                  | `uncertain`                              | —                    | `not_eligible`                                    |
+| Agent run                        | `completed`                 | —                                        | `failed`             | `running` (spinner)                               |
+| Task                             | `done`                      | —                                        | —                    | `open` (API carries no day count)                 |
+| Calendar event state             | `upcoming` (existing green) | —                                        | `overdue`            | `past`                                            |
 
 The RBI "days left" cell uses the label from `daysRemainingLabel` and takes danger only when the API reports zero or fewer days. No 60/30-day thresholds are hard-coded in the web app; those numbers live in `packages/rules`.
 
@@ -196,9 +200,9 @@ Headings and buttons use sentence case ("Run monthly close", not "Run Monthly Cl
 | < 640px    | Single column; content padding 16; forms stack; tables scroll inside their card |
 | 640–1023px | Top bar + menu; form fields pair up (2 columns) where short                     |
 | ≥ 1024px   | Fixed 248px sidebar + content column; content padding 32                        |
-| ≥ 1280px   | Overview uses its 3-column grid                                                 |
+| ≥ 1280px   | Overview uses an 8/4 split, with recent invoices spanning the row               |
 
-The content column has `--niryat-bg`, with an inner `max-width: 72rem` (left-aligned next to the sidebar). Forms cap at 40rem. Dashboard and Calendar go full width through the existing `main:has(.dashboard-studio)` pattern, extended to the calendar.
+The content column has `--niryat-bg`, fills the width remaining beside the sidebar and has 32px side padding (16px below 640px). Public pages use a centered `max-width: 72rem` container. Forms cap at 40rem and prose at 68ch. Both shells keep the footer below long content and at the viewport bottom on short pages. Dashboard and Calendar use the available full column width.
 
 ```
 ≥1024px app shell
@@ -231,7 +235,7 @@ The content column has `--niryat-bg`, with an inner `max-width: 72rem` (left-ali
 
 ### 4.7 Sidebar (≥ 1024px)
 
-- **Container:** `<nav aria-label="Main">` inside `<aside>`, 248px wide, `--niryat-surface`, 1px right border, `position: sticky; top: 0; height: 100dvh; overflow-y: auto`, padding 16.
+- **Container:** `<nav aria-label="Main">` inside the single `<aside id="nav-menu" popover="auto">`, initially 248px wide, `--niryat-surface`, 1px right border, `position: sticky; top: 0; height: 100dvh`, padding 16. A keyboard-accessible separator lets users drag the desktop width between 224px and 384px; the width remains during app navigation and resets on reload. Only the link area scrolls, keeping brand and account visible. Desktop CSS overrides both open and closed popover styles and hides the backdrop; mobile uses this same element as its menu sheet, without the resize control.
 - **Brand row** (56px tall): a 28px rounded square mark (`primary` fill with a saffron arrow pointing up-right for "export", inline SVG) plus the "Niryat" wordmark in Plex Sans 18/600. It links to `/overview`.
 - **Sandbox pill** below the brand: "Sandbox", label style, `neutral-soft` background, `neutral-strong` text, 1px border. It is always visible, so judges and the video never mistake this for live money.
 - **Skip link** before the nav: "Skip to content" → `#main`, visible on focus.
@@ -241,27 +245,29 @@ The content column has `--niryat-bg`, with an inner `max-width: 72rem` (left-ali
   - Focus-visible: the global focus ring.
 - **Group labels:** Label style, `--niryat-muted`, 20px above and 8px below. "Today" sits first with no group label.
 - **Approvals badge** on Monthly close: right-aligned, min 20×20, radius 999, `accent` fill, `on-accent` text 12/600. It shows only when the count is above 0, and carries visually hidden text: "2 approvals waiting".
+- Count only `/close` reminder actions with `status === "proposed"`, matching Today's approvals tile. Invoice-send and refund proposals stay on Invoices and are not counted.
 - **Account block**, pinned to the bottom with a top border: the email (Caption, `--niryat-muted`, truncated with the full value in `title`), then a ghost "Sign out" button with an icon (the existing `SignOutButton`, restyled).
 
 ### 4.8 Top bar and mobile menu (< 1024px)
 
-- **Bar:** 56px, `--niryat-surface`, bottom border, `position: sticky; top: 0`. Left: mark, wordmark and Sandbox pill. Right: the approvals badge as a link to `/close` (only when above 0), then a secondary button "Menu" with a menu icon.
-- **Menu:** the button has `popovertarget="nav-menu"`, and the panel is `popover="auto"`: native light-dismiss and Escape, no JavaScript for open and close. The panel is a left sheet, `position: fixed; inset: 0 auto 0 0; width: min(20rem, 85vw)`, with `::backdrop` at `rgb(0 0 0 / 0.4)`. It holds the same `NavLinks` and account block as the sidebar. `NavLinks` calls `hidePopover()` when the pathname changes, because client-side navigation does not close it.
+- **Bar:** 56px, `--niryat-surface`, bottom border, `position: sticky; top: 0`. Mark, wordmark, Sandbox pill and a secondary "Menu" button with a menu icon. No top-bar approvals badge: the badge renders once inside the nav.
+- **Menu:** the button has `popovertarget="nav-menu"`; the single nav aside is `popover="auto"`, with native light-dismiss and Escape. The panel is a left sheet, `position: fixed; inset: 0 auto 0 0; width: min(20rem, 85vw)`, with the backdrop token at `rgb(0 0 0 / 0.4)`. The nav and account block are not duplicated. `NavLinks` calls `hidePopover()` on navigation and pathname changes.
 
 ### 4.9 Page header
 
 - `PageHeader({ title, description?, actions? })`: H1, then the description in Body `--niryat-muted` (max 68ch), with actions right-aligned on desktop and wrapping below on mobile. 32px top padding (20 mobile), 24px bottom margin.
 - **One primary action per page, at most:**
 
-| Page          | Primary action           |
-| ------------- | ------------------------ |
-| Invoices      | New invoice              |
-| Monthly close | Run monthly close        |
-| GSTR-1        | Download GSTR-1 file     |
-| Clients       | Add client               |
-| FIRA          | Upload FIRA              |
-| Health check  | Edit profile (secondary) |
-- No breadcrumbs, because the hierarchy is one level deep. Add one only if `/invoices/[id]` is built ("Invoices / INV-0007").
+| Page          | Header action                         |
+| ------------- | ------------------------------------- |
+| Invoices      | New invoice disclosure                |
+| Monthly close | Run monthly close                     |
+| Clients       | Add a client disclosure               |
+| Health check  | Edit profile (secondary)              |
+| FIRA          | None; upload card comes first         |
+| GSTR-1        | None; download submits its rate form  |
+| Advance tax   | None; estimate submits its input form |
+- Download and estimate buttons stay at the ends of their forms (D15). No breadcrumbs or invoice-detail route; visible invoice cards are the anchor targets (D10).
 
 ### 4.10 Footer
 
@@ -313,7 +319,7 @@ The content column has `--niryat-bg`, with an inner `max-width: 72rem` (left-ali
 
 **Money and dates.**
 - Money: `Intl.NumberFormat("en-IN", { style: "currency", currency })`, which gives `$1,234.00`, `A$1,234.00`, `CA$1,234.00` and `₹1,23,456.00` with Indian grouping. Right-aligned in tables.
-- A refund shows as "−$120.00" in `text` colour beside a neutral "Refund" badge (a refund is not an error).
+- Refund amounts use `formatMoney` in the labelled refunds section; preserve the record's sign. A refunded invoice has a neutral status badge (a refund is not an error).
 - Dates in IST: "12 Aug 2026" (`day: "numeric", month: "short", year: "numeric"`); months "October 2026"; times "12 Aug 2026, 14:05 IST".
 - Days left: the API's value through `daysRemainingLabel`.
 
@@ -340,7 +346,7 @@ The content column has `--niryat-bg`, with an inner `max-width: 72rem` (left-ali
 
 **Loading** (`(app)/loading.tsx`): skeleton blocks in `sunken` with a pulse, shaped like a page header (a 30px bar at 40% width plus a 16px bar at 60%) and two cards. It carries `aria-busy="true"` and visually hidden text: "Loading".
 
-**Error** (`(app)/error.tsx`): a card with a danger icon and the H2 "Couldn't load this page", then: "Niryat couldn't reach its server. Nothing was sent to PayPal." Two buttons: primary "Try again" (`reset`) and secondary "Go to Today". No error details.
+**Error** (root `app/error.tsx`): a card with a danger icon and the H2 "Couldn't load this page", then: "Niryat couldn't reach its server. Nothing was sent to PayPal." Two buttons: primary "Try again" (`retry`) and secondary "Go to Today". No error details. Card failures show "Couldn't load this card. Nothing was sent to PayPal." with a ghost "Try again" button; badge failures render nothing.
 
 **Not found:** H1 "Page not found", one sentence, a link to Today.
 
@@ -389,8 +395,8 @@ Check the names against Lucide at copy time.
 Today                                             Sunday, 1 Nov 2026
 ┌ APPROVALS WAITING ┐┌ NEXT DEADLINE ───┐┌ HEALTH SCORE ┐┌ OPEN TASKS ┐
 │ 2                 ││ 15 Nov 2026      ││ 62 / 100     ││ 3          │
-│ Review in Monthly ││ GSTR-1 due       ││ 2 high flags ││ 1 overdue  │
-│ close →           ││ in 14 days →     ││ →            ││ →          │
+│ Review in Monthly ││ GSTR-1 due       ││ 2 high flags ││ View tasks │
+│ close →           ││ →                ││ →            ││ →          │
 └───────────────────┘└──────────────────┘└──────────────┘└────────────┘
 ┌ Waiting for your approval ─────────────────┐┌ Upcoming deadlines ───────┐
 │ approval cards, compact (max 3) + "All →"  ││ 5 rows: date, title, badge │
@@ -412,12 +418,9 @@ Today                                             Sunday, 1 Nov 2026
 
 **Invoices.**
 - A "New invoice" card holds ExtractPanel (paste email → fields filled) and InvoiceForm. It is collapsed into a `<details>` when invoices exist, open when there are none.
-- Table columns: Invoice (mono), Client, Date, Amount (right), Status badge, FIRA badge, RBI deadline (days label), and a row action ("Details").
-- Details (`<details>` row expansion; `/invoices/[id]` only if time allows):
-  - a 2-column definition grid (type, recurrence, paid so far, PDF link);
-  - a payments sub-table (gross, fee, net, FX, date);
-  - RefundForm;
-  - any approval card for this invoice.
+- One card per invoice, with a visible `id="invoice-<id>"` target and a `:target` outline. Number (mono), client, date, amount, status/FIRA badges, RBI deadline, approval cards and dispute alerts stay visible.
+- A `Details` disclosure contains type, recurrence, paid so far, PDF link, payments and refunds tables, RefundForm, realisation, credit notes and dispute details. No invoice table-row expansion or `/invoices/[id]` route.
+- Refund proposals label the invoice total `Invoice amount`; the requested refund remains visible in the PayPal request disclosure. Other approvals label the total `Amount`.
 
 **Approval card** (used on Invoices, Monthly close and Today).
 
@@ -450,22 +453,22 @@ Today                                             Sunday, 1 Nov 2026
 
 **FIRA.**
 - An upload card: file input, the "this is my own FIRA" consent checkbox, primary "Upload FIRA".
-- A documents table: month, uploaded on, status.
-- Match lines table: date, amount, reference (mono), matched payment, a state badge and a **Reason** column. The one flagged line in the demo must read clearly here. Confirm buttons sit in the row actions.
+- One card per document, headed "FIRA for <month>" with its uploaded date.
+- Match lines table: date, amount, reference (mono, with source-text disclosure), purpose code, matched payment, state badge, **Reason**, confidence and actions. A line without a match is danger with the text "Flagged". The flagged line must read clearly at 1440px; narrow screens scroll within the table wrapper.
 
-**Tasks.** A table: due date, task, source rule (mono rule ID), a status badge, and a "Mark done" ghost button. Overdue rows get the danger badge. A `<details>` holds completed tasks.
+**Tasks.** A table: due date, task, source rule (mono rule ID), a status badge, an "Open invoice" link when available and a "Mark done" ghost button. Open tasks are neutral and done tasks success; the API carries no day count, so the web does not invent an overdue tone. A `<details>` holds completed tasks with formatted completion dates.
 
 **Calendar.** The legend renders as badges (overdue, upcoming, past), then the Bryntum calendar in a full-width card with a fixed height (40rem), then the existing deadline list as a table below.
 
 **Dashboard.** Full width; the page header has a description of the questions the AI can answer; AG Studio sits in a card. The empty state replaces the current bare `DASHBOARD_EMPTY` line.
 
-**Clients.** The table holds name, country (`Intl.DisplayNames`, as now), email and export-check badges (five conditions, pass / unknown / fail). The "Add client" form card is collapsed when clients exist.
+**Clients.** One card per client, with name, country (`Intl.DisplayNames`), email, address, its five-condition export-check table (pass / unknown / fail badges), citation and `Edit answers` disclosure. The header's "Add a client" form disclosure is open only when there are no clients (D16).
 
-**GSTR-1, Advance tax.** The period-selection form sits in a card, the results table follows, and the primary download or estimate action lives in the page header. Totals rows are 600 weight with a 2px top border.
+**GSTR-1, Advance tax.** Input and period-selection forms sit in cards, with download and estimate buttons at the ends of their forms. Results use formatted money/dates and right-aligned numeric columns; totals rows are 600 weight with a 2px top border. Every Phase 6 message and null-value label stays unchanged (D9, D15).
 
 **Profile.** One form split into section cards: Business, GST and LUT, Work and purpose code. Short fields pair up on wider screens, and the save button sits at the end.
 
-**Disclaimer** (public route, Phase 7). Prose at 68ch with the [PLAN §23](PLAN.md#23-disclaimer) text. It covers: not tax advice, no CA review, one seller per deployment, sandbox only.
+**Disclaimer** (public route). Prose at 68ch with the [PLAN §23](PLAN.md#23-disclaimer) text. It covers: not tax advice, no CA review, one seller per deployment, sandbox only.
 
 ### 4.14 Sponsor widgets
 
@@ -487,7 +490,9 @@ Today                                             Sunday, 1 Nov 2026
 - Use a seeded account whose sample names are realistic and plainly fictional.
 - Start each scene with its page already loaded; the skeletons should appear only where showing streaming is the point.
 
-## 5. Order of work (one slice per commit; `pnpm verify` and `pnpm build` each time)
+## 5. Original slice outline (implementation tasks F0–F12 take precedence)
+
+Follow [frontend-refactor-plan §7](frontend-refactor-plan.md#7-tasks-in-order) for task scope/order. Its §5 defers formatting, automated validation and browser handoff until F12; commits are made only when requested. The table below is the original estimate, not a second workflow.
 
 | #   | Slice                                                                                                                           | Est.   | Done when                                                                     |
 | --- | ------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------- |
@@ -559,6 +564,7 @@ Ask it to run `pnpm --filter @niryat/web test`, `pnpm verify` and `pnpm build`, 
 ## 7. Manual checks for the user (browser)
 
 Start with `pnpm dev` (web on http://localhost:3000, API on :3001) and sign in with a sandbox account that has invoices, a FIRA and a pending reminder.
+On restricted PowerShell use `corepack.cmd pnpm dev`. If the combined launch fails, run `corepack.cmd pnpm --filter @niryat/api dev` and `corepack.cmd pnpm --filter @niryat/web dev` in separate terminals. Use your existing configured local database/storage and sandbox account; supply credentials yourself. Start at http://localhost:3000/login. The complete F12 handoff, including reduced motion, radio labels, invoice anchors, error recovery, menu dismissal and the demo script, is [frontend-refactor-plan §8](frontend-refactor-plan.md#8-manual-checks-for-the-user-browser-f12-only). Every browser check remains awaiting user verification.
 - [ ] Logged out, `/` shows the public page with no app chrome; `/invoices` redirects to `/login`.
 - [ ] After sign-in you land on `/overview`; each card loads independently, and the approvals badge matches the count on `/close`.
 - [ ] The sidebar highlights the current page; the Sandbox pill and footer lines are visible on every app page.

@@ -34,6 +34,7 @@ export function ClientForm({
   return (
     <form
       method="post"
+      aria-describedby={message ? `${prefix}-error` : undefined}
       onSubmit={async (event) => {
         event.preventDefault();
         const form = event.currentTarget;
@@ -111,7 +112,11 @@ export function ClientForm({
       <button type="submit" disabled={isPending}>
         Check and save
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p id={`${prefix}-error`} role="alert">
+          {message}
+        </p>
+      )}
     </form>
   );
 }

@@ -485,6 +485,8 @@ it.each(["send_invoice", "refund_payment"] as const)(
 );
 
 it("posts a manual close, prevents repeated clicks and shows the running/error states", async () => {
+  expect(renderToStaticMarkup(CloseButton())).toContain("Run monthly close");
+  hooks.cursor = 0;
   const response = Promise.withResolvers<Response>();
   const fetch = vi.fn().mockReturnValue(response.promise);
   vi.stubGlobal("fetch", fetch);
@@ -493,7 +495,9 @@ it("posts a manual close, prevents repeated clicks and shows the running/error s
   const pending = button.props.onClick();
   await button.props.onClick();
   hooks.cursor = 0;
-  expect(renderToStaticMarkup(CloseButton())).toContain("Closing…");
+  const running = renderToStaticMarkup(CloseButton());
+  expect(running).toContain("Closing…");
+  expect(running).toContain('aria-busy="true"');
   expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/close", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

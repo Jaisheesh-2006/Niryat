@@ -23,6 +23,7 @@ export function InvoiceForm({
   return (
     <form
       method="post"
+      aria-describedby={message ? `${prefix}-error` : undefined}
       onSubmit={async (event) => {
         event.preventDefault();
         const form = event.currentTarget;
@@ -122,7 +123,11 @@ export function InvoiceForm({
       <button type="submit" disabled={isPending}>
         {isPending ? "Issuing…" : "Issue invoice"}
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p id={`${prefix}-error`} role="alert">
+          {message}
+        </p>
+      )}
       {reasons.length > 0 && (
         <ul>
           {reasons.map((reason) => (

@@ -2,6 +2,7 @@ import type { ProfileInput, PurposeCodeEntry } from "@niryat/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
 import Disclaimer, { metadata as disclaimerMetadata } from "./app/(public)/disclaimer/page";
+import PublicLayout from "./app/(public)/layout";
 import Login, { metadata as loginMetadata } from "./app/(public)/login/page";
 import Home from "./app/(public)/page";
 import Signup, { metadata as signupMetadata } from "./app/(public)/signup/page";
@@ -10,6 +11,16 @@ import { ProfileForm } from "./components/ProfileForm";
 import { profileBody } from "./lib/forms";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
+it("lets public-page keyboard users skip the header", () => {
+  const html = renderToStaticMarkup(
+    <PublicLayout>
+      <h1>Public page</h1>
+    </PublicLayout>,
+  );
+  expect(html).toContain('<a class="skip-link" href="#main">Skip to content</a>');
+  expect(html).toContain('<main id="main" tabindex="-1"><h1>Public page</h1></main>');
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();

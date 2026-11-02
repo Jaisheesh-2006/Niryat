@@ -6,6 +6,7 @@ import { ApprovalsBadge } from "../../components/ApprovalsBadge";
 import { CardBoundary } from "../../components/CardBoundary";
 import { BrandMark, Menu } from "../../components/icons";
 import { NavLinks } from "../../components/NavLinks";
+import { SidebarResize } from "../../components/SidebarResize";
 import { SignOutButton } from "../../components/SignOutButton";
 import { SiteFooter } from "../../components/SiteFooter";
 import { apiGet } from "../../lib/api";
@@ -52,6 +53,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
           <SignOutButton />
         </div>
       </aside>
+      <SidebarResize />
       <div className="content">
         <main id="main" tabIndex={-1}>
           {children}

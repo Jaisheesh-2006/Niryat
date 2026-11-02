@@ -88,6 +88,7 @@ export function ExtractPanel({ clients }: { clients: Client[] }) {
           onChange={(event) => setText(event.target.value)}
           minLength={20}
           maxLength={8000}
+          aria-describedby={message ? `${id}-error` : undefined}
           required
           disabled={submitting}
         />
@@ -95,27 +96,33 @@ export function ExtractPanel({ clients }: { clients: Client[] }) {
           {submitting ? "Extracting…" : "Extract with Claude"}
         </button>
       </form>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p id={`${id}-error`} role="alert">
+          {message}
+        </p>
+      )}
       {result && (
         <>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Field</th>
-                <th scope="col">Extracted value</th>
-                <th scope="col">Source text</th>
-              </tr>
-            </thead>
-            <tbody>
-              {extractionFieldNames.map((name) => (
-                <tr key={name}>
-                  <th scope="row">{labels[name]}</th>
-                  <td>{result.fields[name].value ?? "Not found"}</td>
-                  <td>{result.fields[name].source ?? "—"}</td>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Field</th>
+                  <th scope="col">Extracted value</th>
+                  <th scope="col">Source text</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {extractionFieldNames.map((name) => (
+                  <tr key={name}>
+                    <th scope="row">{labels[name]}</th>
+                    <td>{result.fields[name].value ?? "Not found"}</td>
+                    <td>{result.fields[name].source ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p>Extracted by Claude from your text. Check every value before you use it.</p>
           <button type="button" onClick={() => setUsing(true)} disabled={using}>
             Use these values

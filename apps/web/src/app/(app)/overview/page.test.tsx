@@ -4,15 +4,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AuthForm } from "../../../components/AuthForm";
 import { apiGet } from "../../../lib/api";
+import { sendJson } from "../../../lib/forms";
 import Overview, { metadata } from "./page";
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+const { setState } = vi.hoisted(() => ({ setState: vi.fn() }));
 vi.mock("../../../lib/api", () => ({ apiGet: vi.fn() }));
 vi.mock("../../../lib/forms", () => ({ sendJson: vi.fn(async () => ({ ok: true })) }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
-  useState: (initial: unknown) => [initial, vi.fn()],
+  useState: (initial: unknown) => [initial, setState],
+  useEffect: () => {},
 }));
 vi.mock("../../../components/CardBoundary", () => ({
   CardBoundary: ({ children }: { children: ReactNode }) => children,
@@ -242,7 +243,9 @@ it("shows the first five invoices in API order with formatted amounts and anchor
   expect(html).toContain("All invoices");
 });
 
-it.each(["login", "signup"] as const)("lands email %s on Today", async (mode) => {
+it.each(["login", "signup"] as const)("replaces email %s with Today in history", async (mode) => {
+  const replace = vi.fn();
+  vi.stubGlobal("window", { location: { replace } });
   const form = AuthForm({ mode });
   const preventDefault = vi.fn();
   vi.stubGlobal(
@@ -258,7 +261,13 @@ it.each(["login", "signup"] as const)("lands email %s on Today", async (mode) =>
   try {
     await form.props.onSubmit({ preventDefault, currentTarget: {} });
     expect(preventDefault).toHaveBeenCalledOnce();
-    expect(push).toHaveBeenCalledWith("/overview");
+    expect(sendJson).toHaveBeenCalledExactlyOnceWith(`/api/auth/${mode}`, "POST", {
+      email: "ananya@example.com",
+      password: "long-test-password",
+    });
+    expect(replace).toHaveBeenCalledExactlyOnceWith("/overview");
+    expect(setState).toHaveBeenCalledWith(true);
+    expect(setState).not.toHaveBeenCalledWith(false);
   } finally {
     vi.unstubAllGlobals();
   }

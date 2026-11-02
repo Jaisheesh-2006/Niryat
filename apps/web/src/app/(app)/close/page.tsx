@@ -58,7 +58,7 @@ export default async function Close() {
         actions={<CloseButton />}
       />
       {latest?.status === "running" && (
-        <div className="banner" data-tone="neutral">
+        <div className="banner" data-tone="neutral" role="status">
           <span className="spinner" aria-hidden="true" />
           <p>Closing {formatMonth(latest.month)}… This page refreshes until it finishes.</p>
           <CloseRefresher />
@@ -97,7 +97,7 @@ export default async function Close() {
       {attention.length > 0 && (
         <section>
           <h2>Needs attention</h2>
-          <p className="banner" data-tone="danger">
+          <p className="banner" data-tone="danger" role="alert">
             Check PayPal before taking further action.
           </p>
           {attention.map((action) => {

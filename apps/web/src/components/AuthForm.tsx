@@ -1,18 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sendJson } from "../lib/forms";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
-  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
 
   return (
     <form
       className="auth-form"
       method="post"
+      aria-describedby={message ? "auth-error" : undefined}
       onSubmit={async (event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
@@ -22,13 +23,23 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           email: form.get("email"),
           password: form.get("password"),
         });
-        setSubmitting(false);
-        if (result.ok) router.push("/overview");
-        else setMessage(result.message);
+        // A fresh request must see the new session, not a cached logged-out redirect.
+        if (result.ok) window.location.replace("/overview");
+        else {
+          setSubmitting(false);
+          setMessage(result.message);
+        }
       }}
     >
       <label htmlFor="email">Email</label>
-      <input id="email" name="email" type="email" autoComplete="email" required />
+      <input
+        id="email"
+        name="email"
+        type="email"
+        autoComplete="email"
+        aria-describedby={message ? "auth-error" : undefined}
+        required
+      />
       <label htmlFor="password">Password</label>
       <input
         id="password"
@@ -37,13 +48,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         minLength={12}
         maxLength={128}
         autoComplete={mode === "login" ? "current-password" : "new-password"}
+        aria-describedby={message ? "auth-error" : undefined}
         required
       />
-      <button type="submit" className="btn" data-variant="primary" disabled={submitting}>
+      <button type="submit" className="btn" data-variant="primary" disabled={!ready || submitting}>
         {mode === "login" ? "Sign in" : "Create account"}
       </button>
       {message && (
-        <p role="alert" className="banner" data-tone="danger">
+        <p id="auth-error" role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}

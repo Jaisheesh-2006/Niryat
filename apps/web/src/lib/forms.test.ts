@@ -12,6 +12,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
 import Fira from "../app/(app)/fira/page";
 import { ActionButtons } from "../components/ActionButtons";
+import { AuthForm } from "../components/AuthForm";
 import { ClientForm } from "../components/ClientForm";
 import { ExtractPanel } from "../components/ExtractPanel";
 import { FiraLineButtons } from "../components/FiraLineButtons";
@@ -40,6 +41,7 @@ const panelState = vi.hoisted(() => ({
   values: [] as unknown[],
   hooks: null as unknown[] | null,
   cursor: 0,
+  effects: [] as (() => void)[],
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -54,7 +56,7 @@ vi.mock("react", async (importOriginal) => ({
       if (result instanceof Promise) transition.actions.push(result);
     },
   ],
-  useEffect: () => {},
+  useEffect: (effect: () => void) => panelState.effects.push(effect),
   useState: (initial: unknown) => {
     const hooks = panelState.hooks;
     if (!hooks) return [panelState.values.length ? panelState.values.shift() : initial, setState];
@@ -81,8 +83,83 @@ afterEach(() => {
   panelState.values = [];
   panelState.hooks = null;
   panelState.cursor = 0;
+  panelState.effects = [];
   transition.pending = false;
   transition.actions = [];
+});
+
+it.each([false, true])("connects existing form errors to their descriptions: %s", (hasError) => {
+  const message = "Check the entered values.";
+  const forms = [
+    { render: () => AuthForm({ mode: "login" }), values: [false, message] },
+    { render: () => ClientForm({}), values: [message] },
+    { render: () => InvoiceForm({ clients: [] }), values: [message, []] },
+    { render: () => ProfileForm({ initial: null, codes: [] }), values: [false, message] },
+    { render: () => RefundForm({ paymentId: "payment-id", currency: "USD" }), values: [message] },
+    { render: () => FiraUpload(), values: [message] },
+    {
+      render: () => ExtractPanel({ clients: [] }),
+      values: ["", false, message, null, false, null],
+    },
+  ];
+  for (const form of forms) {
+    panelState.values = hasError ? [...form.values] : [];
+    const html = renderToStaticMarkup(form.render());
+    const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+    const descriptions = [...html.matchAll(/aria-describedby="([^"]+)"/g)].flatMap(
+      (match) => match[1]?.split(" ") ?? [],
+    );
+    for (const id of descriptions) expect(ids).toContain(id);
+    if (hasError) {
+      const errorId = html.match(/<p id="([^"]+)" role="alert"/)?.[1];
+      expect(errorId).toBeDefined();
+      expect(descriptions).toContain(errorId);
+      expect(html).toContain(message);
+    } else {
+      expect(descriptions.every((id) => !id.endsWith("-error"))).toBe(true);
+      expect(html).not.toContain('role="alert"');
+    }
+  }
+});
+
+it("enables sign-in only after hydration, then disables it during submission", () => {
+  panelState.hooks = [];
+  function disabled() {
+    panelState.cursor = 0;
+    const form = AuthForm({ mode: "login" });
+    const button = Children.toArray(form.props.children).find(
+      (child) => isValidElement(child) && child.type === "button",
+    );
+    if (!isValidElement<{ disabled: boolean }>(button)) throw new Error("Expected submit button");
+    return button.props.disabled;
+  }
+  expect(disabled()).toBe(true);
+  panelState.effects[0]?.();
+  expect(disabled()).toBe(false);
+  panelState.hooks[0] = true;
+  expect(disabled()).toBe(true);
+});
+
+it("keeps a failed email login on the form and enables another attempt", async () => {
+  const replace = vi.fn();
+  vi.stubGlobal("window", { location: { replace } });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(Response.json({ error: "invalid_credentials" }, { status: 401 })),
+  );
+  vi.stubGlobal(
+    "FormData",
+    class extends FormData {
+      constructor() {
+        super();
+        this.set("email", "seller@example.com");
+      }
+    },
+  );
+  await AuthForm({ mode: "login" }).props.onSubmit({ preventDefault: vi.fn(), currentTarget: {} });
+  expect(replace).not.toHaveBeenCalled();
+  expect(setState).toHaveBeenCalledWith(false);
+  expect(setState).toHaveBeenLastCalledWith("Email or password is incorrect.");
 });
 
 it.each([
@@ -228,6 +305,7 @@ it("shows source quotes and Discard clears extraction without a request", () => 
   const html = renderToStaticMarkup(element);
   expect(html).toContain("Start from a client email");
   expect(html).toContain("Source text");
+  expect(html).toContain('<div class="table-wrap"><table>');
   expect(html).toContain("1,500");
   expect(html).toContain("Not found");
   expect(html).toContain(

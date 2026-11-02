@@ -37,15 +37,31 @@ export function FiraUpload() {
       }}
     >
       <label htmlFor={id}>FIRA PDF</label>
-      <input id={id} name="file" type="file" accept="application/pdf" required />
+      <input
+        id={id}
+        name="file"
+        type="file"
+        accept="application/pdf"
+        aria-describedby={message ? `${id}-error` : undefined}
+        required
+      />
       <label>
-        <input name="consent" type="checkbox" required />
+        <input
+          name="consent"
+          type="checkbox"
+          aria-describedby={message ? `${id}-error` : undefined}
+          required
+        />
         This is my own FIRA. I consent to Niryat storing it.
       </label>
       <button type="submit" disabled={isPending}>
         {isPending ? "Reading…" : "Upload FIRA"}
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p id={`${id}-error`} role="alert">
+          {message}
+        </p>
+      )}
     </form>
   );
 }

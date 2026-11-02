@@ -3,6 +3,7 @@
 import { type Gstr1Preview, gstr1FileRequestSchema, gstr1FileSchema } from "@niryat/shared";
 import { useState } from "react";
 import { z } from "zod";
+import { formatMoney } from "../lib/format";
 
 const errorSchema = z.object({ error: z.string(), invoices: z.array(z.string()).optional() });
 
@@ -82,7 +83,7 @@ export function Gstr1Download({ preview }: { preview: Gstr1Preview }) {
       {covered.map((invoice) => (
         <fieldset key={invoice.invoiceId} disabled={submitting}>
           <legend>
-            Invoice {invoice.number} ({invoice.currency} {invoice.amount})
+            Invoice {invoice.number} ({formatMoney(invoice.amount, invoice.currency)})
           </legend>
           <label htmlFor={`inr-${invoice.invoiceId}`}>INR rate for invoice {invoice.number}</label>
           <input
@@ -90,7 +91,7 @@ export function Gstr1Download({ preview }: { preview: Gstr1Preview }) {
             name={`inr-${invoice.invoiceId}`}
             type="text"
             inputMode="decimal"
-            aria-describedby="inr-rate-help"
+            aria-describedby={message ? "inr-rate-help gstr1-result" : "inr-rate-help"}
             required
           />
           <label htmlFor={`gst-${invoice.invoiceId}`}>
@@ -101,7 +102,7 @@ export function Gstr1Download({ preview }: { preview: Gstr1Preview }) {
             name={`gst-${invoice.invoiceId}`}
             type="text"
             inputMode="decimal"
-            aria-describedby="gst-rate-help"
+            aria-describedby={message ? "gst-rate-help gstr1-result" : "gst-rate-help"}
             required
           />
         </fieldset>
@@ -112,7 +113,11 @@ export function Gstr1Download({ preview }: { preview: Gstr1Preview }) {
       <noscript>
         <p>Enable JavaScript to enter rates and download the file.</p>
       </noscript>
-      {message && <p role="status">{message}</p>}
+      {message && (
+        <p id="gstr1-result" role="status">
+          {message}
+        </p>
+      )}
     </form>
   );
 }

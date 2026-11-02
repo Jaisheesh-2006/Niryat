@@ -184,6 +184,7 @@ it("forwards the selected period and renders exclusions without requesting their
 
 it("labels both rate inputs, connects their help, and supplies no GST default", () => {
   const html = renderToStaticMarkup(<Gstr1Download preview={preview} />);
+  expect(html).toContain("Invoice 2026-27/0001 ($100.00)");
   expect(html).toContain("INR rate for invoice 2026-27/0001");
   expect(html).toContain("Use the exchange rate your CA uses for the invoice date.");
   expect(html).toContain("Applicable IGST rate (%) for invoice 2026-27/0001");
