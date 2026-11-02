@@ -73,7 +73,7 @@ export function Gstr1Download({ preview }: { preview: Gstr1Preview }) {
   }
 
   return (
-    <form method="post" onSubmit={submit}>
+    <form className="card" method="post" onSubmit={submit}>
       <p id="inr-rate-help">Use the exchange rate your CA uses for the invoice date.</p>
       <p id="gst-rate-help">
         Enter the rate your CA confirms for this service and invoice date. This is not the INR

@@ -87,7 +87,8 @@ it.each(["P9999", "P0802", null])(
       { code: "P0802", paypalLabel: "Software", annexDescription: "Software", suggest: "yes" },
     ];
     const html = renderToStaticMarkup(<ProfileForm initial={initial} codes={codes} />);
-    const selected = html.match(/<option value="([^"]*)" selected=""/)?.[1];
+    const purposeSelect = html.match(/<select[^>]*id="purposeCode"[^>]*>(.*?)<\/select>/)?.[1];
+    const selected = purposeSelect?.match(/<option value="([^"]*)" selected=""/)?.[1];
     expect(selected).toBe(purposeCode ?? "");
     expect(html.match(/<option value="P0802"/g)).toHaveLength(1);
 

@@ -1,15 +1,18 @@
-import {
-  clientSchema,
-  closePageSchema,
-  invoiceViewSchema,
-  reminderStageSchema,
-} from "@niryat/shared";
+import { clientSchema, closePageSchema, invoiceViewSchema } from "@niryat/shared";
 import { z } from "zod";
-import { ActionButtons } from "../../../components/ActionButtons";
+import { ApprovalCard } from "../../../components/ApprovalCard";
+import { EmptyState } from "../../../components/EmptyState";
 import { ExtractPanel } from "../../../components/ExtractPanel";
+import { FileText } from "../../../components/icons";
+import { PageHeader } from "../../../components/PageHeader";
 import { RefundForm } from "../../../components/RefundForm";
+import { StatusBadge } from "../../../components/StatusBadge";
 import { apiGet } from "../../../lib/api";
+import { formatDate, formatDateTime, formatMoney } from "../../../lib/format";
 import { daysRemainingLabel } from "../../../lib/forms";
+import { approvalKind, approvalTitle, invoiceFira, invoiceStatus } from "../../../lib/status";
+
+export const metadata = { title: "Invoices" };
 
 export default async function Invoices() {
   const [invoices, clients, close] = await Promise.all([
@@ -17,77 +20,46 @@ export default async function Invoices() {
     apiGet("/clients", z.array(clientSchema)),
     apiGet("/close", closePageSchema),
   ]);
-  const statusLabels = {
-    issued: "Issued",
-    sent: "Sent through PayPal",
-    partially_paid: "Partly paid",
-    paid: "Paid",
-    partially_refunded: "Partly refunded",
-    refunded: "Refunded",
-  };
-  const firaLabels = {
-    matched: "Matched to FIRA",
-    pending: "Pending",
-    missing: "Missing from FIRA",
-  };
 
   return (
     <>
-      <h1>Invoices</h1>
-      <ExtractPanel clients={clients ?? []} />
+      <PageHeader
+        title="Invoices"
+        actions={
+          <details className="card" open={(invoices ?? []).length === 0}>
+            <summary>New invoice</summary>
+            <ExtractPanel clients={clients ?? []} />
+          </details>
+        }
+      />
+      {(invoices ?? []).length === 0 && (
+        <EmptyState icon={FileText} title="No invoices yet">
+          Paste a client email and Claude fills in the invoice for you.
+        </EmptyState>
+      )}
       {(invoices ?? []).map((invoice) => (
-        <section key={invoice.id} id={`invoice-${invoice.id}`}>
-          <h2>
-            {invoice.number} · {invoice.clientName}
-          </h2>
-          <dl>
-            <dt>Date</dt>
-            <dd>{invoice.date}</dd>
-            <dt>Amount</dt>
-            <dd>
-              {invoice.currency} {invoice.amount}
-            </dd>
-            <dt>Type</dt>
-            <dd>
-              {invoice.type === "recurring" && invoice.recurrence
-                ? `Recurring: every ${invoice.recurrence.intervalCount} ${invoice.recurrence.intervalUnit.toLowerCase()}, ${invoice.recurrence.totalCycles} invoices`
-                : "One-time"}
-            </dd>
-            <dt>Status</dt>
-            <dd>{statusLabels[invoice.status]}</dd>
-            <dt>FIRA status</dt>
-            <dd>{firaLabels[invoice.firaStatus]}</dd>
-            <dt>Paid so far</dt>
-            <dd>
-              {invoice.currency} {invoice.paidTotal}
-            </dd>
-            <dt>GST invoice PDF</dt>
-            <dd>
-              {invoice.pdfUrl !== null ? (
-                <a href={invoice.pdfUrl}>Open PDF</a>
-              ) : (
-                "Not generated (demo invoice)"
-              )}
-            </dd>
-          </dl>
-          {invoice.action && <ActionButtons action={invoice.action} />}
-          {(close?.approvals ?? [])
-            .filter((action) => action.invoiceId === invoice.id)
-            .map((action) => (
-              <div key={action.id}>
-                <p>
-                  Invoice {action.invoiceNumber}: reminder{" "}
-                  {reminderStageSchema.parse(action.payload.stage)} days before the RBI deadline
-                </p>
-                <ActionButtons key={action.id} action={action} />
-              </div>
-            ))}
+        <section className="card" key={invoice.id} id={`invoice-${invoice.id}`}>
+          <div className="card-header">
+            <h2>
+              <span className="mono">{invoice.number}</span> · {invoice.clientName}
+            </h2>
+            <span className="num">{formatMoney(invoice.amount, invoice.currency)}</span>
+          </div>
+          <p>
+            <time dateTime={invoice.date}>{formatDate(invoice.date)}</time>
+          </p>
+          <StatusBadge tone={invoiceStatus[invoice.status].tone}>
+            {invoiceStatus[invoice.status].label}
+          </StatusBadge>{" "}
+          <StatusBadge tone={invoiceFira[invoice.firaStatus].tone}>
+            {invoiceFira[invoice.firaStatus].label}
+          </StatusBadge>
           {invoice.compliance.deadline && (
             <>
               <h3>RBI deadline</h3>
               <dl>
                 <dt>Receive full payment by</dt>
-                <dd>{invoice.compliance.deadline.deadline}</dd>
+                <dd>{formatDate(invoice.compliance.deadline.deadline)}</dd>
                 <dt>Days remaining</dt>
                 <dd>{daysRemainingLabel(invoice.compliance.deadline.daysRemaining)}</dd>
               </dl>
@@ -98,171 +70,241 @@ export default async function Invoices() {
               </p>
             </>
           )}
-          <h3>Payments</h3>
-          {invoice.payments.length === 0 ? (
-            <p>No payments recorded yet.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">PayPal transaction</th>
-                  <th scope="col">Received</th>
-                  <th scope="col">Gross</th>
-                  <th scope="col">PayPal fee</th>
-                  <th scope="col">Net</th>
-                  <th scope="col">FX rate</th>
-                  <th scope="col">FIRA</th>
-                  <th scope="col">Refund</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoice.payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td>{payment.paypalTxnId}</td>
-                    <td>{payment.receivedAt}</td>
-                    <td>
-                      {payment.currency} {payment.gross}
-                    </td>
-                    <td>{payment.fee ?? "Not provided by PayPal"}</td>
-                    <td>{payment.net ?? "Not provided by PayPal"}</td>
-                    <td>{payment.fxRate ?? "Not provided by PayPal"}</td>
-                    <td>
-                      {payment.fira?.state === "matched"
-                        ? "Matched"
-                        : payment.fira?.state === "needs_confirmation"
-                          ? "Needs your confirmation"
-                          : "Not matched"}
-                    </td>
-                    <td>
-                      {!invoice.refundActions.some(
-                        (action) =>
-                          action.paymentId === payment.id &&
-                          (action.status === "proposed" ||
-                            action.status === "approved" ||
-                            action.status === "failed"),
-                      ) && <RefundForm paymentId={payment.id} currency={payment.currency} />}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {invoice.refundActions.length > 0 && (
-            <>
-              <h3>Refund approvals</h3>
-              {invoice.refundActions.map((action) => (
-                <ActionButtons key={action.id} action={action} />
-              ))}
-            </>
-          )}
-          {invoice.refunds.length > 0 && (
-            <>
-              <h3>Refunds</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">PayPal refund</th>
-                    <th scope="col">Refunded on</th>
-                    <th scope="col">Amount</th>
-                    <th scope="col">PayPal fee returned</th>
-                    <th scope="col">Net</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.refunds.map((refund) => (
-                    <tr key={refund.id}>
-                      <td>{refund.paypalTxnId}</td>
-                      <td>{refund.receivedAt}</td>
-                      <td>
-                        {refund.currency} {refund.gross}
-                      </td>
-                      <td>{refund.fee ?? "Not provided by PayPal"}</td>
-                      <td>{refund.net ?? "Not provided by PayPal"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
-          <h3>Realisation</h3>
-          <dl>
-            <dt>Export value</dt>
-            <dd>
-              {invoice.currency} {invoice.compliance.realisation.exportValue}
-            </dd>
-            <dt>Received through PayPal, net of refunds</dt>
-            <dd>
-              {invoice.currency} {invoice.compliance.realisation.received}
-            </dd>
-            <dt>Not yet received</dt>
-            <dd>
-              {invoice.currency} {invoice.compliance.realisation.shortfall}
-            </dd>
-          </dl>
-          {invoice.compliance.realisation.message && (
-            <p>{invoice.compliance.realisation.message}</p>
-          )}
-          <p>
-            Rule {invoice.compliance.realisation.citation.ruleId}:{" "}
-            {invoice.compliance.realisation.citation.source}. Verify with your CA.
-          </p>
-          {invoice.compliance.creditNotes.map((note) => (
-            <div key={note.refundId}>
-              <h3>GST credit note</h3>
-              <dl>
-                <dt>Against invoice</dt>
-                <dd>
-                  {note.originalInvoice} dated {note.originalDate}
-                </dd>
-                <dt>Credit value</dt>
-                <dd>{note.value}</dd>
-                <dt>IGST</dt>
-                <dd>{note.igst}</dd>
-                <dt>Declare by</dt>
-                <dd>{note.declareBy}</dd>
-              </dl>
-              <p>{note.message}</p>
-              <p>
-                Rule {note.citation.ruleId}: {note.citation.source}. Verify with your CA.
-              </p>
-            </div>
+          {[
+            ...(invoice.action ? [invoice.action] : []),
+            ...invoice.refundActions,
+            ...(close?.approvals ?? []).filter((action) => action.invoiceId === invoice.id),
+          ].map((action) => {
+            const kind = approvalKind(action);
+            return (
+              <ApprovalCard
+                key={action.id}
+                action={action}
+                title={approvalTitle({
+                  action,
+                  invoiceNumber: invoice.number,
+                  clientName: invoice.clientName,
+                })}
+                {...(kind ? { kind } : {})}
+                facts={[
+                  {
+                    label: action.paypalAction === "refund_payment" ? "Invoice amount" : "Amount",
+                    value: formatMoney(invoice.amount, invoice.currency),
+                  },
+                  { label: "Invoice date", value: formatDate(invoice.date) },
+                  ...(invoice.compliance.deadline
+                    ? [
+                        {
+                          label: "RBI deadline",
+                          value: daysRemainingLabel(invoice.compliance.deadline.daysRemaining),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            );
+          })}
+          {invoice.compliance.disputeAlerts.map((alert) => (
+            <p className="banner" data-tone="danger" role="alert" key={alert.paypalDisputeId}>
+              {alert.message}
+            </p>
           ))}
-          {invoice.disputes.length > 0 && (
-            <>
-              <h3>Disputes</h3>
-              {invoice.disputes.map((dispute) => {
-                const alert = invoice.compliance.disputeAlerts.find(
-                  (entry) => entry.paypalDisputeId === dispute.paypalDisputeId,
-                );
-                return (
-                  <div key={dispute.id}>
-                    {alert && <p role="alert">{alert.message}</p>}
-                    <dl>
-                      <dt>PayPal dispute</dt>
-                      <dd>{dispute.paypalDisputeId}</dd>
-                      <dt>Amount</dt>
-                      <dd>
-                        {dispute.currency} {dispute.amount}
-                      </dd>
-                      <dt>Reason</dt>
-                      <dd>{dispute.reason}</dd>
-                      <dt>Status</dt>
-                      <dd>{dispute.status}</dd>
-                      <dt>Respond by</dt>
-                      <dd>{dispute.responseDueDate ?? "Not given"}</dd>
-                      <dt>Outcome</dt>
-                      <dd>{dispute.outcome ?? "Open"}</dd>
-                    </dl>
-                    {alert && (
-                      <p>
-                        Rule {alert.citation.ruleId}: {alert.citation.source}. Verify with your CA.
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </>
-          )}
+          <details>
+            <summary>Details</summary>
+            <dl>
+              <dt>Type</dt>
+              <dd>
+                {invoice.type === "recurring" && invoice.recurrence
+                  ? `Recurring: every ${invoice.recurrence.intervalCount} ${invoice.recurrence.intervalUnit.toLowerCase()}, ${invoice.recurrence.totalCycles} invoices`
+                  : "One-time"}
+              </dd>
+              <dt>Paid so far</dt>
+              <dd className="num">{formatMoney(invoice.paidTotal, invoice.currency)}</dd>
+              <dt>GST invoice PDF</dt>
+              <dd>
+                {invoice.pdfUrl !== null ? (
+                  <a href={invoice.pdfUrl}>Open PDF</a>
+                ) : (
+                  "Not generated (demo invoice)"
+                )}
+              </dd>
+            </dl>
+            <h3>Payments</h3>
+            {invoice.payments.length === 0 ? (
+              <p>No payments recorded yet.</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">PayPal transaction</th>
+                      <th scope="col">Received</th>
+                      <th scope="col">Gross</th>
+                      <th scope="col">PayPal fee</th>
+                      <th scope="col">Net</th>
+                      <th scope="col">FX rate</th>
+                      <th scope="col">FIRA</th>
+                      <th scope="col">Refund</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoice.payments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td className="mono">{payment.paypalTxnId}</td>
+                        <td>{formatDateTime(payment.receivedAt)}</td>
+                        <td className="num">{formatMoney(payment.gross, payment.currency)}</td>
+                        <td className="num">
+                          {payment.fee === null
+                            ? "Not provided by PayPal"
+                            : formatMoney(payment.fee, payment.currency)}
+                        </td>
+                        <td className="num">
+                          {payment.net === null
+                            ? "Not provided by PayPal"
+                            : formatMoney(payment.net, payment.currency)}
+                        </td>
+                        <td>{payment.fxRate ?? "Not provided by PayPal"}</td>
+                        <td>
+                          {payment.fira?.state === "matched"
+                            ? "Matched"
+                            : payment.fira?.state === "needs_confirmation"
+                              ? "Needs your confirmation"
+                              : "Not matched"}
+                        </td>
+                        <td>
+                          {!invoice.refundActions.some(
+                            (action) =>
+                              action.paymentId === payment.id &&
+                              (action.status === "proposed" ||
+                                action.status === "approved" ||
+                                action.status === "failed"),
+                          ) && <RefundForm paymentId={payment.id} currency={payment.currency} />}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {invoice.refunds.length > 0 && (
+              <>
+                <h3>Refunds</h3>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">PayPal refund</th>
+                        <th scope="col">Refunded on</th>
+                        <th scope="col">Amount</th>
+                        <th scope="col">PayPal fee returned</th>
+                        <th scope="col">Net</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoice.refunds.map((refund) => (
+                        <tr key={refund.id}>
+                          <td className="mono">{refund.paypalTxnId}</td>
+                          <td>{formatDateTime(refund.receivedAt)}</td>
+                          <td className="num">{formatMoney(refund.gross, refund.currency)}</td>
+                          <td className="num">
+                            {refund.fee === null
+                              ? "Not provided by PayPal"
+                              : formatMoney(refund.fee, refund.currency)}
+                          </td>
+                          <td className="num">
+                            {refund.net === null
+                              ? "Not provided by PayPal"
+                              : formatMoney(refund.net, refund.currency)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+            <h3>Realisation</h3>
+            <dl>
+              <dt>Export value</dt>
+              <dd className="num">
+                {formatMoney(invoice.compliance.realisation.exportValue, invoice.currency)}
+              </dd>
+              <dt>Received through PayPal, net of refunds</dt>
+              <dd className="num">
+                {formatMoney(invoice.compliance.realisation.received, invoice.currency)}
+              </dd>
+              <dt>Not yet received</dt>
+              <dd className="num">
+                {formatMoney(invoice.compliance.realisation.shortfall, invoice.currency)}
+              </dd>
+            </dl>
+            {invoice.compliance.realisation.message && (
+              <p>{invoice.compliance.realisation.message}</p>
+            )}
+            <p>
+              Rule {invoice.compliance.realisation.citation.ruleId}:{" "}
+              {invoice.compliance.realisation.citation.source}. Verify with your CA.
+            </p>
+            {invoice.compliance.creditNotes.map((note) => (
+              <div key={note.refundId}>
+                <h3>GST credit note</h3>
+                <dl>
+                  <dt>Against invoice</dt>
+                  <dd>
+                    {note.originalInvoice} dated {formatDate(note.originalDate)}
+                  </dd>
+                  <dt>Credit value</dt>
+                  <dd>{note.value}</dd>
+                  <dt>IGST</dt>
+                  <dd>{note.igst}</dd>
+                  <dt>Declare by</dt>
+                  <dd>{formatDate(note.declareBy)}</dd>
+                </dl>
+                <p>{note.message}</p>
+                <p>
+                  Rule {note.citation.ruleId}: {note.citation.source}. Verify with your CA.
+                </p>
+              </div>
+            ))}
+            {invoice.disputes.length > 0 && (
+              <>
+                <h3>Disputes</h3>
+                {invoice.disputes.map((dispute) => {
+                  const alert = invoice.compliance.disputeAlerts.find(
+                    (entry) => entry.paypalDisputeId === dispute.paypalDisputeId,
+                  );
+                  return (
+                    <div key={dispute.id}>
+                      <dl>
+                        <dt>PayPal dispute</dt>
+                        <dd className="mono">{dispute.paypalDisputeId}</dd>
+                        <dt>Amount</dt>
+                        <dd>{formatMoney(dispute.amount, dispute.currency)}</dd>
+                        <dt>Reason</dt>
+                        <dd>{dispute.reason}</dd>
+                        <dt>Status</dt>
+                        <dd>{dispute.status}</dd>
+                        <dt>Respond by</dt>
+                        <dd>
+                          {dispute.responseDueDate
+                            ? formatDate(dispute.responseDueDate)
+                            : "Not given"}
+                        </dd>
+                        <dt>Outcome</dt>
+                        <dd>{dispute.outcome ?? "Open"}</dd>
+                      </dl>
+                      {alert && (
+                        <p>
+                          Rule {alert.citation.ruleId}: {alert.citation.source}. Verify with your
+                          CA.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </details>
         </section>
       ))}
     </>

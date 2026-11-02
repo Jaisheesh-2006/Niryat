@@ -1,8 +1,15 @@
 import { type Task, taskSchema } from "@niryat/shared";
 import Link from "next/link";
 import { z } from "zod";
+import { EmptyState } from "../../../components/EmptyState";
+import { ListChecks } from "../../../components/icons";
+import { PageHeader } from "../../../components/PageHeader";
+import { StatusBadge } from "../../../components/StatusBadge";
 import { TaskDoneButton } from "../../../components/TaskDoneButton";
 import { apiGet } from "../../../lib/api";
+import { formatDate } from "../../../lib/format";
+
+export const metadata = { title: "Tasks" };
 
 export default async function Tasks() {
   const tasks = (await apiGet("/tasks", z.array(taskSchema))) ?? [];
@@ -18,31 +25,65 @@ export default async function Tasks() {
 
   return (
     <>
-      <h1>Tasks</h1>
-      {openTasks.length === 0 && <p>No open tasks.</p>}
-      {openTasks.map((task) => (
-        <section key={task.id}>
-          <h2>{labels[task.type]}</h2>
-          <p>{task.message}</p>
-          {task.dueDate && <p>Due {task.dueDate}</p>}
-          {task.invoiceId && <Link href={`/invoices#invoice-${task.invoiceId}`}>Open invoice</Link>}
-          <TaskDoneButton taskId={task.id} />
-        </section>
-      ))}
-      <h2>Done</h2>
-      <ul>
-        {tasks
-          .filter((task) => task.status === "done")
-          .map((task) => (
-            <li key={task.id}>
-              {task.message} (done{" "}
-              {task.doneAt
-                ? new Date(task.doneAt).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
-                : ""}
-              )
-            </li>
-          ))}
-      </ul>
+      <PageHeader title="Tasks" />
+      {openTasks.length === 0 ? (
+        <EmptyState icon={ListChecks} title="No open tasks">
+          Niryat adds tasks when a refund, dispute, FIRA or deadline needs you.
+        </EmptyState>
+      ) : (
+        <div className="card table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Due date</th>
+                <th scope="col">Task</th>
+                <th scope="col">Source rule</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {openTasks.map((task) => (
+                <tr key={task.id}>
+                  <td>{task.dueDate ? formatDate(task.dueDate) : "—"}</td>
+                  <td>
+                    <strong>{labels[task.type]}</strong>
+                    <p>{task.message}</p>
+                  </td>
+                  <td className="mono">{task.sourceRuleId ?? "—"}</td>
+                  <td>
+                    <StatusBadge tone="neutral">Open</StatusBadge>
+                  </td>
+                  <td>
+                    {task.invoiceId && (
+                      <Link
+                        className="btn"
+                        data-variant="ghost"
+                        href={`/invoices#invoice-${task.invoiceId}`}
+                      >
+                        Open invoice
+                      </Link>
+                    )}
+                    <TaskDoneButton taskId={task.id} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <details className="card">
+        <summary>Done</summary>
+        <ul>
+          {tasks
+            .filter((task) => task.status === "done")
+            .map((task) => (
+              <li key={task.id}>
+                {task.message} (done {task.doneAt ? formatDate(task.doneAt) : ""})
+              </li>
+            ))}
+        </ul>
+      </details>
     </>
   );
 }

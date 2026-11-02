@@ -593,13 +593,13 @@ it("renders failed AI with retained drafts, figures, priorities, reminders and t
     "What to do first",
     "Check the dispute first.",
     "Summary for October 2026",
-    "As of 2026-12-01",
-    "Gross 1500.00, PayPal fees Not provided by PayPal, net Not provided by PayPal",
+    "As of 1 Dec 2026",
+    "Gross $1,500.00, PayPal fees Not provided by PayPal, net Not provided by PayPal",
     "Missing: upload it on the FIRA page; 2 lines need your confirmation; 1 lines not matched",
     "PayPal sync failed; figures may be incomplete.",
     "The AI step failed.",
     "Note from Claude",
-    "Monthly close (scheduled) 2026-11-01: Completed",
+    "Monthly close (scheduled) 1 Nov 2026, 00:00 IST:",
     "Tool calls (1)",
     "paypal_get_invoice",
     "Test citation",
@@ -611,7 +611,7 @@ it("renders failed AI with retained drafts, figures, priorities, reminders and t
   ])
     expect(html).toContain(text);
   expect(html).not.toContain("Reviewed by Claude.");
-  expect(html.match(/Send PayPal&#x27;s standard reminder/g)).toHaveLength(1);
+  expect(html.match(/Send PayPal&#x27;s standard reminder/g)).toHaveLength(5);
   expect(html.match(/<button[^>]*>Reject<\/button>/g)).toHaveLength(2);
 });
 
@@ -641,7 +641,7 @@ it.each(["covered", "not_due", "not_needed"] as const)(
         not_needed: "No PayPal payments this month",
       }[state],
     );
-    expect(html).toContain("No PayPal actions to approve.");
+    expect(html).toContain("Nothing to approve");
     expect(html).toContain("Reviewed by Claude.");
     expect(hooks.effects).toHaveLength(1);
   },
@@ -665,7 +665,7 @@ it.each([
       doneAt: null,
     }),
   ]);
-  expect(renderToStaticMarkup(await Tasks())).toContain(`<h2>${label}</h2>`);
+  expect(renderToStaticMarkup(await Tasks())).toContain(`<strong>${label}</strong>`);
 });
 
 it.each([true, false])(
@@ -741,20 +741,110 @@ it.each([true, false])(
       });
     const html = renderToStaticMarkup(await Invoices());
     expect(apiGet).toHaveBeenCalledWith("/close", expect.anything());
+    expect(html).toContain(`id="invoice-${invoice.id}"`);
+    expect(html).toContain('<details class="card"><summary>New invoice</summary>');
     expect(html.includes("<h3>RBI deadline</h3>")).toBe(unpaid);
     if (unpaid) {
-      expect(html).toContain("<dt>Receive full payment by</dt><dd>2026-10-30</dd>");
+      expect(html).toContain("<dt>Amount</dt><dd>$1,500.00</dd>");
+      expect(html).toContain("<dt>Receive full payment by</dt><dd>30 Oct 2026</dd>");
       expect(html).toContain("Overdue by 1 day");
       expect(html).toContain("Test deadline message");
       expect(html).toContain("Test citation");
       for (const stage of [60, 30]) {
-        expect(html).toContain(
-          `Invoice ${action.invoiceNumber}: reminder ${stage} days before the RBI deadline</p><div><h3>Waiting for your approval</h3>`,
-        );
+        expect(html).toContain(`Reminder \u00b7 ${stage}-day stage`);
       }
     }
     expect(html).toContain(unknownOutcome);
-    expect(html.match(/Send PayPal&#x27;s standard reminder/g) ?? []).toHaveLength(unpaid ? 2 : 0);
+    expect(html.match(/Send PayPal&#x27;s standard reminder/g) ?? []).toHaveLength(unpaid ? 5 : 1);
     expect(html).not.toContain("approve again to retry");
   },
 );
+
+it("opens the new invoice form only when there are no invoices", async () => {
+  vi.mocked(apiGet)
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce({ runs: [], approvals: [] });
+  const html = renderToStaticMarkup(await Invoices());
+  expect(html).toContain('<details class="card" open=""><summary>New invoice</summary>');
+  expect(html).toContain("No invoices yet");
+  expect(html).toContain("Paste a client email and Claude fills in the invoice for you.");
+});
+
+it("renders credit notes and distinguishes the invoice total from a partial refund", async () => {
+  const invoice = invoiceViewSchema.parse({
+    id: action.invoiceId,
+    clientId: action.invoiceId,
+    clientName: "Acme",
+    type: "one_time",
+    number: action.invoiceNumber,
+    fy: "2026-27",
+    date: "2026-01-30",
+    currency: "USD",
+    amount: "100.00",
+    description: "Dashboard",
+    sac: "998314",
+    recurrence: null,
+    status: "partially_refunded",
+    pdfUrl: null,
+    paypalInvoiceId: "INV2-TEST",
+    paypalRecurringSeriesId: null,
+    paidTotal: "100.00",
+    payments: [],
+    firaStatus: "pending",
+    refundedTotal: "40.00",
+    refunds: [],
+    disputes: [],
+    action: null,
+    refundActions: [
+      {
+        ...action,
+        paymentId: action.invoiceId,
+        paypalAction: "refund_payment",
+        payload: {
+          invoiceId: action.invoiceId,
+          paymentId: action.invoiceId,
+          captureId: "CAPTURE-1",
+          refund: { amount: { currency_code: "USD", value: "40.00" } },
+        },
+      },
+    ],
+    compliance: {
+      realisation: {
+        exportValue: "100.00",
+        received: "60.00",
+        shortfall: "40.00",
+        adjustment: "none",
+        message: null,
+        citation: summary.citations[0],
+      },
+      deadline: null,
+      creditNotes: [
+        {
+          refundId: "REFUND-1",
+          originalInvoice: action.invoiceNumber,
+          originalDate: "2026-01-30",
+          value: "USD 40.00",
+          igst: "USD 0.00",
+          declareBy: "2027-11-30",
+          late: false,
+          message: "Review this credit note with your CA.",
+          citation: summary.citations[0],
+        },
+      ],
+      disputeAlerts: [],
+    },
+  });
+  vi.mocked(apiGet)
+    .mockResolvedValueOnce([invoice])
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce({ runs: [], approvals: [] });
+  const html = renderToStaticMarkup(await Invoices());
+  expect(html).toContain("<details><summary>Details</summary>");
+  expect(html).toContain("<dt>Credit value</dt><dd>USD 40.00</dd>");
+  expect(html).toContain("<dt>IGST</dt><dd>USD 0.00</dd>");
+  expect(html).toContain("<dt>Invoice amount</dt><dd>$100.00</dd>");
+  expect(html).not.toContain("<dt>Amount</dt>");
+  expect(html).toContain("&quot;value&quot;: &quot;40.00&quot;");
+  expect(html).toContain("Approve and refund through PayPal");
+});

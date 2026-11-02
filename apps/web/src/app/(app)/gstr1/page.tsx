@@ -4,7 +4,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { Gstr1Download } from "../../../components/Gstr1Download";
+import { PageHeader } from "../../../components/PageHeader";
 import { apiUrl } from "../../../lib/env";
+import { formatDate, formatMoney } from "../../../lib/format";
+
+export const metadata = { title: "GSTR-1" };
 
 const messages: Record<string, string> = {
   not_gst_registered:
@@ -44,7 +48,7 @@ export default async function Gstr1({
   if (!selected.ok)
     return (
       <>
-        <h1>GSTR-1</h1>
+        <PageHeader title="GSTR-1" />
         <p>{selected.message}</p>
         <Link href="/profile">Edit profile</Link>
         <p>
@@ -55,8 +59,8 @@ export default async function Gstr1({
   const { preview } = selected;
   return (
     <>
-      <h1>GSTR-1</h1>
-      <form method="get">
+      <PageHeader title="GSTR-1" />
+      <form className="card" method="get">
         <label htmlFor="period">Reporting period</label>
         <select key={preview.period} id="period" name="period" defaultValue={preview.period}>
           {!preview.periods.some((period) => period.period === preview.period) && (
@@ -72,7 +76,8 @@ export default async function Gstr1({
       </form>
       <h2>{preview.label}</h2>
       <p>
-        Due {preview.dueDate}. The government sometimes extends this date; check the GST portal.
+        Due {formatDate(preview.dueDate)}. The government sometimes extends this date; check the GST
+        portal.
       </p>
       <p>
         Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with your CA.
@@ -82,43 +87,44 @@ export default async function Gstr1({
       ) : (
         <>
           <h2>Invoices</h2>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Invoice</th>
-                <th scope="col">Date</th>
-                <th scope="col">Amount</th>
-                <th scope="col">Status</th>
-                <th scope="col">LUT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {preview.invoices.map((invoice) => (
-                <tr key={invoice.invoiceId}>
-                  <td>{invoice.number}</td>
-                  <td>{invoice.date}</td>
-                  <td>
-                    {invoice.currency} {invoice.amount}
-                  </td>
-                  <td>{invoice.status}</td>
-                  <td>
-                    {invoice.lutCovered ? (
-                      "Covered"
-                    ) : (
-                      <>
-                        Invoice {invoice.number} is not covered by your LUT on {invoice.date}, so it
-                        needs IGST. It is not in this file; ask your CA.
-                        <p>
-                          Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with
-                          your CA.
-                        </p>
-                      </>
-                    )}
-                  </td>
+          <div className="card table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Invoice</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">LUT</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {preview.invoices.map((invoice) => (
+                  <tr key={invoice.invoiceId}>
+                    <td className="mono">{invoice.number}</td>
+                    <td>{formatDate(invoice.date)}</td>
+                    <td className="num">{formatMoney(invoice.amount, invoice.currency)}</td>
+                    <td>{invoice.status}</td>
+                    <td>
+                      {invoice.lutCovered ? (
+                        "Covered"
+                      ) : (
+                        <>
+                          Invoice {invoice.number} is not covered by your LUT on{" "}
+                          {formatDate(invoice.date)}, so it needs IGST. It is not in this file; ask
+                          your CA.
+                          <p>
+                            Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with
+                            your CA.
+                          </p>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
       <h2>Refunds</h2>
@@ -128,7 +134,8 @@ export default async function Gstr1({
       <ul>
         {preview.refunds.map((refund) => (
           <li key={refund.refundId}>
-            {refund.date}: invoice {refund.invoiceNumber}, {refund.currency} {refund.amount}
+            {formatDate(refund.date)}: invoice {refund.invoiceNumber},{" "}
+            {formatMoney(refund.amount, refund.currency)}
             {refund.creditNote && (
               <>
                 <p>{refund.creditNote.message}</p>
@@ -142,26 +149,28 @@ export default async function Gstr1({
         ))}
       </ul>
       <h2>Reconciliation</h2>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Currency</th>
-            <th scope="col">Invoices</th>
-            <th scope="col">Refunds</th>
-            <th scope="col">Net</th>
-          </tr>
-        </thead>
-        <tbody>
-          {preview.totals.map((total) => (
-            <tr key={total.currency}>
-              <th scope="row">{total.currency}</th>
-              <td>{total.invoices}</td>
-              <td>{total.refunds}</td>
-              <td>{total.net}</td>
+      <div className="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Currency</th>
+              <th scope="col">Invoices</th>
+              <th scope="col">Refunds</th>
+              <th scope="col">Net</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {preview.totals.map((total) => (
+              <tr className="totals-row" key={total.currency}>
+                <th scope="row">{total.currency}</th>
+                <td className="num">{formatMoney(total.invoices, total.currency)}</td>
+                <td className="num">{formatMoney(total.refunds, total.currency)}</td>
+                <td className="num">{formatMoney(total.net, total.currency)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <Gstr1Download key={preview.period} preview={preview} />
     </>
   );

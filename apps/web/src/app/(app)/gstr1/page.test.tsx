@@ -66,7 +66,7 @@ it("renders the server preview and eight API-supplied periods without recomputin
   expect(html.match(/<option /g)).toHaveLength(8);
   expect(html).toContain('value="2026-10" selected=""');
   expect(html).toContain(
-    "Due 2026-11-11. The government sometimes extends this date; check the GST portal.",
+    "Due 11 Nov 2026. The government sometimes extends this date; check the GST portal.",
   );
   expect(html).toContain("Rule GSTR1_6A: Source citation. Verify with your CA.");
   expect(html).toContain(
@@ -177,7 +177,7 @@ it("forwards the selected period and renders exclusions without requesting their
   );
   expect(fetcher.mock.calls[0]?.[0]).toEqual(new URL("http://localhost:3001/gstr1?period=2026-10"));
   expect(html).toContain(
-    "Invoice 2026-27/0002 is not covered by your LUT on 2026-10-01, so it needs IGST. It is not in this file; ask your CA.",
+    "Invoice 2026-27/0002 is not covered by your LUT on 1 Oct 2026, so it needs IGST. It is not in this file; ask your CA.",
   );
   expect(html).not.toContain(`name="gst-${excluded.invoiceId}"`);
 });

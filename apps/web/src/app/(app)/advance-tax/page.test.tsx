@@ -32,6 +32,14 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+it("formats receipts while retaining unavailable estimate labels and the CA note", async () => {
+  const html = renderToStaticMarkup(await AdvanceTax({ searchParams: Promise.resolve({}) }));
+  expect(html).toContain('class="num">$100.00</td>');
+  expect(html).toContain("Gross receipts: Not available. Estimate — confirm with your CA.");
+  expect(html).toContain("Deemed income: Not available. Estimate — confirm with your CA.");
+  expect(html).toContain("Estimated tax: Not available. Estimate — confirm with your CA.");
+});
+
 it.each([
   {},
   { taxYear: "2026-27", USD: "83.00", estimatedTax: "20000" },

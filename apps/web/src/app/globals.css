@@ -411,6 +411,75 @@ details[open] > summary {
 .card + .card {
   margin-top: var(--niryat-space-4);
 }
+.health-bar {
+  height: var(--niryat-space-2);
+  overflow: hidden;
+  border-radius: var(--niryat-radius-pill);
+  background: var(--niryat-sunken);
+  margin-bottom: var(--niryat-space-3);
+}
+.health-bar > div {
+  height: 100%;
+  background: var(--niryat-primary);
+}
+.purpose-code {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+.close-priorities {
+  list-style: none;
+  counter-reset: priority;
+  padding: 0;
+}
+.close-priorities > li {
+  position: relative;
+  min-height: var(--niryat-space-5);
+  margin-bottom: var(--niryat-space-4);
+  padding-left: var(--niryat-space-6);
+  counter-increment: priority;
+}
+.close-priorities > li::before {
+  position: absolute;
+  left: 0;
+  width: var(--niryat-space-5);
+  height: var(--niryat-space-5);
+  border: 1px solid var(--niryat-accent);
+  border-radius: 50%;
+  text-align: center;
+  line-height: 22px;
+  content: counter(priority);
+}
+.totals-row > * {
+  border-top: 2px solid var(--niryat-border-strong);
+  font-weight: 600;
+}
+.fira-lines {
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+.fira-lines :is(th, td) {
+  padding: var(--niryat-space-2);
+}
+.fira-lines th:nth-child(3),
+.fira-lines th:nth-child(5) {
+  width: 15%;
+}
+.fira-lines th:nth-child(7) {
+  width: 18%;
+}
+.fira-lines pre {
+  white-space: pre-wrap;
+}
+.fira-lines :where(td:last-child button) {
+  max-width: 100%;
+  padding-inline: var(--niryat-space-1);
+}
+@media (max-width: 639px) {
+  .fira-lines {
+    min-width: 60rem;
+  }
+}
 .approval-card[data-status="proposed"] {
   border-left: 3px solid var(--niryat-accent);
 }
@@ -545,7 +614,7 @@ details[open] > summary {
 .page-header {
   padding-top: var(--niryat-space-6);
 }
-.page-header p {
+.page-header > :where(div:first-child) > p {
   margin: var(--niryat-space-2) 0 0;
   color: var(--niryat-muted);
 }

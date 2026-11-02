@@ -12,6 +12,8 @@ export function TaskDoneButton({ taskId }: { taskId: string }) {
   return (
     <>
       <button
+        className="btn"
+        data-variant="ghost"
         type="button"
         disabled={isPending}
         onClick={async () => {

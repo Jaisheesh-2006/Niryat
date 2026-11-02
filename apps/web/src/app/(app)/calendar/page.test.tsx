@@ -54,7 +54,7 @@ it("server-renders all overdue and only the first ten upcoming links in date ord
   expect(html).not.toContain('href="/invoices#invoice-past-1"');
   expect(html.indexOf("Overdue: invoice 1")).toBeLessThan(html.indexOf("Overdue: invoice 3"));
   expect(html.indexOf("Upcoming: invoice 1")).toBeLessThan(html.indexOf("Upcoming: invoice 9"));
-  expect(html).toContain('<time dateTime="2026-11-01">2026-11-01</time>');
+  expect(html).toContain('<time dateTime="2026-11-01">1 Nov 2026</time>');
 });
 
 it("renders the empty fallback without JavaScript", async () => {

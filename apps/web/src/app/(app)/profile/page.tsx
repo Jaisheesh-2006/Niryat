@@ -1,6 +1,9 @@
 import { profileInputSchema, purposeCodesResponseSchema } from "@niryat/shared";
+import { PageHeader } from "../../../components/PageHeader";
 import { ProfileForm } from "../../../components/ProfileForm";
 import { apiGet } from "../../../lib/api";
+
+export const metadata = { title: "Profile" };
 
 export default async function Profile() {
   const [profile, catalogue] = await Promise.all([
@@ -11,7 +14,7 @@ export default async function Profile() {
 
   return (
     <>
-      <h1>Compliance profile</h1>
+      <PageHeader title="Compliance profile" />
       <ProfileForm initial={profile} codes={catalogue.codes} />
     </>
   );

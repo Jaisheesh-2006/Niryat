@@ -12,6 +12,7 @@ export function FiraUpload() {
 
   return (
     <form
+      className="card"
       method="post"
       onSubmit={async (event) => {
         event.preventDefault();

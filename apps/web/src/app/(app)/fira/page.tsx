@@ -2,86 +2,96 @@ import { firaDocumentSchema } from "@niryat/shared";
 import { z } from "zod";
 import { FiraLineButtons } from "../../../components/FiraLineButtons";
 import { FiraUpload } from "../../../components/FiraUpload";
+import { PageHeader } from "../../../components/PageHeader";
+import { StatusBadge } from "../../../components/StatusBadge";
 import { apiGet } from "../../../lib/api";
+import { formatDate, formatMoney, formatMonth } from "../../../lib/format";
+
+export const metadata = { title: "FIRA" };
 
 export default async function Fira() {
   const documents = (await apiGet("/fira", z.array(firaDocumentSchema))) ?? [];
 
   return (
     <>
-      <h1>FIRA matching</h1>
-      <p>
-        Upload the digital FIRA PDF from PayPal. Niryat reads each line and matches it to your
-        PayPal payments. Uncertain matches wait for your confirmation.
-      </p>
+      <PageHeader
+        title="FIRA matching"
+        description="Upload the digital FIRA PDF from PayPal. Niryat reads each line and matches it to your PayPal payments. Uncertain matches wait for your confirmation."
+      />
       <FiraUpload />
       {documents.map((document) => (
-        <section key={document.id}>
-          <h2>
-            FIRA for{" "}
-            {new Date(document.month).toLocaleDateString("en-IN", {
-              month: "long",
-              year: "numeric",
-              timeZone: "Asia/Kolkata",
-            })}
-          </h2>
-          <p>
-            Uploaded{" "}
-            {new Date(document.uploadedAt).toLocaleDateString("en-CA", {
-              timeZone: "Asia/Kolkata",
-            })}
-          </p>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Amount</th>
-                <th scope="col">Reference</th>
-                <th scope="col">Purpose code</th>
-                <th scope="col">Match</th>
-                <th scope="col">Confidence</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {document.lines.map((line) => (
-                <tr key={line.id}>
-                  <td>{line.date}</td>
-                  <td>
-                    {line.currency} {line.amount}
-                  </td>
-                  <td>
-                    {line.reference}
-                    <details>
-                      <summary>Source text</summary>
-                      <pre>{line.sourceText}</pre>
-                    </details>
-                  </td>
-                  <td>{line.purposeCode ?? "Not shown"}</td>
-                  <td>
-                    {line.match ? (
-                      <>
-                        Payment {line.match.paypalTxnId} (invoice {line.match.invoiceNumber})
-                        {line.match.state === "needs_confirmation" && <p>{line.note}</p>}
-                      </>
-                    ) : (
-                      <>
-                        <strong>Flagged</strong> {line.note}
-                      </>
-                    )}
-                  </td>
-                  <td>
-                    {line.match ? `${Math.round(Number(line.match.confidence) * 100)}%` : "—"}
-                  </td>
-                  <td>
-                    {line.match?.state === "needs_confirmation" && (
-                      <FiraLineButtons lineId={line.id} />
-                    )}
-                  </td>
+        <section className="card" key={document.id}>
+          <h2>FIRA for {formatMonth(document.month)}</h2>
+          <p className="caption">Uploaded {formatDate(document.uploadedAt)}</p>
+          <div className="table-wrap">
+            <table className="fira-lines">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Purpose code</th>
+                  <th scope="col">Match</th>
+                  <th scope="col">State</th>
+                  <th scope="col">Reason</th>
+                  <th scope="col">Confidence</th>
+                  <th scope="col">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {document.lines.map((line) => (
+                  <tr key={line.id}>
+                    <td>{formatDate(line.date)}</td>
+                    <td className="num">{formatMoney(line.amount, line.currency)}</td>
+                    <td>
+                      <span className="mono">{line.reference}</span>
+                      <details>
+                        <summary>Source text</summary>
+                        <pre>{line.sourceText}</pre>
+                      </details>
+                    </td>
+                    <td className="mono">{line.purposeCode ?? "Not shown"}</td>
+                    <td>
+                      {line.match ? (
+                        <>
+                          Payment <span className="mono">{line.match.paypalTxnId}</span> (invoice{" "}
+                          <span className="mono">{line.match.invoiceNumber}</span>)
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      <StatusBadge
+                        tone={
+                          !line.match
+                            ? "danger"
+                            : line.match.state === "matched"
+                              ? "success"
+                              : "attention"
+                        }
+                      >
+                        {!line.match
+                          ? "Flagged"
+                          : line.match.state === "matched"
+                            ? "Matched"
+                            : "Needs your confirmation"}
+                      </StatusBadge>
+                    </td>
+                    <td>{line.note}</td>
+                    <td>
+                      {line.match ? `${Math.round(Number(line.match.confidence) * 100)}%` : "—"}
+                    </td>
+                    <td>
+                      {line.match?.state === "needs_confirmation" && (
+                        <FiraLineButtons lineId={line.id} />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ))}
     </>

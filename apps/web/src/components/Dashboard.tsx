@@ -9,7 +9,18 @@ import { createDashboardAdapter, DASHBOARD_PROMPT_STARTERS } from "../lib/dashbo
 // D12 tokens switch for dark mode in globals.css, so the theme follows them.
 const theme = studioTheme.withParams({
   accentColor: "var(--niryat-primary)",
-  chartAxisLineColor: "var(--niryat-past)",
+  backgroundColor: "var(--niryat-surface)",
+  foregroundColor: "var(--niryat-text)",
+  chartAxisLineColor: "var(--niryat-muted)",
+  fontFamily: "var(--niryat-font-sans), system-ui, sans-serif",
+  chartPaletteFills1Color: "var(--niryat-primary)",
+  chartPaletteFills2Color: "var(--niryat-accent)",
+  chartPaletteFills3Color: "var(--niryat-neutral-strong)",
+  chartPaletteFills4Color: "var(--niryat-danger)",
+  chartPaletteStrokes1Color: "var(--niryat-primary)",
+  chartPaletteStrokes2Color: "var(--niryat-accent)",
+  chartPaletteStrokes3Color: "var(--niryat-neutral-strong)",
+  chartPaletteStrokes4Color: "var(--niryat-danger)",
 });
 const modules = [AgStudioAiModule];
 // Module-level so a re-render keeps the same harness setup.

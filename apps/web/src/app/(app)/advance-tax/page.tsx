@@ -3,7 +3,11 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { PageHeader } from "../../../components/PageHeader";
 import { apiUrl } from "../../../lib/env";
+import { formatDate, formatMoney } from "../../../lib/format";
+
+export const metadata = { title: "Advance tax" };
 
 const estimateNote = "Estimate — confirm with your CA.";
 const invalidQuery = "Enter a valid tax year, positive INR rates and a whole-rupee tax estimate.";
@@ -14,12 +18,6 @@ const querySchema = z
       (currency) => !query[currency] || inrRateSchema.safeParse(query[currency]).success,
     ),
   );
-
-function inr(value: string | null) {
-  if (value === null) return "Not available";
-  const [whole = "", fraction] = value.split(".");
-  return `INR ${whole.replace(/\B(?=(\d{2})*\d{3}$)/g, ",")}${fraction === undefined ? "" : `.${fraction}`}`;
-}
 
 async function estimateFor(query: URLSearchParams) {
   const response = await fetch(new URL(`/advance-tax?${query}`, apiUrl), {
@@ -59,7 +57,7 @@ export default async function AdvanceTax({
   if (!result.ok) {
     return (
       <>
-        <h1>Advance tax</h1>
+        <PageHeader title="Advance tax" />
         <p>{estimateNote}</p>
         <p>{result.message}</p>
         <Link href="/advance-tax">Reset estimate</Link>
@@ -69,9 +67,9 @@ export default async function AdvanceTax({
   const { estimate } = result;
   return (
     <>
-      <h1>Advance tax</h1>
+      <PageHeader title="Advance tax" />
       <p>{estimateNote}</p>
-      <form method="get">
+      <form className="card" method="get">
         <label htmlFor="taxYear">Tax year</label>
         <input id="taxYear" name="taxYear" defaultValue={estimate.taxYear} required />
         {estimate.receipts.map(({ currency }) => (
@@ -98,75 +96,109 @@ export default async function AdvanceTax({
         <button type="submit">Show estimate</button>
       </form>
       <h2>PayPal receipts for {estimate.taxYear}</h2>
-      <table>
-        <caption>{estimateNote}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Currency</th>
-            <th scope="col">Payments</th>
-            <th scope="col">Refunds</th>
-            <th scope="col">Net receipts</th>
-          </tr>
-        </thead>
-        <tbody>
-          {estimate.receipts.map((receipt) => (
-            <tr key={receipt.currency}>
-              <th scope="row">{receipt.currency}</th>
-              <td>{receipt.payments}</td>
-              <td>{receipt.refunds}</td>
-              <td>{receipt.net}</td>
+      <div className="card table-wrap">
+        <table>
+          <caption>{estimateNote}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Currency</th>
+              <th scope="col">Payments</th>
+              <th scope="col">Refunds</th>
+              <th scope="col">Net receipts</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <h2>Presumptive eligibility</h2>
-      <p>{estimate.eligibility.message}</p>
-      <p>
-        Rule {estimate.eligibility.citation.ruleId}: {estimate.eligibility.citation.source}. Verify
-        with your CA.
-      </p>
-      <p>
-        Gross receipts: {inr(estimate.grossReceiptsInr)}. {estimateNote}
-      </p>
-      <p>
-        Deemed income: {inr(estimate.deemedIncomeInr)}. {estimateNote}
-      </p>
-      <h2>Advance-tax schedule</h2>
-      <p>
-        Estimated tax: {inr(estimate.estimatedTaxInr)}. {estimateNote}
-      </p>
-      {estimate.messages.map((message) => (
-        <div key={message}>
-          <p>{message}</p>
-          {estimate.citations
-            .filter((citation) => citation.ruleId === "ADVANCE_TAX_DATES")
-            .map((citation) => (
-              <p key={citation.ruleId}>
-                Rule {citation.ruleId}: {citation.source}. Verify with your CA.
-              </p>
+          </thead>
+          <tbody>
+            {estimate.receipts.map((receipt) => (
+              <tr key={receipt.currency}>
+                <th scope="row">{receipt.currency}</th>
+                <td className="num">{formatMoney(receipt.payments, receipt.currency)}</td>
+                <td className="num">{formatMoney(receipt.refunds, receipt.currency)}</td>
+                <td className="num">{formatMoney(receipt.net, receipt.currency)}</td>
+              </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+      <section className="card">
+        <h2>Presumptive eligibility</h2>
+        <p>{estimate.eligibility.message}</p>
+        <p>
+          Rule {estimate.eligibility.citation.ruleId}: {estimate.eligibility.citation.source}.
+          Verify with your CA.
+        </p>
+        <p>
+          Gross receipts:{" "}
+          {estimate.grossReceiptsInr === null
+            ? "Not available"
+            : formatMoney(estimate.grossReceiptsInr, "INR")}
+          . {estimateNote}
+        </p>
+        <p>
+          Deemed income:{" "}
+          {estimate.deemedIncomeInr === null
+            ? "Not available"
+            : formatMoney(estimate.deemedIncomeInr, "INR")}
+          . {estimateNote}
+        </p>
+      </section>
+      <section className="card">
+        <h2>Advance-tax schedule</h2>
+        <p>
+          Estimated tax:{" "}
+          {estimate.estimatedTaxInr === null
+            ? "Not available"
+            : formatMoney(estimate.estimatedTaxInr, "INR")}
+          . {estimateNote}
+        </p>
+        {estimate.messages.map((message) => (
+          <div key={message}>
+            <p>{message}</p>
+            {estimate.citations
+              .filter((citation) => citation.ruleId === "ADVANCE_TAX_DATES")
+              .map((citation) => (
+                <p key={citation.ruleId}>
+                  Rule {citation.ruleId}: {citation.source}. Verify with your CA.
+                </p>
+              ))}
+          </div>
+        ))}
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Schedule</th>
+                <th scope="col" className="num">
+                  Amount
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {estimate.schedule.map((row) => (
+                <tr key={row.date}>
+                  <td>
+                    By {formatDate(row.date)}: {row.cumulativePercent}% of the year&apos;s tax
+                  </td>
+                  <td className="num">
+                    {row.amountInr !== null && (
+                      <>
+                        {" "}
+                        ({formatMoney(row.amountInr, "INR")}) — {estimateNote}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      ))}
-      <ul>
-        {estimate.schedule.map((row) => (
-          <li key={row.date}>
-            By {row.date}: {row.cumulativePercent}% of the year&apos;s tax
-            {row.amountInr !== null && (
-              <>
-                {" "}
-                ({inr(row.amountInr)}) — {estimateNote}
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      {estimate.citations
-        .filter((citation) => citation.ruleId === "ADVANCE_TAX_DATES")
-        .map((citation) => (
-          <p key={citation.ruleId}>
-            Rule {citation.ruleId}: {citation.source}. Verify with your CA.
-          </p>
-        ))}
+        {estimate.citations
+          .filter((citation) => citation.ruleId === "ADVANCE_TAX_DATES")
+          .map((citation) => (
+            <p key={citation.ruleId}>
+              Rule {citation.ruleId}: {citation.source}. Verify with your CA.
+            </p>
+          ))}
+      </section>
       <Link href="/profile">Edit profile</Link>
     </>
   );

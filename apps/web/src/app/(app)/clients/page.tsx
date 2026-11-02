@@ -1,7 +1,12 @@
 import { clientSchema } from "@niryat/shared";
 import { z } from "zod";
 import { ClientForm } from "../../../components/ClientForm";
+import { PageHeader } from "../../../components/PageHeader";
+import { StatusBadge } from "../../../components/StatusBadge";
 import { apiGet } from "../../../lib/api";
+import type { Tone } from "../../../lib/status";
+
+export const metadata = { title: "Clients" };
 
 export default async function Clients() {
   const clients = (await apiGet("/clients", z.array(clientSchema))) ?? [];
@@ -15,16 +20,28 @@ export default async function Clients() {
   };
   const resultLabels = { pass: "Pass", fail: "Fail", unknown: "Unknown" };
 
+  const resultTones: Record<keyof typeof resultLabels, Tone> = {
+    pass: "success",
+    fail: "danger",
+    unknown: "attention",
+  };
+
   return (
     <>
-      <h1>Clients and export check</h1>
-      <h2>Add a client</h2>
-      <ClientForm />
+      <PageHeader
+        title="Clients and export check"
+        actions={
+          <details className="card" open={clients.length === 0}>
+            <summary>Add a client</summary>
+            <ClientForm />
+          </details>
+        }
+      />
       {clients.map((client) => {
         const { eligible, conditions, citation } = client.exportCheck.result;
         const countryName = regions.of(client.country) ?? client.country;
         return (
-          <section key={client.id}>
+          <section className="card" key={client.id}>
             <h2>
               {client.name} ({countryName})
             </h2>
@@ -34,26 +51,30 @@ export default async function Clients() {
               <dt>Client address</dt>
               <dd>{client.address ?? "Not provided"}</dd>
             </dl>
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Condition</th>
-                  <th scope="col">Result</th>
-                  <th scope="col">Legal reference</th>
-                  <th scope="col">Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {conditions.map(({ id, status, reference, message }) => (
-                  <tr key={id}>
-                    <td>{conditionLabels[id]}</td>
-                    <td>{resultLabels[status]}</td>
-                    <td>{reference}</td>
-                    <td>{message}</td>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Condition</th>
+                    <th scope="col">Result</th>
+                    <th scope="col">Legal reference</th>
+                    <th scope="col">Details</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {conditions.map(({ id, status, reference, message }) => (
+                    <tr key={id}>
+                      <td>{conditionLabels[id]}</td>
+                      <td>
+                        <StatusBadge tone={resultTones[status]}>{resultLabels[status]}</StatusBadge>
+                      </td>
+                      <td>{reference}</td>
+                      <td>{message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {eligible ? (
               <p>
                 <strong>Zero-rated export invoice: allowed.</strong>
