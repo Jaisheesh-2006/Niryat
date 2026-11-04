@@ -32,6 +32,19 @@ const config: NextConfig = {
   transpilePackages: ["@niryat/shared"],
   // Avoid missing SST files in the persistent Windows development cache.
   experimental: { turbopackFileSystemCacheForDev: false },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiUrl}/:path*` }];
   },

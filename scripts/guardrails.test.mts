@@ -7,6 +7,24 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const hook = resolve(root, "scripts/claude-hook.mts");
+
+test("Render services explicitly use production mode", () => {
+  const services = readFileSync(resolve(root, "render.yaml"), "utf8")
+    .replaceAll("\r\n", "\n")
+    .split(/^ {2}- type: /m);
+  for (const name of [
+    "niryat-api",
+    "niryat-web",
+    "niryat-sync",
+    "niryat-monthly-close",
+    "niryat-worker",
+  ]) {
+    const service = services.find((block) => block.includes(`    name: ${name}\n`));
+    assert.ok(service, name);
+    assert.match(service, /^ {6}- key: NODE_ENV\n {8}value: production$/m, name);
+  }
+});
+
 function runHook(mode: string, input: unknown) {
   return spawnSync(process.execPath, [hook, mode], {
     cwd: root,

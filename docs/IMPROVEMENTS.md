@@ -1,0 +1,584 @@
+# Improvements plan: judge readiness, CA view, sponsor depth, plain wording
+
+Written 2026-11-04 for execution by a coding model. Submission target is **2026-11-11** (deadline 2026-11-12, 12:00 PT); judging runs 2026-12-01 to 2026-12-15.
+Prize targets: a grand prize, **Best Use of AG Grid (AG Studio)**, **Bryntum** and **Render**. The rules allow **one** sponsor prize per project. AG Studio is the primary sponsor target. Bryntum and Render work must not delay AG Studio or grand-prize work.
+
+Read before starting any task: [AGENTS.md](AGENTS.md), the nearest nested AGENTS.md, [architecture](docs/architecture.md), [build flow §Phase 7](docs/build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58), [ADR 0005](docs/decisions/0005-agent-boundary.md) and [PLAN §15–16, §23](docs/PLAN.md).
+Hosting and deployment are **out of scope** (the user deploys to Render). Tasks that change [render.yaml](render.yaml) only edit the blueprint; nothing here deploys.
+
+---
+
+## 0. Scope gate (read first)
+
+- **Cut line.** If B1–B5 are not passing `pnpm verify` by **2026-11-08 end of day**, stop CA work at the last passing task. Ship A, C1–C3, D and F. A half-built CA view is worse than none in a demo.
+- **Priority:** P0 = must ship for judging. P1 = should ship; strengthens a prize. P2 = only if everything else is done.
+- **Golden rules still hold** (AGENTS.md): every PayPal write needs freelancer approval, legal/numeric logic stays in `packages/rules`, sandbox only, zod at every boundary, no `.env*` reads. The only authorized `.env.example` changes are those in section 5, decision 1.
+- **One spec per task** still applies. Each task below is one unit; do them in order unless "Depends on" allows otherwise.
+- **Do not tick spec checkboxes** unless a task's acceptance actually satisfies them. None of these tasks satisfies an open spec checkbox by itself.
+
+### Order and priority
+
+| Order | Task                                                    | Priority                   | Depends on          |
+| ----- | ------------------------------------------------------- | -------------------------- | ------------------- |
+| 1     | A1 Security quick fixes                                 | P0                         | —                   |
+| 2     | A2 Rate limits                                          | P0                         | —                   |
+| 3     | A3 Demo honesty fixes (docs)                            | P0                         | —                   |
+| 4     | A4 Make the agent visible                               | P0                         | —                   |
+| 5     | B1 Roles and role-aware sessions                        | P0                         | —                   |
+| 6     | B2 Separate freelancer and CA sign-in                   | P0                         | B1                  |
+| 7     | B3 Freelancer → CA share requests                       | P0                         | B2                  |
+| 8     | B4 CA read access to a client's records                 | P0                         | B3                  |
+| 9     | B5 CA pages (portfolio list, client view)               | P0                         | B4                  |
+| 10    | B6 CA portfolio AG Studio dashboard                     | P1 (AG prize)              | B5                  |
+| 11    | C1 Calendar categories, filter sidebar, more views      | P1                         | —                   |
+| 12    | C2 Calendar event tooltips with "what to do" and source | P1                         | C1                  |
+| 13    | C3 CA multi-client calendar                             | P1 (Bryntum prize)         | B4, C1              |
+| 14    | D1 Plain-language glossary and term helper              | P0                         | —                   |
+| 15    | D2 Rewrite user-facing wording                          | P0                         | D1                  |
+| 16    | E1 PayPal sync freshness and frequent light sync        | P1 (Render prize, Phase 7) | —                   |
+| 17    | E2 Durable manual close through Render Workflows        | P1 (Render prize, Phase 7) | —                   |
+| 18    | A5 Judge mode: seed and "Try as judge"                  | P0                         | B1–B5 (CA part), A2 |
+| 19    | F1 Submission materials                                 | P0                         | all shipped tasks   |
+| 20    | C4 Plan-your-work drag on the calendar                  | P2                         | C1                  |
+
+A1–A4, C1–C2, D1 and E1 touch separate files, so they may run in parallel with B.
+
+---
+
+## 1. Shared decisions and contracts (defined once, referenced by tasks)
+
+### S1. Roles
+
+- `users.role`: `text NOT NULL DEFAULT 'freelancer'`, with a `CHECK (role IN ('freelancer','ca'))`. New migration `0007_*` from `pnpm db:generate`. Existing rows become `freelancer`.
+- Add `userRoles = ["freelancer", "ca"] as const` and `UserRole` to [packages/shared/src/index.ts](packages/shared/src/index.ts), next to `agentRunKinds`.
+- A role never changes after creation. One email has exactly one account and one role (`users.email` stays unique).
+- **Only freelancers own compliance data.** A CA account has no profile, clients, invoices, actions, runs or tasks of its own, except `agent_runs` of kind `dashboard` created by B6.
+
+### S2. Role-aware session
+
+- Cookie value becomes `${userId}.${role}.${issuedAtSeconds}`, still signed with `SESSION_SECRET` through `setSignedCookie` ([session.ts](apps/api/src/auth/session.ts)). The schema becomes a tuple of uuid, `z.enum(userRoles)` and digits. Old two-part cookies fail to parse, so users sign in again. That is acceptable; say so in the task notes.
+- `startSession(c, userId, role, secret, secure)`: the role is required.
+- `readSession(c, secret, now?)`: **unchanged name and return type**, but returns the userId **only for `freelancer` sessions**. CA sessions return `undefined`. This makes every existing route (26 call sites in 13 files) deny CAs with no edits. Do not change those call sites.
+- New `readCaSession(c, secret, now?) → string | undefined`: returns the userId only for `ca` sessions.
+- New `readAnySession(c, secret, now?) → { userId, role } | undefined`: used only by `/auth/me`, `/auth/logout` and the B4 access reader.
+- `GET /auth/me` returns `{ id, email, role }`. Update `sessionUserSchema` in shared and every web caller (the [(app) layout](apps/web/src/app/(app)/layout.tsx) and others found by grep).
+
+### S3. Sign-in surfaces
+
+| Who        | Pages                           | API                                                 | PayPal login   |
+| ---------- | ------------------------------- | --------------------------------------------------- | -------------- |
+| Freelancer | `/login`, `/signup` (existing)  | `POST /auth/signup`, `POST /auth/login` (existing)  | Yes (existing) |
+| CA         | `/ca/login`, `/ca/signup` (new) | `POST /auth/ca/signup`, `POST /auth/ca/login` (new) | **No**         |
+- Signup endpoints create an account with their own role only.
+- Login endpoints verify the password first (keep the dummy-hash timing defence in [auth.ts](apps/api/src/routes/auth.ts)). Only then, on a role mismatch, return **403** `{ error: "wrong_portal", portal: "ca" | "freelancer" }`. No session is set.
+- `signInWithPayPal` must never sign in a CA. If the PayPal email matches a CA account, the existing `email_taken` result applies. Add a test.
+- After sign-in: freelancer → `/overview`, CA → `/ca`.
+- Exact UI messages (add to the existing message map in [lib/forms.ts](apps/web/src/lib/forms.ts) or wherever `sendJson` messages live):
+  - `wrong_portal` with `portal: "ca"`: **"This is a CA account. Sign in on the CA sign-in page."** plus a link to `/ca/login`.
+  - `wrong_portal` with `portal: "freelancer"`: **"This is a freelancer account. Sign in on the freelancer sign-in page."** plus a link to `/login`.
+- Page copy: freelancer pages say "For freelancers" with a link "Are you a CA? Sign in here". CA pages say "For chartered accountants" with a link back.
+
+### S4. Role routing in the web app (navigation only, never security)
+
+- The API enforces roles (S2). The web app only routes people to the right area.
+- Add a request-routing file for Next **16.4.3** (Next 16 renamed `middleware.ts`; **check the installed Next docs for the current file name and API before writing it**). It reads the session cookie's unsigned role segment only to redirect:
+  - a `ca` cookie on `(app)` paths → `/ca`;
+  - a `freelancer` cookie on `/ca/*` paths except `/ca/login` and `/ca/signup` → `/overview`.
+
+  It never trusts the role for data access.
+- The `(app)` layout keeps its `/auth/me` check and also redirects a CA to `/ca`. A new `(ca)` route-group layout requires `role === "ca"`, else redirects to `/ca/login`.
+- `apiGet` ([lib/api.ts](apps/web/src/lib/api.ts)) currently redirects 401 to `/login`. Add an optional `loginPath` argument (default `/login`); CA pages pass `/ca/login`.
+
+### S5. Share links (freelancer invites a CA)
+
+New table `ca_links`:
+
+| Column                                   | Type                    | Notes                                                 |
+| ---------------------------------------- | ----------------------- | ----------------------------------------------------- |
+| `id`                                     | uuid pk                 |                                                       |
+| `freelancer_user_id`                     | uuid fk users, not null | must be a freelancer                                  |
+| `ca_email`                               | text not null           | trimmed, lowercased                                   |
+| `ca_user_id`                             | uuid fk users, null     | set on accept; must be a CA                           |
+| `status`                                 | text not null           | `pending` \| `accepted` \| `ended` (CHECK)            |
+| `ended_by`                               | text null               | `freelancer` \| `ca`, set when status becomes `ended` |
+| `created_at`, `responded_at`, `ended_at` | timestamptz             |                                                       |
+- **At most one active link per freelancer:** a partial unique index on `freelancer_user_id WHERE status IN ('pending','accepted')`.
+- The request stores an email. The API **does not look up whether that email has an account**, to avoid revealing who is registered. A CA sees it after signing up or signing in with that email. **No email is sent** (no mail service exists; a non-goal). The freelancer tells their CA.
+- Allowed transitions. Each is atomic, `UPDATE … WHERE status = <expected> RETURNING`, like the `agent_actions` claim:
+
+| From                    | To                               | Who        | Condition                                                    |
+| ----------------------- | -------------------------------- | ---------- | ------------------------------------------------------------ |
+| —                       | `pending`                        | freelancer | no active link; `ca_email` ≠ own email                       |
+| `pending`               | `accepted`                       | CA         | session email = `ca_email`; set `ca_user_id`, `responded_at` |
+| `pending`               | `ended` (`ended_by: ca`)         | CA         | session email = `ca_email` (decline)                         |
+| `pending` or `accepted` | `ended` (`ended_by: freelancer`) | freelancer | owner (cancel or stop sharing)                               |
+| `accepted`              | `ended` (`ended_by: ca`)         | CA         | `ca_user_id` = session user (stop managing)                  |
+- An ended link is never reopened; the freelancer creates a new request.
+- **Endpoints** (JSON only, through `parseJsonBody`):
+  - Freelancer (`readSession`):
+    - `GET /ca-link` → `{ link: null | { id, caEmail, status, createdAt, respondedAt } }`
+    - `POST /ca-link` `{ caEmail }` → 201 | 400 `invalid_request` | 400 `own_email` | 409 `link_exists`
+    - `POST /ca-link/end` `{}` → 204 | 404
+  - CA (`readCaSession`):
+    - `GET /ca/requests` → pending links for the CA's email: `{ id, freelancerName, freelancerEmail, createdAt }[]`. `freelancerName` is the profile `legalName` or null.
+    - `POST /ca/requests/:id/accept` and `POST /ca/requests/:id/decline` → 204 | 404
+    - `POST /ca/clients/:freelancerId/end` → 204 | 404
+- Repository functions in a new `packages/db/src/ca-links.ts`, exported from the db index. Follow the error-wrapping and zod-parsing style in [users.ts](packages/db/src/users.ts).
+
+### S6. CA read access to a client's records
+
+- New `readClientAccess(c, deps, clientParam: string | undefined) → { userId: string; viewer: "owner" | "ca" } | undefined` in `apps/api/src/auth/`.
+  - Freelancer session and no `client` param → `{ userId: self, viewer: "owner" }`.
+  - Freelancer session with any `client` param that isn't the freelancer's own id → `undefined`. **Never** let a freelancer read another freelancer.
+  - CA session with a valid uuid `client` param and an `accepted` link (`ca_user_id` = CA, `freelancer_user_id` = client) → `{ userId: client, viewer: "ca" }`.
+  - Anything else → `undefined`.
+- Routes that adopt it map `undefined` to **401 when there is no session** and **404 `not_found` otherwise**, so a CA can't learn whether an unlinked id exists.
+- **Adopt only in these handlers** (each is a one-line swap from `readSession` plus reading `c.req.query("client")`):
+  - `GET /health-check`, `GET /invoices`, `GET /calendar`, `GET /gstr1`, `GET /advance-tax`, `GET /dashboard`, `GET /fira`, `GET /tasks`;
+  - `POST /gstr1/file`. It computes a CSV and stores nothing. **Verify that** in [routes/gstr1.ts](apps/api/src/routes/gstr1.ts) before adopting it.
+- Every other POST keeps `readSession`, so CAs stay denied: approvals, invoice issue, refunds, FIRA upload and confirm, tasks done, profile save, close start, extraction.
+- `POST /dashboard/turn` gets CA access in B6 only, for the CA's own portfolio session, never with `client`.
+- **Response projection for CAs:** `GET /invoices` for a CA viewer must omit action payloads (`agent_actions` payloads contain recipient emails) and must not include PDF file tokens. Read the invoice view type first and drop those fields when `viewer === "ca"`. The freelancer response is unchanged.
+
+### S7. Background jobs ignore CAs
+
+`listUserIds` ([users.ts](packages/db/src/users.ts)) is used by the all-user close and sync in [close.ts](apps/api/src/close.ts) (lines ~562 and ~581). It must return **freelancer ids only**. Add a DB test proving a CA account is excluded.
+
+### S8. Rate limiter
+
+- `createRateLimiter({ windowMs, max }) → (key: string, now: number) => boolean` in `apps/api/src/rate-limit.ts`: a fixed window with in-memory state **inside the returned closure**, not module-level (AGENTS.md). Build it in [server.ts](apps/api/src/server.ts) and pass it in through `AppDeps` (optional; absent in tests means unlimited).
+- Key = route group + client IP. The IP comes from the **first** `x-forwarded-for` entry when present (Render's proxy sets it), else the connection address. For AI groups, append the session userId.
+- Over limit → **429** `{ error: "rate_limited" }` with a `Retry-After` header in seconds.
+- Mark it `// shortcut: in-memory per instance; move to Postgres or Redis if the API runs more than one instance.`
+
+| Group   | Routes                                                                                 | Limit                 |
+| ------- | -------------------------------------------------------------------------------------- | --------------------- |
+| `auth`  | `POST /auth/login`, `/auth/signup`, `/auth/ca/login`, `/auth/ca/signup`, `/auth/judge` | 10 per minute per IP  |
+| `ai`    | `POST /dashboard/turn`, `POST /extract`, `POST /close`                                 | 6 per minute per user |
+| `share` | `POST /ca-link`                                                                        | 10 per hour per user  |
+
+### S9. Plain-language rules (used by D1/D2 and every new string in this plan)
+
+1. **Plain word first, legal term second, once per page:** "the yearly form that lets you bill foreign clients without GST (LUT, form RFD-11)". After that, the short term alone is fine.
+2. **Every warning says three things:** what is wrong, what to do, and who does it ("you", "your CA" or "in PayPal").
+3. **Keep the meaning of the law exactly.** Never change a number, date, threshold, condition or "may"/"must". If a simpler sentence would change the legal meaning, keep the original.
+4. **Never change these strings:**
+   - `LUT_ENDORSEMENT` and the other legal text printed on the invoice PDF ([export-invoice.ts](packages/rules/src/export-invoice.ts));
+   - rule IDs, `source` citations and YAML descriptions ([india-export.yaml](packages/rules/rules/india-export.yaml));
+   - GSTR-1 CSV headers and values;
+   - PayPal payloads;
+   - the "verify with your CA" or "confirm with your bank" notes (wording may become plainer, but the note must stay).
+5. Short sentences, under ~20 words where possible. No "pursuant", "aforesaid" or "realisation" without a gloss.
+6. **Figures stay out of AI text** (ADR 0005). This only affects code-written text.
+
+---
+
+## 2. Tasks
+
+### A1. Security quick fixes (P0)
+
+**Objective:** close the two config gaps found in the security review.
+- [render.yaml](render.yaml): add `NODE_ENV=production` (a `value:`, not `sync: false`) to `niryat-api`, `niryat-web` and every cron/worker service that runs API code. Reason: `secureCookies` is `NODE_ENV === "production"` ([server.ts:31](apps/api/src/server.ts#L31)), and env.ts defaults to `development`.
+- [apps/web/next.config.ts](apps/web/next.config.ts): add `headers()` returning, for `/:path*`:
+  - `X-Frame-Options: DENY`
+  - `Content-Security-Policy: frame-ancestors 'none'`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `X-Content-Type-Options: nosniff`
+
+  Do **not** add a full script/style CSP: AG Studio and Bryntum inject styles, and a strict CSP would need testing in the browser.
+
+**Edge cases:** the PDF route already sets its own headers; the proxied API responses are unaffected.
+
+**Tests:** extend [scripts/guardrails.test.mts](scripts/guardrails.test.mts) or add a small test asserting that `render.yaml` sets `NODE_ENV=production` for `niryat-api`. Add a web test importing the config and checking that `headers()` includes `X-Frame-Options: DENY`.
+
+**Acceptance:** `pnpm verify` and `pnpm build` pass.
+
+### A2. Rate limits (P0)
+
+**Objective:** implement S8. **Files:** new `apps/api/src/rate-limit.ts` with a test; [server.ts](apps/api/src/server.ts); `AppDeps` in [routes/auth.ts](apps/api/src/routes/auth.ts); the routes listed in S8. Remove the "no rate limiting on login" shortcut comment once done.
+
+**Tests:**
+- Unit test: window boundary, reset, separate keys.
+- Route tests: the 11th login in a minute → 429 with `Retry-After`; another IP is unaffected; no limiter in deps → unlimited.
+
+**Acceptance:** `pnpm verify` passes, and existing route tests pass unchanged.
+
+### A3. Demo honesty fixes (docs only, P0)
+
+1. [PLAN §16](docs/PLAN.md#16-demo-script-3-minutes) says _"Upload the FIRA → AI matches it"_. FIRA matching uses **no AI** (architecture.md). Change it to: _"Upload the FIRA → Niryat matches each line to a PayPal payment (no AI, by design) and flags one line with a reason"_.
+2. **Conflict to resolve:** the demo shows **"LUT expired"**, then sends an invoice. An expired LUT is a `high` flag, and high flags **block** invoice issuing ([export-invoice.ts](packages/rules/src/export-invoice.ts) `checkLut` filter). Change the script to **"LUT expires in N days"** (`lut_expiring`, low severity, does not block). A5 must seed `lutValidTo` 10–20 days after the seed date so this flag shows.
+3. Say on screen and in the README that the FIRA used is a **synthetic sample**.
+
+**Acceptance:** text-only diff; `pnpm verify` passes (the scaffold check reads PLAN).
+
+### A4. Make the agent visible (P0)
+
+**Objective:** the monthly close's investigation is the strongest "AI agent + PayPal" evidence. Make it visible without clicks.
+
+**File:** [close/page.tsx](apps/web/src/app/(app)/close/page.tsx) (tool-call `<details>` at ~line 240).
+
+**Requirements:**
+- The **most recent run's** tool-call list renders open (`<details open>`); older runs stay closed.
+- Plain labels, defined in [lib/status.ts](apps/web/src/lib/status.ts) next to the existing labels:
+  - actor `agent` → **"Claude"**, `system` → **"Niryat"**;
+  - tool names → plain verbs, e.g. `get_invoice` → **"Read a PayPal invoice"**, `list_transactions` → **"Read PayPal transactions"**, `propose_reminder` → **"Drafted a reminder for your approval"**, `suggest_task` → **"Suggested a task"**, `write_summary` → **"Wrote the summary"**.
+
+  Find the complete tool list in [close-agent.ts](packages/agent/src/close-agent.ts) and [paypal-tools.ts](packages/agent/src/paypal-tools.ts). Unknown names fall back to the raw name.
+- Keep the raw input/output `<pre>` behind a nested "Show details" disclosure.
+- Above the table, one line: **"Claude read your PayPal records with read-only tools. Nothing was sent or changed. Every PayPal action below waits for your approval."**
+
+**Tests:** update [ActionButtons.test.tsx](apps/web/src/components/ActionButtons.test.tsx) or the close page test: the latest run is open, labels are mapped, and unknown names fall back.
+
+**Acceptance:** web tests and `pnpm build` pass.
+
+### B1. Roles and role-aware sessions (P0)
+
+**Objective:** implement S1, S2 and S7.
+
+**Files:**
+- [schema.ts](packages/db/src/schema.ts) plus migration `0007` (`pnpm db:generate`);
+- [users.ts](packages/db/src/users.ts): `createUser` gains `role` (default `freelancer`); `findUserByEmail` and `findUserById` return `role`; `listUserIds` filters freelancers;
+- [session.ts](apps/api/src/auth/session.ts), [auth.ts](apps/api/src/routes/auth.ts) (`startSession` callers, `/auth/me`);
+- shared `sessionUserSchema`, `userRoles`;
+- test helpers in [auth/testing.ts](apps/api/src/auth/testing.ts).
+
+**Tests:**
+- Session tests: a CA cookie is rejected by `readSession` and accepted by `readCaSession`; a tampered role fails the signature; an old two-part cookie fails.
+- DB: role default, the CHECK constraint, `listUserIds` excludes CAs.
+- Route: `/auth/me` includes `role`.
+- One representative freelancer route test with a CA cookie → 401.
+
+**Acceptance:** `pnpm verify` passes, DB/API integration suites pass on the test database (`test:db`), and no existing freelancer behaviour changes.
+
+### B2. Separate freelancer and CA sign-in (P0)
+
+**Objective:** implement S3 and S4.
+
+**Files:**
+- [auth.ts](apps/api/src/routes/auth.ts): add the CA routes; reuse the existing signup/login loop body through a small helper taking `role`. **No copy-paste of the loop.**
+- [AuthForm.tsx](apps/web/src/components/AuthForm.tsx): add an `audience: "freelancer" | "ca"` prop deciding the endpoint and the redirect.
+- New `(public)/ca/login/page.tsx` and `(public)/ca/signup/page.tsx`. CA pages have **no** PayPal button.
+- New `(ca)/layout.tsx`: shell like `(app)/layout.tsx` with a CA nav ("Clients", "Calendar", "Requests") and the sign-out button.
+- The Next request-routing file (S4); `apiGet` `loginPath`.
+
+**Edge cases:** a CA at freelancer login → 403 `wrong_portal` with the S3 message; a freelancer at CA login → the mirror message; a CA email used through PayPal login → `email_taken`; signing up at the CA page with an email already used by a freelancer → 409 `email_taken`, the existing message.
+
+**Tests:**
+- Route matrix for 4 login cases × role.
+- Web form test: audience → endpoint and redirect.
+- Routing-file unit test for redirects: CA cookie on `/invoices` → `/ca`; freelancer cookie on `/ca` → `/overview`; `/ca/login` is always reachable.
+
+**Browser check (user):** sign up as a CA at `/ca/signup` → lands on `/ca`; visiting `/overview` redirects to `/ca`; freelancer sign-in with the CA email shows the S3 message.
+
+### B3. Freelancer → CA share requests (P0)
+
+**Objective:** implement S5 end to end.
+
+**Files:**
+- `ca_links` in schema plus migration (may share `0007` if B1 isn't merged yet; otherwise `0008`);
+- `packages/db/src/ca-links.ts`; new `apps/api/src/routes/ca-links.ts` mounted in [index.ts](apps/api/src/index.ts);
+- freelancer UI: a **"Your CA"** card on [profile/page.tsx](apps/web/src/app/(app)/profile/page.tsx) (new client component `CaShareCard`);
+- CA UI: `(ca)/ca/requests/page.tsx`.
+
+**Exact freelancer copy:**
+- Heading **"Share your records with your CA"**.
+- Body **"Your CA will see your invoices, payments, deadlines and reports. They cannot send anything from your PayPal or approve actions. You can stop sharing at any time."**
+- Field label **"Your CA's email"**, button **"Send request"**.
+- Pending: **"Waiting for {email} to accept. Ask them to sign in to Niryat as a CA with this email."** with button **"Cancel request"**.
+- Accepted: **"Shared with {email} since {date}."** with button **"Stop sharing"**.
+- Errors: `own_email` → **"Enter your CA's email, not your own."**; `link_exists` → **"You already have a CA request. Cancel it first."**
+
+**Exact CA copy:**
+- Requests page heading **"Client requests"**.
+- Each row shows the freelancer's name (or email if no name), the request date, and **"Accept"** / **"Decline"** buttons.
+- Empty: **"No requests. Ask your client to add your email ({email}) in Niryat under Profile → Your CA."**
+
+**Edge cases:** concurrent accept and cancel (atomic `WHERE status`); a CA accepting a request addressed to another email → 404; double accept → the second gets 404; email case and whitespace normalised; a freelancer with an ended link can create a new one.
+
+**Tests:** DB transition tests including concurrency (follow the `agent_actions` claim tests); route tests for every row of the S5 transition table; web tests for card states.
+
+**Acceptance:** `pnpm verify` and DB integration pass.
+
+### B4. CA read access to a client's records (P0)
+
+**Objective:** implement S6.
+
+**Files:** new `apps/api/src/auth/client-access.ts` with a test; the eight GET handlers plus `POST /gstr1/file` listed in S6; the CA projection for `GET /invoices`.
+
+**Tests**, a matrix applied to **every** adopted route:
+- freelancer self → 200;
+- freelancer with `?client=<other>` → 404;
+- CA with an accepted link → 200 and the data belongs to the client;
+- CA with a pending or ended link → 404;
+- CA without `client` → 404;
+- CA with a malformed `client` → 404;
+- no session → 401.
+
+Also: `GET /invoices` as CA contains no action payloads or file tokens; every non-adopted POST with a CA cookie → 401 (one representative test per route file).
+
+**Acceptance:** the full API suite passes. Review checklist: no route outside S6 reads `client`.
+
+### B5. CA pages: portfolio list and client view (P0)
+
+**Objective:** give a CA a read-only workspace.
+
+**New API endpoint** `GET /ca/portfolio` (`readCaSession`), returning one row per accepted link:
+
+```
+{ freelancerId, name, email, healthScore | null, unpaidCount, overdueCount,
+  nextDeadline: { date, title } | null, firaMissingCount, pendingApprovals, sharedSince }
+```
+
+Build each row from the **existing** builders (`listInvoices` + `toInvoiceView`, `evaluateHealth`, `buildCalendarEvents`, `firaStatus` from the invoice view, the pending-actions count). Add `caPortfolioSchema` to shared. No new compliance logic; counts only.
+
+**New web pages:**
+- `(ca)/ca/page.tsx`: portfolio. Until B6 lands it is a plain accessible table sorted by `overdueCount` desc, then `nextDeadline`. B6 replaces the main area with AG Studio; keep this table as the no-JavaScript fallback.
+- `(ca)/ca/clients/[id]/page.tsx`: client overview. Sections:
+  - health (score and flags with citations);
+  - invoices (read-only table: number, date, client, amount, received, status, deadline, FIRA status);
+  - deadlines (`deadlineList` of the client's calendar events);
+  - GSTR-1 (period preview plus the existing rate inputs and CSV download through `?client=`);
+  - pending approvals as a count only, with the text **"Waiting for your client to approve in Niryat."**
+
+  Data via `apiGet(path + "?client=" + id, schema, { loginPath: "/ca/login" })`.
+
+**Hard requirement:** CA pages render **no** mutating controls except the GSTR-1 download and the B3 accept/decline/stop buttons. Reuse display-only components (`StatusBadge`, `PageHeader`, `EmptyState`, formatters). Do **not** reuse `ActionButtons`, `TaskDoneButton`, `FiraLineButtons`, `RefundForm`, `InvoiceForm` or `ClientForm`.
+
+**Edge cases:** a link ended while the CA is viewing → next load 404 → show **"You no longer have access to this client."** and link to `/ca`; a client with no profile → health section shows **"Your client hasn't completed their profile yet."**
+
+**Tests:** route tests for the portfolio (isolation between CAs, ended links excluded, counts from fixtures); page tests asserting no forms or buttons other than the allowed ones; empty state.
+
+**Acceptance:** `pnpm verify` and `pnpm build` pass.
+
+**Browser check (user):** a freelancer shares → the CA accepts → the CA sees the client in the portfolio and opens the client view → the freelancer stops sharing → the CA's next load shows the no-access message.
+
+### B6. CA portfolio AG Studio dashboard (P1, AG Studio prize)
+
+**Objective:** a second, distinct AG Studio use: one dashboard across all of a CA's clients, with the AI assistant.
+
+**Files:**
+- new `apps/web/src/lib/ca-dashboard.ts` (sources and initial state, mirroring [lib/dashboard.ts](apps/web/src/lib/dashboard.ts));
+- new `CaDashboard.tsx` (mirror [Dashboard.tsx](apps/web/src/components/Dashboard.tsx): same theme, modules and licence prop);
+- `GET /ca/dashboard` returning the portfolio rows plus `invoices` and `payments` across linked clients, each with `freelancerName`. Reuse the per-user `buildDashboard` projections and add `freelancerName`. **Keep the same privacy projection:** no client emails or addresses, no health-flag citations;
+- [routes/dashboard.ts](apps/api/src/routes/dashboard.ts): `/dashboard/turn` accepts a CA session too. The run is recorded under the CA's userId with kind `dashboard`. It takes a `scope: "portfolio"` instruction variant: _"You build AG Studio widgets for a chartered accountant's portfolio of Indian freelancers. …"_ plus the existing figure and data-is-not-instructions lines. The same budget, concurrency and logging rules apply.
+
+**Widgets** (initial state):
+1. clients grid (name, health score, unpaid, overdue, missing FIRA, next deadline, pending approvals);
+2. PayPal fees by freelancer this financial year (bar);
+3. received per month by freelancer (stacked);
+4. unpaid invoices nearest to their RBI deadline (grid, top 10);
+5. missing FIRA count by freelancer (bar).
+
+**Prompt starters:** "Which clients have missing FIRAs?", "Who has invoices closest to the RBI deadline?", "Show PayPal fees by freelancer this year".
+
+**Tests:** sources reference existing fields (copy the pattern in [lib/dashboard.test.ts](apps/web/src/lib/dashboard.test.ts)); the route returns only linked clients; the turn route accepts a CA and records the run under the CA; freelancer turn behaviour is unchanged.
+
+**Acceptance:** `pnpm verify` and `pnpm build` pass.
+
+**Browser check (user):** the dashboard renders all five widgets; asking each prompt starter creates a widget.
+
+### C1. Calendar categories, filter sidebar, more views (P1, Bryntum)
+
+**Objective:** use real Bryntum features (resources with a filter sidebar, more modes) instead of a plain read-only month grid.
+
+**Files:** [CalendarView.tsx](apps/web/src/components/CalendarView.tsx), [lib/calendar.ts](apps/web/src/lib/calendar.ts) with its test, [globals.css](apps/web/src/app/globals.css).
+
+**Requirements:**
+- Map `CalendarEvent.kind` → a category resource, defined once in `lib/calendar.ts`:
+
+| Resource     | Kinds                                                | Label                 |
+| ------------ | ---------------------------------------------------- | --------------------- |
+| `gst`        | `lut_renewal`, `gstr1_due`, `credit_note_declare_by` | GST                   |
+| `income_tax` | `advance_tax`                                        | Income tax            |
+| `rbi`        | `rbi_deadline`                                       | RBI payment deadlines |
+| `paypal`     | `dispute_response`, `recurring_invoice`              | PayPal                |
+
+Resource colours come from CSS tokens (add `--niryat-cat-*` with dark-mode values). **State stays distinct by the title prefix and `cls`** (overdue, upcoming, past), so colour is never the only signal.
+- Enable modes `agenda`, `week`, `month`, `year`, `list`. Keep `day` off. The default is `month`.
+- Show the built-in sidebar with the resource filter, so users can tick categories on and off.
+- Everything stays `readOnly`. **Check every config name against the installed `@bryntum/calendar` 7.3.8 types** before using it.
+- The server-rendered deadline list on the page is unchanged (the no-JavaScript fallback).
+
+**Tests:** mapping covers every kind (an exhaustive switch with a `never` check); events carry `resourceId`.
+
+**Browser check (user):** the filter sidebar hides and shows categories; the year view shows the whole financial year.
+
+### C2. Calendar event tooltips with "what to do" and source (P1, Bryntum)
+
+**Objective:** make each deadline explain itself, in plain words, with its legal source.
+
+**Contract change:** `calendarEventSchema` gains:
+- `action: string`: one plain sentence saying what to do and who does it (S9.2);
+- `source: string | null`: the rule's `source` from `cite(rules, ruleId)`.
+
+Both are set in [apps/api/src/calendar.ts](apps/api/src/calendar.ts) per kind. Actions are written once per kind, e.g. `gstr1_due` → **"File GSTR-1 for this period. Your CA usually does this; download the export file from the GSTR-1 page."**
+
+**UI:** configure the `eventTooltip` feature to show the title, `action`, `source` and an **"Open"** link to `href`. Escape all text (no raw HTML from data).
+
+**Tests:** the builder sets `action` for every kind and `source` matches `cite`; mapping passes them through; the fallback list shows `action` under each title.
+
+### C3. CA multi-client calendar (P1, Bryntum prize centrepiece)
+
+**Objective:** one Bryntum calendar showing every linked client's deadlines, one colour per client, with a filter sidebar. This is a CA-specific use competitors won't have.
+
+**API:** `GET /ca/calendar` (`readCaSession`) returns `{ clients: { id, name }[], events: (CalendarEvent & { freelancerId })[] }`, built by calling `buildCalendarEvents` per linked client. Event ids are prefixed `${freelancerId}:` to stay unique. `href` is rewritten to `/ca/clients/${freelancerId}`.
+
+**Web:** `(ca)/ca/calendar/page.tsx` with a `CaCalendarView`, reusing C1's view config:
+- **resources = clients** (colours from a fixed token palette cycling by index);
+- category becomes a second filter: a simple checkbox group above the calendar filtering events client-side, unless the installed Bryntum supports two resource dimensions; **check the types first**;
+- `readOnly`; a click opens the client view.
+- Server-rendered fallback list: all overdue events for all clients plus the next 10 upcoming, each labelled with the client name.
+
+**Tests:** route isolation and unique ids; the mapping assigns resources; fallback list ordering.
+
+### D1. Plain-language glossary and term helper (P0)
+
+**Objective:** one source for plain explanations, so pages don't each invent their own.
+
+**Files:**
+- new `apps/web/src/lib/glossary.ts`: a `const` record keyed by term id (`lut`, `fira`, `gstr1`, `purpose_code`, `realisation`, `sac`, `credit_note`, `advance_tax`, `presumptive`, `gstin`, `export_conditions`). Each entry has `term` (short form), `plain` (one sentence) and `who` ("you", "your CA" or "your bank");
+- new `components/Term.tsx`: renders the term with an accessible inline explanation, using `<details>`/`<summary>`, or `<abbr title>` plus visible text on first use (`aria-describedby`). It must work without JavaScript.
+
+**Content rule:** `plain` text must agree with [glossary.md](docs/glossary.md) and the YAML descriptions. Simpler words, same meaning (S9.3).
+
+Proposed entries (the implementer may polish but not change meaning):
+- LUT: "A yearly form (RFD-11) that lets you bill foreign clients without charging GST."
+- FIRA: "A document from PayPal or your bank that proves foreign money reached you."
+- Purpose code: "A code that tells the RBI what a foreign payment was for, such as software work. Your bank confirms it."
+- RBI payment deadline (realisation): "The date by which money for an export invoice must reach India."
+- GSTR-1: "Your GST sales return. Exports go in Table 6A."
+
+**Tests:** every entry is non-empty with a `who`; `Term` renders without JavaScript.
+
+### D2. Rewrite user-facing wording (P0)
+
+**Objective:** apply S9 across the product.
+
+**Scope:** user-visible strings only. Logic, thresholds, citations and the S9.4 immutable list are unchanged.
+
+**Order** (one commit-sized step each; run tests after each):
+1. **Rules messages:** [health.ts](packages/rules/src/health.ts), [export-conditions.ts](packages/rules/src/export-conditions.ts), [purpose-codes.ts](packages/rules/src/purpose-codes.ts), [realisation.ts](packages/rules/src/realisation.ts), [credit-note.ts](packages/rules/src/credit-note.ts), [rbi-deadline.ts](packages/rules/src/rbi-deadline.ts), [gstr1.ts](packages/rules/src/gstr1.ts), [advance-tax.ts](packages/rules/src/advance-tax.ts), and the `reasons` strings in [export-invoice.ts](packages/rules/src/export-invoice.ts) (**not** the PDF row labels or the endorsement). Each health flag message follows S9.2. Example:
+
+   **"Your LUT expired on {date}. You can't bill foreign clients without GST until you file a new one. Ask your CA to file form RFD-11 on the GST portal, then update the dates in your profile."**
+2. **Status and labels:** [lib/status.ts](apps/web/src/lib/status.ts), [lib/forms.ts](apps/web/src/lib/forms.ts) message maps, [NavLinks.tsx](apps/web/src/components/NavLinks.tsx). Nav labels may stay short, but each page header gets a one-line plain description through `PageHeader`.
+3. **Pages and components:** the 24 web files that grep finds for `LUT|FIRA|GSTR|realis|purpose code|RFD-11|Table 6A|WOPAY`, plus the public home page. Use `<Term>` on the first use per page.
+4. **API messages shown to users:** grep `apps/api/src` for strings returned in `message` fields (e.g. [compliance.ts](apps/api/src/compliance.ts), [reminders.ts](apps/api/src/reminders.ts)).
+
+**Tests:** update exact-string assertions in the matching `*.test.ts(x)` files **in the same step**. Do not weaken an assertion to a partial match just to make it pass. Add one test per rules file asserting each high-severity flag's message contains an action verb from S9.2.
+
+**Review gate:** after step 1, list every changed rules message (old → new) in this file under "D2 review log" **for the user to approve before steps 2–4**. Legal meaning changes need a human read.
+
+**Acceptance:** `pnpm verify` and `pnpm build` pass; the user approves the D2 review log.
+
+### E1. PayPal sync freshness and a frequent light sync (P1, Render, Phase 7)
+
+**Objective:** implement the Phase 7 checklist items "freshness target", "show last successful sync" and "separate polling from Claude".
+
+**Contract:**
+- New table `sync_runs`: `id`, `started_at`, `finished_at`, `status` (`running` | `ok` | `failed`), `summary` jsonb with counts. One `running` row at a time (a partial unique index, like `agent_runs_one_running`) to prevent overlapping polls.
+- [sync.ts](apps/api/src/sync.ts) records a row per run. A failed run never updates the "last successful" value. A second sync started while one runs exits as `skipped` without error.
+- Add a CLI flag `--no-agent`: reconcile payments and disputes only, never start Claude.
+- **Freshness target: 30 minutes.** render.yaml adds cron `niryat-sync-light` every 30 minutes running `sync:payments --no-agent`. The nightly `niryat-sync` keeps the reminder agent.
+- `GET /sync-status` (freelancer, `readSession`) → `{ lastSuccessAt | null, lastStatus, stale: boolean }`, where `stale` = no success in the last 2 hours.
+- The Today page and the invoices page show **"PayPal data last updated {relative time}."**, or when stale **"PayPal data may be out of date (last update {time}). New payments or disputes may not show yet."**
+
+**Tests:**
+- A failed run doesn't advance `lastSuccessAt`; overlap is skipped; `--no-agent` never calls the runner (fake runner asserting zero calls); stale boundary.
+- Copy the existing fake-ledger pattern in [sync.test.ts](apps/api/src/sync.test.ts).
+
+### E2. Durable manual close through Render Workflows (P1, Render, Phase 7)
+
+**Objective:** a "Close this month" click should survive an API restart. Today it runs inside the API process ([architecture](docs/architecture.md#agents-close-and-extraction)).
+
+**Requirements:**
+- `POST /close`, when the Render Workflows dispatch is configured (the same env the trigger uses; read [trigger.ts](apps/worker/src/trigger.ts) and [worker index](apps/worker/src/index.ts)), dispatches `monthlyClose` with `{ userId, month, asOf, trigger: "manual" }` instead of `runInBackground`. It still returns 202. Without that configuration (local), it keeps the current in-process path.
+- Extend `monthlyCloseInputSchema` to accept an optional single `userId` and `trigger`. The task runs only that user when `userId` is given.
+- The existing `agent_runs` one-running rule still gives 409 on concurrent starts. A run row stuck as `running` past 15 minutes is already failed as stale on the next start (verify in [agent-runs.ts](packages/db/src/agent-runs.ts)).
+- **Never** replay or reset a claimed reminder (ADR 0004).
+- **Env:** if no dispatch key exists yet, adding one to `.env.example` with a placeholder value is authorized (section 5, decision 1).
+
+**Tests:** route with a fake dispatcher (dispatch called once with the right input, 202, no in-process run); worker input validation; single-user mode runs one user.
+
+**Browser and hosted check (user, after deploy):** restart the API during a manual close → the run finishes or shows a recoverable failure; no duplicate proposals.
+
+### A5. Judge mode: seed and "Try as judge" (P0)
+
+**Objective:** PLAN §15. Judges reach a populated freelancer account and a populated CA account in one click each.
+
+**Env:** `JUDGE_MODE` (`"true"` enables it) and `JUDGE_BUYER_EMAIL` (the sandbox buyer email for the live-send client). Adding both to `.env.example` with placeholder values is authorized (section 5, decision 1).
+
+**Seed** ([seed-judge.ts](packages/db/src/seed-judge.ts), currently a no-op; it may live in `apps/api/src` if it needs rules, like [seed-fira-demo.ts](apps/api/src/seed-fira-demo.ts)):
+- **Idempotent.** Re-running doesn't duplicate data. Use fixed judge emails `judge-freelancer@niryat.test` and `judge-ca@niryat.test`, plus two extra freelancers `judge-freelancer-2@…` and `-3@…`, all with a `null` password hash and no payer id, so they can only enter through `/auth/judge`.
+- **Main freelancer ("Ananya Rao"):**
+  - GST registered, GSTIN, monthly GSTR-1;
+  - LUT valid from the financial-year start to **seed date + 15 days** (the A3 conflict fix);
+  - work type "Software development", purpose code P1006 (to show the mismatch flag, PLAN §16);
+  - one US client whose email is `JUDGE_BUYER_EMAIL`, for live sends;
+  - historical invoices, payments with fee/net, one refund, one dispute and FIRA lines via `insertDemoLedger` / `seedFiraDemo`.
+- **Safety requirement:** seeded invoices that look unpaid must have `paypalInvoiceId = null` or a status that excludes them from reminder candidates ([reminders.ts](apps/api/src/reminders.ts) skips null ids), so judges are **never offered an approval that will fail at PayPal**. Verify after seeding by running a close against the seed and asserting zero proposals for seeded invoices.
+- **Extra freelancers:** smaller ledgers with different health (one healthy; one with an overdue RBI deadline).
+- **Judge CA:** `accepted` links to all three freelancers.
+
+**API:** `POST /auth/judge` `{ as: "freelancer" | "ca" }` → 404 unless `JUDGE_MODE === "true"`. Otherwise it starts a session for the fixed judge account with its role. It is rate-limited (S8 `auth`).
+
+**Web:** on the public home and both login pages, when judge mode is on (expose a boolean from the API, e.g. `GET /judge-mode`), show **"Try as freelancer (demo)"** and **"Try as CA (demo)"** buttons, with the text **"Demo accounts use PayPal sandbox only. No real money moves."**
+
+**README:** list the sandbox buyer login (the user supplies it; never commit secrets). Note that judges share demo accounts.
+
+**Tests:** seed idempotency (run twice, same counts); `/auth/judge` is 404 when off and sets the right role when on; seeded data creates no reminder proposals.
+
+**Acceptance:** `pnpm seed:judge` works on the test database; `pnpm verify` passes.
+
+### F1. Submission materials (P0)
+
+Docs and README only.
+- **Video (under 3 minutes)**, five scenes with PayPal on screen, replacing PLAN §16's nine:
+  1. The problem in plain words (one line on the LUT, using the S9 phrasing).
+  2. Paste an email → AI fills the invoice → approve → **the sandbox buyer receives it in PayPal** → pays → fee and net appear.
+  3. **Monthly close with the A4 tool log visible:** Claude reads PayPal, holds for the disputed client, proposes reminders → approve → the buyer gets the reminder.
+  4. AG Studio: ask the freelancer dashboard a question, then switch to the **CA portfolio** (B6) and the **multi-client Bryntum calendar** (C3).
+  5. Safety: the freelancer approves every PayPal action; rules cite their sources; the CA can only view. Close on the tagline.
+- **README:** a "Sponsor tools" section describing exactly:
+  - AG Studio: two dashboards, the AI assistant, theme;
+  - Bryntum: categories, filters, tooltips with sources, multi-client calendar;
+  - Render: Workflows monthly close and durable manual close, 30-minute light sync, nightly sync, paid Postgres;
+  - APIMatic: link the usage log.
+
+  Plus a judge-mode section and an updated status line. **The README must stay under 120 lines** (the scaffold check).
+- **Devpost text:** problem, who it's for, how PayPal and Claude are used, the business model line (_"free for freelancers; CA firms pay per client"_), and limitations (sandbox only, one PayPal seller per deployment, synthetic FIRA, rules not CA-reviewed, invoices not digitally signed).
+- **Manual (user):**
+  - confirm AG Studio and Bryntum licences cover 2026-12-15 (V15) on the PayPal Discord;
+  - set `AI_MONTHLY_BUDGET_USD` for December;
+  - record results in [verification.md](docs/verification.md).
+- Update [build-flow.md](docs/build-flow.md) Phase 7 statuses for whatever shipped. Tick nothing that wasn't verified.
+
+### C4. Plan-your-work drag on the calendar (P2)
+
+Only if every P0 and P1 task is done. Let freelancers drag their **own tasks** (not legal deadlines) to a "planned" date in Bryntum; legal deadline events stay locked per event. Needs a nullable `tasks.planned_date` column and `POST /tasks/:id/plan`. Write a full sub-plan before starting; do not start without the user's go-ahead.
+
+---
+
+## 3. Non-goals (do not build)
+
+- CA writes of any kind except the GSTR-1 CSV download and link accept/decline/stop. **CAs never approve, propose or send PayPal actions.** CA proposals into the approval queue are future work.
+- Email or notification delivery for share requests; CA identity verification (ICAI number); CA firms with several staff; more than one active CA per freelancer; CA billing.
+- PayPal Partner Referrals (one seller per deployment remains, disclosed).
+- A chatbot; new agent PayPal actions; Toolkit write tools.
+- A real-FIRA parser, invoice PDF digital signatures and INR conversion on the PDF (listed as limitations in F1).
+- Deployment itself, Render account setup, webhook registration on the hosted URL (the user does these).
+- Changing any rule's logic, threshold, YAML metadata or citation.
+
+---
+
+## 4. Verification for every task
+
+- `corepack pnpm verify` (or `corepack.cmd pnpm verify` on restricted PowerShell). `pnpm build` for any web change.
+- DB/API integration: `pnpm --filter @niryat/db test:db` and `pnpm --filter @niryat/api test:db` against the separate `niryat_test` database. Report skipped integration tests honestly.
+- Browser checks are the user's (AGENTS.md). Each task lists its manual steps; report them as **awaiting user verification**.
+- No commit or publish unless the user asks.
+
+## 5. User decisions (approved 2026-11-04)
+
+1. **A5 / E2 env keys: approved.** The implementer may add `JUDGE_MODE` and `JUDGE_BUYER_EMAIL`, and a Workflows dispatch key only if E2 finds none exists, to `.env.example`, with placeholder values only. No other `.env.example` change is authorized.
+2. **D2 review gate: approved.** Step 1's old → new rules messages go in a "D2 review log" here; the user reviews them before steps 2–4 start.
+3. **B3: approved.** One active CA per freelancer.
