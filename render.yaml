@@ -11,6 +11,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: API_INTERNAL_HOSTPORT
+        fromService:
+          type: web
+          name: niryat-api
+          property: hostport
       - key: AG_STUDIO_LICENSE_KEY
         sync: false
       - key: BRYNTUM_LICENSE_KEY

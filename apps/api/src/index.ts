@@ -1,5 +1,6 @@
 import { cite, PAYPAL_INDIA_PURPOSE_CODES } from "@niryat/rules";
 import { Hono } from "hono";
+import { rateLimitMiddleware } from "./rate-limit";
 import { advanceTaxRoutes } from "./routes/advance-tax";
 import { type AppDeps, authRoutes } from "./routes/auth";
 import { calendarRoutes } from "./routes/calendar";
@@ -23,6 +24,7 @@ export function createApp(deps?: AppDeps): Hono {
     c.json({ citation: cite(rules, "PURPOSE_CODES"), codes: PAYPAL_INDIA_PURPOSE_CODES }),
   );
   if (deps) {
+    app.use("*", rateLimitMiddleware(deps));
     app.route("/", advanceTaxRoutes(deps));
     app.route("/", calendarRoutes(deps));
     app.route("/", dashboardRoutes(deps));

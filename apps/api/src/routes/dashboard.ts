@@ -18,7 +18,7 @@ import { indiaDate, rules, todayInIndia } from "../rules";
 import type { AppDeps } from "./auth";
 import { parseJsonBody } from "./body";
 
-// shortcut: flat charge per attempted turn instead of token pricing (D11); Phase 7 adds rate limits.
+// shortcut: flat charge per attempted turn instead of token pricing (D11); use token pricing when available.
 const DASHBOARD_TURN_COST_USD = "0.05";
 
 const instructionsFor = (

@@ -10,12 +10,15 @@ import { hashPassword, verifyPassword } from "../auth/password";
 import { endSession, readSession, startSession } from "../auth/session";
 import type { CloseDeps } from "../close";
 import type { FileStore } from "../files";
+import type { createRateLimiter, RATE_LIMITS } from "../rate-limit";
 
 export interface AppDeps {
   db: Db;
   encryptionKey: Buffer;
   sessionSecret: string;
   secureCookies: boolean;
+  rateLimits?: Record<keyof typeof RATE_LIMITS, ReturnType<typeof createRateLimiter>>;
+  trustRenderProxy?: boolean;
   paypal?: { rest: PayPalRestClient; ledger: PayPalLedger; webhookId: string };
   paypalLogin?: PayPalLogin;
   files?: FileStore;
@@ -84,7 +87,6 @@ export function authRoutes(deps: AppDeps): Hono {
     await next();
   });
 
-  // shortcut: no rate limiting on login; add before any public deployment.
   for (const action of ["signup", "login"] as const) {
     routes.post(`/auth/${action}`, async (c) => {
       const body = await c.req.json<unknown>().catch(() => undefined);

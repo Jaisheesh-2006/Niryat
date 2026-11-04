@@ -3,6 +3,7 @@ import { z } from "zod";
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  RENDER: z.literal("true").optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   PAYPAL_ENVIRONMENT: z.literal("SANDBOX").default("SANDBOX"),
   PUBLIC_APP_URL: z.preprocess(

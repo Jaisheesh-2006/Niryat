@@ -139,6 +139,18 @@ it.each([
   ]);
 });
 
+it("uses the same private API address for rewrites and server-side reads", async () => {
+  vi.stubEnv("API_INTERNAL_HOSTPORT", "niryat-api-example:10000");
+  vi.stubEnv("API_URL", "https://niryat-api.example");
+  vi.resetModules();
+  const { default: config } = await import("../next.config");
+  const { apiUrl } = await import("./lib/env");
+  expect(apiUrl).toBe("http://niryat-api-example:10000");
+  expect(await config.rewrites?.()).toEqual([
+    { source: "/api/:path*", destination: `${apiUrl}/:path*` },
+  ]);
+});
+
 it.each([
   { appUrl: undefined, hosts: [] },
   { appUrl: "", hosts: [] },

@@ -6,6 +6,7 @@ import { createPayPalLedger, createPayPalLogin, createPayPalRestClient } from "@
 import { loadAiEnv, loadAuthEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
 import { createS3FileStore } from "./files";
 import { createApp } from "./index";
+import { createRateLimiter, RATE_LIMITS } from "./rate-limit";
 
 try {
   process.loadEnvFile(resolve("../../.env"));
@@ -29,6 +30,12 @@ const app =
         encryptionKey,
         sessionSecret: authEnv.SESSION_SECRET,
         secureCookies: env.NODE_ENV === "production",
+        trustRenderProxy: env.RENDER === "true",
+        rateLimits: {
+          auth: createRateLimiter(RATE_LIMITS.auth),
+          ai: createRateLimiter(RATE_LIMITS.ai),
+          share: createRateLimiter(RATE_LIMITS.share),
+        },
         publicAppUrl: env.PUBLIC_APP_URL,
         ...(aiEnv
           ? {

@@ -147,7 +147,7 @@ New table `ca_links`:
 ### S8. Rate limiter
 
 - `createRateLimiter({ windowMs, max }) → (key: string, now: number) => boolean` in `apps/api/src/rate-limit.ts`: a fixed window with in-memory state **inside the returned closure**, not module-level (AGENTS.md). Build it in [server.ts](apps/api/src/server.ts) and pass it in through `AppDeps` (optional; absent in tests means unlimited).
-- Key = route group + client IP. The IP comes from the **first** `x-forwarded-for` entry when present (Render's proxy sets it), else the connection address. For AI groups, append the session userId.
+- Key = route group + client IP. Ignore `x-forwarded-for`: callers can forge its first entry. Only on Render (`RENDER=true`, validated at startup), use the validated `CF-Connecting-IP` that Render's public ingress overwrites; otherwise use the connection address. Next's existing rewrite must reach the API over Render's workspace-private network (`API_INTERNAL_HOSTPORT` from the API service's `hostport`), preserving that ingress header. Public API requests get their own protected ingress header; same-workspace private services are trusted. Missing/invalid ingress headers fall back to the connection address. For AI and share groups, append the verified session userId. See [Render's header guidance](https://render.com/articles/host-pocketbase-on-render#making-pocketbase-see-the-real-client-ip).
 - Over limit → **429** `{ error: "rate_limited" }` with a `Retry-After` header in seconds.
 - Mark it `// shortcut: in-memory per instance; move to Postgres or Redis if the API runs more than one instance.`
 

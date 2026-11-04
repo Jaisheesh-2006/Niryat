@@ -1,6 +1,14 @@
 import { expect, it } from "vitest";
 import { loadAiEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
 
+it("enables Render proxy trust only for the validated platform marker", () => {
+  expect(loadEnv({}).RENDER).toBeUndefined();
+  expect(loadEnv({ RENDER: "true" }).RENDER).toBe("true");
+  expect(() => loadEnv({ RENDER: "invalid-private-value" })).toThrow(
+    "Invalid environment: RENDER. See .env.example.",
+  );
+});
+
 it("enables AI only with all keys and a positive finite budget, reporting key names only", () => {
   expect(loadAiEnv({})).toBeUndefined();
   expect(loadAiEnv({ ANTHROPIC_API_KEY: "" })).toBeUndefined();

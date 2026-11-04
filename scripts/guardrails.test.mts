@@ -25,6 +25,20 @@ test("Render services explicitly use production mode", () => {
   }
 });
 
+test("Render web reaches the API privately and Turbo includes the address at build time", () => {
+  const services = readFileSync(resolve(root, "render.yaml"), "utf8")
+    .replaceAll("\r\n", "\n")
+    .split(/^ {2}- type: /m);
+  const web = services.find((block) => block.includes("    name: niryat-web\n"));
+  assert.ok(web);
+  assert.match(
+    web,
+    /^ {6}- key: API_INTERNAL_HOSTPORT\n {8}fromService:\n {10}type: web\n {10}name: niryat-api\n {10}property: hostport$/m,
+  );
+  const turbo = readFileSync(resolve(root, "turbo.json"), "utf8");
+  assert.match(turbo, /"@niryat\/web#build":\s*\{[^}]*"env":\s*\["API_INTERNAL_HOSTPORT"\]/);
+});
+
 function runHook(mode: string, input: unknown) {
   return spawnSync(process.execPath, [hook, mode], {
     cwd: root,
