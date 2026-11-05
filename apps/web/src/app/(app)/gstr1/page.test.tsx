@@ -3,6 +3,7 @@ import { Children, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Gstr1Download } from "../../../components/Gstr1Download";
+import { Gstr1Report } from "../../../components/Gstr1Report";
 import Gstr1 from "./page";
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ cookie: "session=test" }) }));
@@ -146,7 +147,12 @@ it("changes selector identity when navigation changes the report period", async 
         selected.period === "2026-08" ? { period: selected.period } : {},
       ),
     });
-    const form = Children.toArray(page.props.children).find(
+    const report = Children.toArray(page.props.children).find(
+      (child) => isValidElement(child) && child.type === Gstr1Report,
+    );
+    if (!isValidElement<Parameters<typeof Gstr1Report>[0]>(report))
+      throw new Error("Expected GSTR-1 report");
+    const form = Children.toArray(Gstr1Report(report.props).props.children).find(
       (child) => isValidElement(child) && child.type === "form",
     );
     if (!isValidElement<{ children: ReactNode }>(form)) throw new Error("Expected period form");

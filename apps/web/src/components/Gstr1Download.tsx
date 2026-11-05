@@ -7,7 +7,13 @@ import { formatMoney } from "../lib/format";
 
 const errorSchema = z.object({ error: z.string(), invoices: z.array(z.string()).optional() });
 
-export function Gstr1Download({ preview }: { preview: Gstr1Preview }) {
+export function Gstr1Download({
+  preview,
+  client,
+}: {
+  preview: Gstr1Preview;
+  client?: string | undefined;
+}) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const covered = preview.invoices.filter((invoice) => invoice.lutCovered);
@@ -36,7 +42,8 @@ export function Gstr1Download({ preview }: { preview: Gstr1Preview }) {
     setSubmitting(true);
     setMessage("");
     try {
-      const response = await fetch("/api/gstr1/file", {
+      const query = client === undefined ? "" : `?client=${encodeURIComponent(client)}`;
+      const response = await fetch(`/api/gstr1/file${query}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body.data),

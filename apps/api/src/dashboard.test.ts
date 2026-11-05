@@ -1,7 +1,7 @@
 import { dashboardSchema, type HealthReport, type Invoice } from "@niryat/shared";
 import { describe, expect, it } from "vitest";
 import { toInvoiceView } from "./compliance";
-import { buildDashboard } from "./dashboard";
+import { buildDashboard, buildPortfolioRow } from "./dashboard";
 
 const today = "2026-10-31";
 const invoice: Invoice = {
@@ -169,6 +169,87 @@ describe("dashboard rows", () => {
       payments: [],
       invoices: [],
       disputes: [],
+    });
+  });
+});
+
+describe("CA portfolio row", () => {
+  const client = {
+    linkId: "50000000-0000-4000-8000-000000000001",
+    freelancerId: "60000000-0000-4000-8000-000000000001",
+    name: null,
+    email: "owner@example.com",
+    sharedSince: "2026-10-01T00:00:00.000Z",
+  };
+  const proposed = {
+    id: "70000000-0000-4000-8000-000000000001",
+    paymentId: null,
+    paypalAction: "send_invoice",
+    status: "proposed",
+    payload: {},
+    error: null,
+    createdAt: "2025-01-10T00:00:00.000Z",
+  } as const;
+  const unpaid: Invoice = {
+    ...invoice,
+    id: "10000000-0000-4000-8000-000000000002",
+    date: "2025-01-10",
+    status: "issued",
+    paidTotal: "0.00",
+    payments: [],
+    refundedTotal: "0.00",
+    refunds: [],
+    disputes: [],
+    firaStatus: "missing",
+    action: proposed,
+    refundActions: [{ ...proposed, status: "done", paypalAction: "refund_payment" }],
+  };
+  const event = (date: string, state: "past" | "upcoming" | "overdue") => ({
+    id: date,
+    date,
+    kind: "gstr1_due" as const,
+    title: `Due ${date}`,
+    state,
+    href: "/gstr1",
+    ruleId: null,
+  });
+
+  it("counts from the existing views, health, calendar and actions", () => {
+    const views = [toInvoiceView(invoice, true, today), toInvoiceView(unpaid, true, today)];
+    expect(views[1]?.compliance.deadline?.overdue).toBe(true);
+    expect(
+      buildPortfolioRow(client, {
+        views,
+        health,
+        events: [
+          event("2026-12-01", "upcoming"),
+          event("2026-10-11", "past"),
+          event("2026-11-11", "upcoming"),
+        ],
+        reminders: [{ status: "proposed" }, { status: "rejected" }],
+      }),
+    ).toEqual({
+      ...client,
+      healthScore: 80,
+      unpaidCount: 1,
+      overdueCount: 1,
+      nextDeadline: { date: "2026-11-11", title: "Due 2026-11-11" },
+      firaMissingCount: 1,
+      pendingApprovals: 2,
+    });
+  });
+
+  it("reports nulls and zeros for a client with no profile or records", () => {
+    expect(
+      buildPortfolioRow(client, { views: [], health: null, events: [], reminders: [] }),
+    ).toEqual({
+      ...client,
+      healthScore: null,
+      unpaidCount: 0,
+      overdueCount: 0,
+      nextDeadline: null,
+      firaMissingCount: 0,
+      pendingApprovals: 0,
     });
   });
 });

@@ -734,6 +734,26 @@ export const caRequestSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export const caRequestsSchema = z.array(caRequestSchema);
+export const caClientSchema = z.object({
+  linkId: z.uuid(),
+  freelancerId: z.uuid(),
+  name: z.string().nullable(),
+  email: z.email(),
+  sharedSince: z.iso.datetime(),
+});
+export type CaClient = z.infer<typeof caClientSchema>;
+const count = z.number().int().nonnegative();
+export const caPortfolioSchema = z.array(
+  caClientSchema.extend({
+    healthScore: z.number().int().min(0).max(100).nullable(),
+    unpaidCount: count,
+    overdueCount: count,
+    nextDeadline: z.object({ date: z.iso.date(), title: z.string() }).nullable(),
+    firaMissingCount: count,
+    pendingApprovals: count,
+  }),
+);
+export type CaPortfolio = z.infer<typeof caPortfolioSchema>;
 
 export const agentRunKinds = ["monthly_close", "reminders", "extraction", "dashboard"] as const;
 export type AgentRunKind = (typeof agentRunKinds)[number];

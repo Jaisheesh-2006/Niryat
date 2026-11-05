@@ -1,6 +1,8 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
+  type CaClient,
   type CaLink,
+  caClientSchema,
   caInvitationCodeSchema,
   caLinkInputSchema,
   caLinkSchema,
@@ -155,6 +157,30 @@ export async function listCaRequests(db: Db, caId: string) {
     )
     .safeParse(rows);
   if (!parsed.success) throw new Error("Stored CA request is invalid");
+  return parsed.data;
+}
+
+export async function listCaClients(db: Db, caId: string): Promise<CaClient[]> {
+  const rows = await db
+    .select({
+      linkId: caLinks.id,
+      freelancerId: caLinks.freelancerUserId,
+      name: profiles.legalName,
+      email: users.email,
+      sharedSince: caLinks.respondedAt,
+    })
+    .from(caLinks)
+    .innerJoin(users, eq(users.id, caLinks.freelancerUserId))
+    .leftJoin(profiles, eq(profiles.userId, users.id))
+    .where(and(eq(caLinks.caUserId, caId), eq(caLinks.status, "accepted")))
+    .orderBy(asc(caLinks.respondedAt), asc(caLinks.id))
+    .catch(() => {
+      throw new Error("CA clients lookup failed");
+    });
+  const parsed = z
+    .array(caClientSchema.extend({ sharedSince: z.date().transform((d) => d.toISOString()) }))
+    .safeParse(rows);
+  if (!parsed.success) throw new Error("Stored CA client is invalid");
   return parsed.data;
 }
 

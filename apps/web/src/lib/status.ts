@@ -3,6 +3,7 @@ import {
   type ActionStatus,
   type AgentRun,
   type FiraStatus,
+  type HealthFlag,
   type Invoice,
   reminderStageSchema,
 } from "@niryat/shared";
@@ -38,6 +39,16 @@ const agentToolLabels: ReadonlyMap<string, string> = new Map([
 export function agentToolLabel(tool: string): string {
   return agentToolLabels.get(tool) ?? tool;
 }
+
+// `order` puts the most urgent flags first.
+export const healthSeverity: Record<
+  HealthFlag["severity"],
+  { label: string; tone: Tone; order: number }
+> = {
+  high: { label: "High", tone: "danger", order: 0 },
+  medium: { label: "Medium", tone: "attention", order: 1 },
+  low: { label: "Low", tone: "neutral", order: 2 },
+};
 
 export const invoiceStatus: Record<Invoice["status"], { label: string; tone: Tone }> = {
   issued: { label: "Issued", tone: "neutral" },

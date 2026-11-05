@@ -413,6 +413,37 @@ Build each row from the **existing** builders (`listInvoices` + `toInvoiceView`,
 
 **Browser check (user):** a freelancer shares → the CA accepts → the CA sees the client in the portfolio and opens the client view → the freelancer stops sharing → the CA's next load shows the no-access message.
 
+**B5 implementation (2026-11-05):** `GET /ca/portfolio` (`readCaSession`) in `apps/api/src/routes/ca-links.ts` lists the CA's accepted links through the new `listCaClients` in `packages/db/src/ca-links.ts`. Each row comes from `buildPortfolioRow` in `apps/api/src/dashboard.ts`, which only counts what existing builders produce. Unpaid means status issued, sent or partly paid. Overdue uses the RBI deadline in the invoice view. The next deadline is the earliest overdue or upcoming calendar event. Missing FIRA uses `firaStatus === "missing"`. Pending approvals are proposed invoice, refund and reminder actions; reminders are counted among the latest 50 (marked shortcut). Rows are sorted on the server by overdue count, then next deadline, so B6 can reuse them. `caClientSchema`/`caPortfolioSchema` are in shared.
+
+`/ca` is now the plain portfolio table. `/ca/clients/[id]` checks the id against the portfolio, then reads `/invoices`, `/health-check`, `/calendar` and `/gstr1` with `?client=` and the CA login path. It shows health with citations, read-only invoices, deadlines without links into freelancer pages, GSTR-1 and the pending-approval count. An id not in the portfolio, or an invoice/calendar 404 after a mid-load unshare, shows "You no longer have access to this client." A missing profile shows "Your client hasn't completed their profile yet." in both the health and GSTR-1 sections. The GSTR-1 preview rendering and fetch moved from the freelancer page into `components/Gstr1Report.tsx`; the freelancer page behaves the same. `Gstr1Download` takes an optional `client` for `POST /gstr1/file?client=`. `CaStopManagingButton` uses the B3 `{ linkId }` end contract. The only CA controls are this button, the GET period selector and the GSTR-1 download; none of the forbidden components are used. Known limitation: GSTR-1 messages and notes keep their freelancer wording ("your LUT", "ask your CA") for D2 to revisit. No dependency, environment file, migration, sponsor integration, legal rule or feature checkbox changed. No PayPal call, browser session, deployment or commit was made.
+
+**B5 automated acceptance (2026-11-05): PASS.** `corepack.cmd pnpm verify` passes 27/27 tasks; `corepack.cmd pnpm build` passes 9/9, including the new `ƒ /ca/clients/[id]` route. Full DB integration passes 176/176 in eight files and full API integration 747/747 in 36 files, both with zero skips. They ran through `corepack.cmd pnpm --filter @niryat/db exec vitest run --no-file-parallelism` and the matching `@niryat/api` command, with `TEST_DATABASE_URL` pointing only at the disposable `niryat-b4-tests` PostgreSQL 17 container. The application database was untouched. New tests:
+- the `buildPortfolioRow` counts and the empty case;
+- a portfolio route test covering isolation between CAs, pending links excluded and ended links excluded, with `/ca/portfolio` added to the role-denial matrix;
+- a `listCaClients` DB test;
+- portfolio page tests: rows, order, empty and unavailable states;
+- client-view page tests: only the allowed buttons and forms, no access, a link ended mid-load, a missing profile, and a 401 sending the CA to `/ca/login`.
+
+The CA layout test now renders a placeholder child instead of the old "coming next" landing page. Logs: `.tmp/b5-verify.log`, `.tmp/b5-build.log`, `.tmp/b5-db-integration.log`, `.tmp/b5-api-integration.log`. `git diff --check` passes.
+
+**B5 review fixes 1–2 (2026-11-05):**
+1. The CA client page now sorts health flags high → medium → low, like the freelancer health page. Both pages take labels, tones and order from one new `healthSeverity` map in `apps/web/src/lib/status.ts`, replacing two copies. The CA page test now feeds a low flag before a high one and asserts the high one renders first.
+2. New `apps/web/src/components/Gstr1Download.test.tsx` submits the download form in a test without a browser, by stubbing state and `FormData` and calling the submit handler, as other tests here do. It asserts the freelancer posts to `/api/gstr1/file`, a CA to `/api/gstr1/file?client=<id>`, and the exact rates body. A temporary mutation that dropped the `client` query made it fail; the code was restored.
+
+No dependency was added. Checks: the targeted web tests pass (21/21). `corepack.cmd pnpm build` passes 9/9. `corepack.cmd pnpm verify` passes 27/27. Its first run hit a 5 s timeout in the unchanged `(app)/calendar/page.test.tsx`, which imports Bryntum, and passed on re-run. `git diff --check` passes. Logs: `.tmp/b5-review-verify.log`, `.tmp/b5-review-build.log`.
+
+**B5 manual checks — awaiting user verification:**
+1. Prerequisites: your existing local database/auth configuration with migrations through 0009, plus separate freelancer and CA browser profiles. From the root run `corepack.cmd pnpm dev` (web `http://localhost:3000`, API `http://localhost:3001`). No PayPal operation is needed.
+2. As the CA with no accepted clients, open `/ca`. Expect "No clients yet" and a link to `/ca/requests`.
+3. As the freelancer, open `/profile` → **Your CA** and send a request. Give the code to the CA, who redeems and accepts it at `/ca/requests`. As the CA, open `/ca`. Expect one row: the client's name (or email), health score (or "Profile not complete"), unpaid/overdue counts, next deadline, missing FIRA, approvals waiting and the shared-since date.
+4. Select the client. On `/ca/clients/<id>`, expect the sections Health (score, flags with rule citations), Invoices, "Overdue and next 10 deadlines", GSTR-1 and Approvals ("Waiting for your client to approve in Niryat.").
+   - The only controls should be **Stop managing this client**, the GSTR-1 period selector with **Show period**, the rate inputs and **Download GSTR-1 Table 6A file**.
+   - For a GST-registered client with LUT-covered invoices, enter rates and download. Expect a CSV.
+   - Changing the period should keep the URL on `/ca/clients/<id>?period=…`.
+5. As the freelancer, choose **Stop sharing**. Reload the CA client page: expect "You no longer have access to this client." with a link back to `/ca`, and `/ca` no longer lists the client.
+6. Share and accept again, then use **Stop managing this client** as the CA. Expect a return to `/ca` without the client, and the freelancer's profile shows the share form again.
+7. Check the portfolio and client tables at a narrow width, in dark mode and with the keyboard. These browser outcomes remain unverified until you report them.
+
 ### B6. CA portfolio AG Studio dashboard (P1, AG Studio prize)
 
 **Objective:** a second, distinct AG Studio use: one dashboard across all of a CA's clients, with the AI assistant.

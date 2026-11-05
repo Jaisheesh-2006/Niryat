@@ -5,7 +5,6 @@ import { afterEach, expect, it, vi } from "vitest";
 import { NavLinks } from "../../components/NavLinks";
 import { SignOutButton } from "../../components/SignOutButton";
 import { apiGet } from "../../lib/api";
-import CaClients from "./ca/page";
 import CaLayout from "./layout";
 
 vi.mock("../../lib/api", () => ({ apiGet: vi.fn() }));
@@ -19,19 +18,18 @@ vi.mock("../../components/SignOutButton", () => ({ SignOutButton: vi.fn(() => nu
 
 afterEach(() => vi.clearAllMocks());
 
-it("renders the CA shell and honest landing page from a verified session", async () => {
+it("renders the CA shell around its page from a verified session", async () => {
   vi.mocked(apiGet).mockResolvedValue({
     id: "40000000-0000-4000-8000-000000000001",
     email: "ca@example.com",
     role: "ca",
   });
-  const html = renderToStaticMarkup(await CaLayout({ children: <CaClients /> }));
+  const html = renderToStaticMarkup(await CaLayout({ children: <p>CA page</p> }));
   expect(apiGet).toHaveBeenCalledExactlyOnceWith("/auth/me", sessionUserSchema, "/ca/login");
   expect(html).toContain('title="ca@example.com">ca@example.com</p>');
   expect(html).toContain('href="#main">Skip to content</a>');
   expect(html).toContain('id="main"');
-  expect(html).toContain('href="/ca/requests">Accept or decline requests</a>');
-  expect(html).toContain("Viewing shared records is coming next.");
+  expect(html).toContain("<p>CA page</p>");
   expect(vi.mocked(NavLinks).mock.calls[0]?.[0]).toEqual({ audience: "ca" });
   expect(vi.mocked(SignOutButton).mock.calls[0]?.[0]).toEqual({ loginPath: "/ca/login" });
   expect(redirect).not.toHaveBeenCalled();

@@ -5,7 +5,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { apiGet } from "../../../lib/api";
 import { formatDate } from "../../../lib/format";
-import type { Tone } from "../../../lib/status";
+import { healthSeverity } from "../../../lib/status";
 
 export const metadata = { title: "Health check" };
 
@@ -13,13 +13,6 @@ export default async function HealthCheck() {
   const report = await apiGet("/health-check", healthReportSchema);
   if (!report) redirect("/profile");
   const { score, checkedOn, flags, suggestion } = report;
-  const severityLabels = { high: "High", medium: "Medium", low: "Low" };
-  const severityOrder = { high: 0, medium: 1, low: 2 };
-  const severityTones: Record<keyof typeof severityLabels, Tone> = {
-    high: "danger",
-    medium: "attention",
-    low: "neutral",
-  };
 
   return (
     <>
@@ -44,10 +37,12 @@ export default async function HealthCheck() {
       ) : (
         <div>
           {[...flags]
-            .sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
+            .sort((a, b) => healthSeverity[a.severity].order - healthSeverity[b.severity].order)
             .map(({ code, severity, message, citation, note }) => (
               <article className="card" key={code}>
-                <StatusBadge tone={severityTones[severity]}>{severityLabels[severity]}</StatusBadge>
+                <StatusBadge tone={healthSeverity[severity].tone}>
+                  {healthSeverity[severity].label}
+                </StatusBadge>
                 <p>
                   <strong>{message}</strong>
                 </p>

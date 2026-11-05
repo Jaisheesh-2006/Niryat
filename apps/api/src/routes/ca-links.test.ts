@@ -1,7 +1,12 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { createUser, profiles } from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
-import { caLinkCreatedSchema, caLinkResponseSchema, caRequestsSchema } from "@niryat/shared";
+import {
+  caLinkCreatedSchema,
+  caLinkResponseSchema,
+  caPortfolioSchema,
+  caRequestsSchema,
+} from "@niryat/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { cookieFor } from "../auth/testing";
 import { createApp } from "../index";
@@ -20,6 +25,7 @@ describe.skipIf(!testDatabaseUrl)("CA link routes", () => {
     ["POST", "/ca-link", "freelancer"],
     ["POST", "/ca-link/end", "freelancer"],
     ["GET", "/ca/requests", "ca"],
+    ["GET", "/ca/portfolio", "ca"],
     ["POST", "/ca/requests/claim", "ca"],
     ["POST", `/ca/requests/${id}/accept`, "ca"],
     ["POST", `/ca/requests/${id}/decline`, "ca"],
@@ -220,6 +226,46 @@ describe.skipIf(!testDatabaseUrl)("CA link routes", () => {
     });
     expect(ended).toMatchObject({ status: "ended", endedBy: "ca", endedAt: expect.any(Date) });
     expect((await invite()).link.id).not.toBe(link.id);
+  });
+
+  it("lists only this CA's accepted clients in the portfolio", async () => {
+    async function portfolio(cookie: string) {
+      const response = await app.request("/ca/portfolio", { headers: { Cookie: cookie } });
+      expect(response.status).toBe(200);
+      return caPortfolioSchema.parse(await response.json());
+    }
+    async function share(cookie: string, caAccount: { cookie: string }, email: string) {
+      const { link, invitationCode } = await invite(email, cookie);
+      expect((await post("/ca/requests/claim", caAccount.cookie, { invitationCode })).status).toBe(
+        204,
+      );
+      expect(await portfolio(caAccount.cookie)).toEqual([]);
+      expect((await post(`/ca/requests/${link.id}/accept`, caAccount.cookie)).status).toBe(204);
+      return link;
+    }
+    const link = await share(owner.cookie, ca, "ca@example.com");
+    await share(other.cookie, otherCa, "other-ca@example.com");
+    const empty = {
+      healthScore: null,
+      unpaidCount: 0,
+      overdueCount: 0,
+      firaMissingCount: 0,
+      pendingApprovals: 0,
+    };
+    // nextDeadline depends on today's calendar (advance tax applies without a profile).
+    expect(await portfolio(ca.cookie)).toMatchObject([
+      {
+        linkId: link.id,
+        freelancerId: owner.id,
+        name: null,
+        email: "owner@example.com",
+        sharedSince: expect.any(String),
+        ...empty,
+      },
+    ]);
+    expect((await portfolio(otherCa.cookie)).map((row) => row.freelancerId)).toEqual([other.id]);
+    expect((await post("/ca-link/end", owner.cookie, { linkId: link.id })).status).toBe(204);
+    expect(await portfolio(ca.cookie)).toEqual([]);
   });
 
   it("keeps cancellation final when accepting concurrently", async () => {

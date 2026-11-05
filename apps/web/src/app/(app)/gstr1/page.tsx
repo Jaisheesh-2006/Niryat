@@ -1,40 +1,9 @@
-import { gstr1PreviewSchema } from "@niryat/shared";
-import { headers } from "next/headers";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { Gstr1Download } from "../../../components/Gstr1Download";
+import { Gstr1Report, gstr1Messages, gstr1PreviewFor } from "../../../components/Gstr1Report";
 import { PageHeader } from "../../../components/PageHeader";
-import { apiUrl } from "../../../lib/env";
-import { formatDate, formatMoney } from "../../../lib/format";
 
 export const metadata = { title: "GSTR-1" };
-
-const messages: Record<string, string> = {
-  not_gst_registered:
-    "GSTR-1 data is only for GST-registered users. If you have registered, update your profile.",
-  gstr1_frequency_missing:
-    "Choose how you file GSTR-1 (monthly or quarterly) on your profile first.",
-  invalid_period: "Choose a valid reporting period for your filing frequency.",
-};
-
-async function previewFor(period?: string) {
-  const query = period === undefined ? "" : `?period=${encodeURIComponent(period)}`;
-  const response = await fetch(new URL(`/gstr1${query}`, apiUrl), {
-    headers: { cookie: (await headers()).get("cookie") ?? "" },
-    cache: "no-store",
-  });
-  if (response.status === 401) redirect("/login");
-  if (response.status === 404) redirect("/profile");
-  const json: unknown = await response.json();
-  if (!response.ok) {
-    const { error } = z.object({ error: z.string() }).parse(json);
-    const message = messages[error];
-    if (message) return { ok: false, message } as const;
-    throw new Error("GSTR-1 preview unavailable");
-  }
-  return { ok: true, preview: gstr1PreviewSchema.parse(json) } as const;
-}
 
 export default async function Gstr1({
   searchParams,
@@ -43,8 +12,8 @@ export default async function Gstr1({
 }) {
   const query = z.object({ period: z.string().optional() }).safeParse(await searchParams);
   const selected = query.success
-    ? await previewFor(query.data.period)
-    : { ok: false as const, message: messages.invalid_period };
+    ? await gstr1PreviewFor(query.data.period)
+    : { ok: false as const, message: gstr1Messages.invalid_period };
   if (!selected.ok)
     return (
       <>
@@ -60,118 +29,7 @@ export default async function Gstr1({
   return (
     <>
       <PageHeader title="GSTR-1" />
-      <form className="card" method="get">
-        <label htmlFor="period">Reporting period</label>
-        <select key={preview.period} id="period" name="period" defaultValue={preview.period}>
-          {!preview.periods.some((period) => period.period === preview.period) && (
-            <option value={preview.period}>{preview.label}</option>
-          )}
-          {preview.periods.map((period) => (
-            <option key={period.period} value={period.period}>
-              {period.label}
-            </option>
-          ))}
-        </select>
-        <button type="submit">Show period</button>
-      </form>
-      <h2>{preview.label}</h2>
-      <p>
-        Due {formatDate(preview.dueDate)}. The government sometimes extends this date; check the GST
-        portal.
-      </p>
-      <p>
-        Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with your CA.
-      </p>
-      {preview.invoices.length === 0 ? (
-        <p>No export invoices are dated in this period.</p>
-      ) : (
-        <>
-          <h2>Invoices</h2>
-          <div className="card table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Invoice</th>
-                  <th scope="col">Date</th>
-                  <th scope="col">Amount</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">LUT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.invoices.map((invoice) => (
-                  <tr key={invoice.invoiceId}>
-                    <td className="mono">{invoice.number}</td>
-                    <td>{formatDate(invoice.date)}</td>
-                    <td className="num">{formatMoney(invoice.amount, invoice.currency)}</td>
-                    <td>{invoice.status}</td>
-                    <td>
-                      {invoice.lutCovered ? (
-                        "Covered"
-                      ) : (
-                        <>
-                          Invoice {invoice.number} is not covered by your LUT on{" "}
-                          {formatDate(invoice.date)}, so it needs IGST. It is not in this file; ask
-                          your CA.
-                          <p>
-                            Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with
-                            your CA.
-                          </p>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-      <h2>Refunds</h2>
-      <p>
-        Refunds are not in this file. Declare credit notes for them in GSTR-1 Table 9B with your CA.
-      </p>
-      <ul>
-        {preview.refunds.map((refund) => (
-          <li key={refund.refundId}>
-            {formatDate(refund.date)}: invoice {refund.invoiceNumber},{" "}
-            {formatMoney(refund.amount, refund.currency)}
-            {refund.creditNote && (
-              <>
-                <p>{refund.creditNote.message}</p>
-                <p>
-                  Rule {refund.creditNote.citation.ruleId}: {refund.creditNote.citation.source}.
-                  Verify with your CA.
-                </p>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      <h2>Reconciliation</h2>
-      <div className="card table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Currency</th>
-              <th scope="col">Invoices</th>
-              <th scope="col">Refunds</th>
-              <th scope="col">Net</th>
-            </tr>
-          </thead>
-          <tbody>
-            {preview.totals.map((total) => (
-              <tr className="totals-row" key={total.currency}>
-                <th scope="row">{total.currency}</th>
-                <td className="num">{formatMoney(total.invoices, total.currency)}</td>
-                <td className="num">{formatMoney(total.refunds, total.currency)}</td>
-                <td className="num">{formatMoney(total.net, total.currency)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <Gstr1Download key={preview.period} preview={preview} />
+      <Gstr1Report preview={preview} />
     </>
   );
 }

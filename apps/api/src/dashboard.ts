@@ -1,5 +1,14 @@
 import { financialYear, formatSignedMinor, toMinor } from "@niryat/rules";
-import type { Dashboard, HealthReport, InvoiceView, Refund } from "@niryat/shared";
+import type {
+  Action,
+  CaClient,
+  CalendarEvent,
+  CaPortfolio,
+  Dashboard,
+  HealthReport,
+  InvoiceView,
+  Refund,
+} from "@niryat/shared";
 import { indiaDate } from "./rules";
 
 export function buildDashboard(
@@ -64,5 +73,35 @@ export function buildDashboard(
         responseDueDate: dispute.responseDueDate,
       })),
     ),
+  };
+}
+
+// Counts only: every figure comes from the existing invoice view, health and calendar builders.
+export function buildPortfolioRow(
+  client: CaClient,
+  input: {
+    views: readonly InvoiceView[];
+    health: HealthReport | null;
+    events: readonly CalendarEvent[];
+    reminders: readonly Pick<Action, "status">[];
+  },
+): CaPortfolio[number] {
+  const [next] = input.events
+    .filter((event) => event.state !== "past")
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const actions = [
+    ...input.views.flatMap((view) => [view.action, ...view.refundActions]),
+    ...input.reminders,
+  ];
+  return {
+    ...client,
+    healthScore: input.health?.score ?? null,
+    unpaidCount: input.views.filter((view) =>
+      ["issued", "sent", "partially_paid"].includes(view.status),
+    ).length,
+    overdueCount: input.views.filter((view) => view.compliance.deadline?.overdue).length,
+    nextDeadline: next ? { date: next.date, title: next.title } : null,
+    firaMissingCount: input.views.filter((view) => view.firaStatus === "missing").length,
+    pendingApprovals: actions.filter((action) => action?.status === "proposed").length,
   };
 }

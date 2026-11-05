@@ -8,6 +8,7 @@ import {
   endCaLink,
   getCaLink,
   hasAcceptedCaLink,
+  listCaClients,
   listCaRequests,
   respondToCaRequest,
 } from "./ca-links";
@@ -341,5 +342,28 @@ describe.skipIf(!testDatabaseUrl)("CA links", () => {
         sql`INSERT INTO ca_links (freelancer_user_id, ca_email, status, ended_by) VALUES (${freelancerId}, 'ca@example.com', 'ended', 'invalid')`,
       ),
     ).rejects.toThrow();
+  });
+
+  it("lists only this CA's accepted clients", async () => {
+    const other = await createUser(t.db, { email: "other@example.com", role: "ca" });
+    if (!other) throw new Error("Expected CA");
+    await t.db
+      .insert(profiles)
+      .values({ userId: freelancerId, legalName: "Ananya Rao", address: "encrypted" });
+    const { link, invitationCode } = await invite();
+    expect(await claimCaRequest(t.db, caId, invitationCode)).toBe(true);
+    expect(await listCaClients(t.db, caId)).toEqual([]);
+    expect(await respondToCaRequest(t.db, caId, link.id, "accept", now)).toBe(true);
+    const client = {
+      linkId: link.id,
+      freelancerId,
+      name: "Ananya Rao",
+      email: "owner@example.com",
+      sharedSince: now.toISOString(),
+    };
+    expect(await listCaClients(t.db, caId)).toEqual([client]);
+    expect(await listCaClients(t.db, other.id)).toEqual([]);
+    expect(await endCaLink(t.db, freelancerId, link.id, now)).toBe(true);
+    expect(await listCaClients(t.db, caId)).toEqual([]);
   });
 });
