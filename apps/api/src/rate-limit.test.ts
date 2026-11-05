@@ -109,7 +109,6 @@ describe("route rate limits", () => {
   ])("ignores forged forwarding headers for $path outside Render", async ({ path, max }) => {
     const app = limitedApp();
     const cookie = await cookieFor(randomUUID(), base.sessionSecret);
-    app.post("/ca-link", (c) => c.json({ error: "invalid_request" }, 400));
     for (let i = 0; i <= max; i++) {
       const response = await app.request(
         path,
@@ -215,19 +214,17 @@ describe("route rate limits", () => {
     const otherCookie = await cookieFor(randomUUID(), base.sessionSecret);
     const time = vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const start = Date.now();
-    // The share handler belongs to B3; this stub checks A2's middleware only.
-    app.post("/ca-link", (c) => c.body(null, 204));
     for (let i = 0; i < 10; i++) {
-      expect((await post(app, "/ca-link", "192.0.2.1", cookie)).status).toBe(204);
+      expect((await post(app, "/ca-link", "192.0.2.1", cookie)).status).toBe(400);
     }
     const blocked = await post(app, "/ca-link", "192.0.2.1", cookie);
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get("Retry-After")).toBe("3600");
-    expect((await post(app, "/ca-link", "192.0.2.1", otherCookie)).status).toBe(204);
+    expect((await post(app, "/ca-link", "192.0.2.1", otherCookie)).status).toBe(400);
     expect((await post(app, "/extract", "192.0.2.1", cookie)).status).toBe(400);
     time.mockReturnValue(start + 3_599_999);
     expect((await post(app, "/ca-link", "192.0.2.1", cookie)).status).toBe(429);
     time.mockReturnValue(start + 3_600_000);
-    expect((await post(app, "/ca-link", "192.0.2.1", cookie)).status).toBe(204);
+    expect((await post(app, "/ca-link", "192.0.2.1", cookie)).status).toBe(400);
   });
 });

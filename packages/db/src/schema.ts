@@ -30,6 +30,34 @@ export const users = pgTable(
   },
   (table) => [check("users_role_check", sql`${table.role} IN ('freelancer', 'ca')`)],
 );
+export const caLinks = pgTable(
+  "ca_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    freelancerUserId: uuid("freelancer_user_id")
+      .notNull()
+      .references(() => users.id),
+    caEmail: text("ca_email").notNull(),
+    caUserId: uuid("ca_user_id").references(() => users.id),
+    invitationCodeHash: text("invitation_code_hash"),
+    status: text("status", { enum: ["pending", "accepted", "ended"] }).notNull(),
+    endedBy: text("ended_by", { enum: userRoles }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+  },
+  (table) => [
+    check("ca_links_status_check", sql`${table.status} IN ('pending', 'accepted', 'ended')`),
+    check("ca_links_ended_by_check", sql`${table.endedBy} IN ('freelancer', 'ca')`),
+    check(
+      "ca_links_invitation_check",
+      sql`${table.status} = 'ended' OR ${table.invitationCodeHash} IS NOT NULL`,
+    ),
+    uniqueIndex("ca_links_one_active")
+      .on(table.freelancerUserId)
+      .where(sql`${table.status} IN ('pending', 'accepted')`),
+  ],
+);
 export const profiles = pgTable("profiles", {
   userId: uuid("user_id")
     .primaryKey()

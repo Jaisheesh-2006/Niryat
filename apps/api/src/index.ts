@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { rateLimitMiddleware } from "./rate-limit";
 import { advanceTaxRoutes } from "./routes/advance-tax";
 import { type AppDeps, authRoutes } from "./routes/auth";
+import { caLinkRoutes } from "./routes/ca-links";
 import { calendarRoutes } from "./routes/calendar";
 import { clientRoutes } from "./routes/clients";
 import { closeRoutes } from "./routes/close";
@@ -27,6 +28,7 @@ export function createApp(deps?: AppDeps): Hono {
     app.use("*", rateLimitMiddleware(deps));
     app.route("/", advanceTaxRoutes(deps));
     app.route("/", calendarRoutes(deps));
+    app.route("/", caLinkRoutes(deps));
     app.route("/", dashboardRoutes(deps));
     if (deps.paypal) app.route("/", webhookRoutes(deps));
     app.route("/", firaRoutes(deps));

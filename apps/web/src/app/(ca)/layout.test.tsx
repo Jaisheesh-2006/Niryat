@@ -30,7 +30,8 @@ it("renders the CA shell and honest landing page from a verified session", async
   expect(html).toContain('title="ca@example.com">ca@example.com</p>');
   expect(html).toContain('href="#main">Skip to content</a>');
   expect(html).toContain('id="main"');
-  expect(html).toContain("Client sharing is not available yet");
+  expect(html).toContain('href="/ca/requests">Accept or decline requests</a>');
+  expect(html).toContain("Viewing shared records is coming next.");
   expect(vi.mocked(NavLinks).mock.calls[0]?.[0]).toEqual({ audience: "ca" });
   expect(vi.mocked(SignOutButton).mock.calls[0]?.[0]).toEqual({ loginPath: "/ca/login" });
   expect(redirect).not.toHaveBeenCalled();

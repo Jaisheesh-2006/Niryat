@@ -81,6 +81,8 @@ export function daysRemainingLabel(days: number): string {
 }
 
 const labels: Record<string, string> = {
+  caEmail: "Your CA's email",
+  invitationCode: "Invitation code",
   email: "Client email",
   legalName: "Legal name",
   address: "Address",
@@ -185,6 +187,16 @@ async function responseResult(response: Response, reminderApproval = false): Pro
     .safeParse(await response.json().catch(() => undefined));
   if (!parsed.success) return reminderApproval ? reminderFallback : fallback;
   switch (parsed.data.error) {
+    case "invalid_invitation":
+      return {
+        ok: false,
+        message:
+          "This invitation code is invalid or no longer pending. Ask your client for a new one.",
+      };
+    case "own_email":
+      return { ok: false, message: "Enter your CA's email, not your own." };
+    case "link_exists":
+      return { ok: false, message: "You already have a CA request. Cancel it first." };
     case "close_running":
       return { ok: false, message: "A close is already running. Wait for it to finish." };
     case "ai_unavailable":

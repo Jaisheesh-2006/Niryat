@@ -93,36 +93,40 @@ A1–A4, C1–C2, D1 and E1 touch separate files, so they may run in parallel wi
 
 New table `ca_links`:
 
-| Column                                   | Type                    | Notes                                                 |
-| ---------------------------------------- | ----------------------- | ----------------------------------------------------- |
-| `id`                                     | uuid pk                 |                                                       |
-| `freelancer_user_id`                     | uuid fk users, not null | must be a freelancer                                  |
-| `ca_email`                               | text not null           | trimmed, lowercased                                   |
-| `ca_user_id`                             | uuid fk users, null     | set on accept; must be a CA                           |
-| `status`                                 | text not null           | `pending` \| `accepted` \| `ended` (CHECK)            |
-| `ended_by`                               | text null               | `freelancer` \| `ca`, set when status becomes `ended` |
-| `created_at`, `responded_at`, `ended_at` | timestamptz             |                                                       |
+| Column                                   | Type                             | Notes                                                          |
+| ---------------------------------------- | -------------------------------- | -------------------------------------------------------------- |
+| `id`                                     | uuid pk                          |                                                                |
+| `freelancer_user_id`                     | uuid fk users, not null          | must be a freelancer                                           |
+| `ca_email`                               | text not null                    | trimmed, lowercased                                            |
+| `ca_user_id`                             | uuid fk users, null              | set when the invitation code is redeemed; must be a CA         |
+| `invitation_code_hash`                   | text, null for legacy ended rows | SHA-256 of the full invitation code; required for active links |
+| `status`                                 | text not null                    | `pending` \| `accepted` \| `ended` (CHECK)                     |
+| `ended_by`                               | text null                        | `freelancer` \| `ca`, set when status becomes `ended`          |
+| `created_at`, `responded_at`, `ended_at` | timestamptz                      |                                                                |
 - **At most one active link per freelancer:** a partial unique index on `freelancer_user_id WHERE status IN ('pending','accepted')`.
-- The request stores an email. The API **does not look up whether that email has an account**, to avoid revealing who is registered. A CA sees it after signing up or signing in with that email. **No email is sent** (no mail service exists; a non-goal). The freelancer tells their CA.
+- The request stores an email. The API **does not look up whether that email has an account**, to avoid revealing who is registered. Signup emails are unverified, so an email match alone never reveals or authorizes a request. Creation generates a code made of the link UUID and 256 random bits, returns it only once with `Cache-Control: no-store`, and stores only its SHA-256 hash. The freelancer privately gives the code to their intended CA. The CA signs in with the invited email and redeems the code through a JSON POST; only then can that account list or respond to the pending request. Codes never go in URLs, logs or persistent browser storage. Lost codes require cancelling and creating a fresh request. **No email is sent** (no mail service exists; a non-goal).
 - Allowed transitions. Each is atomic, `UPDATE … WHERE status = <expected> RETURNING`, like the `agent_actions` claim:
 
-| From                    | To                               | Who        | Condition                                                    |
-| ----------------------- | -------------------------------- | ---------- | ------------------------------------------------------------ |
-| —                       | `pending`                        | freelancer | no active link; `ca_email` ≠ own email                       |
-| `pending`               | `accepted`                       | CA         | session email = `ca_email`; set `ca_user_id`, `responded_at` |
-| `pending`               | `ended` (`ended_by: ca`)         | CA         | session email = `ca_email` (decline)                         |
-| `pending` or `accepted` | `ended` (`ended_by: freelancer`) | freelancer | owner (cancel or stop sharing)                               |
-| `accepted`              | `ended` (`ended_by: ca`)         | CA         | `ca_user_id` = session user (stop managing)                  |
+| From                    | To                               | Who        | Condition                                                                                            |
+| ----------------------- | -------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
+| —                       | `pending`                        | freelancer | no active link; `ca_email` ≠ own email                                                               |
+| `pending`               | `pending` (claim)                | CA         | code hash and invited email match; bind `ca_user_id`; repeat claims by the same account are harmless |
+| `pending`               | `accepted`                       | CA         | invited email matches and `ca_user_id` = session user after claim; set `responded_at`                |
+| `pending`               | `ended` (`ended_by: ca`)         | CA         | invited email matches and `ca_user_id` = session user after claim (decline)                          |
+| `pending` or `accepted` | `ended` (`ended_by: freelancer`) | freelancer | owner and supplied `linkId` matches the displayed link (cancel or stop sharing)                      |
+| `accepted`              | `ended` (`ended_by: ca`)         | CA         | `ca_user_id` = session user and supplied `linkId` matches (stop managing)                            |
 - An ended link is never reopened; the freelancer creates a new request.
+- Security migration `0009` ends all pre-fix active links because they have no invitation proof. It preserves their history and sets `ended_at`; `ended_by` stays null for this administrative closure. Users must re-invite. A database CHECK rejects any new active row without an invitation hash.
 - **Endpoints** (JSON only, through `parseJsonBody`):
   - Freelancer (`readSession`):
     - `GET /ca-link` → `{ link: null | { id, caEmail, status, createdAt, respondedAt } }`
-    - `POST /ca-link` `{ caEmail }` → 201 | 400 `invalid_request` | 400 `own_email` | 409 `link_exists`
-    - `POST /ca-link/end` `{}` → 204 | 404
+    - `POST /ca-link` `{ caEmail }` → 201 `{ link, invitationCode }` | 400 `invalid_request` | 400 `own_email` | 409 `link_exists`; GET never returns codes or hashes
+    - `POST /ca-link/end` `{ linkId }` → 204 | 400 `invalid_request` | 404
   - CA (`readCaSession`):
-    - `GET /ca/requests` → pending links for the CA's email: `{ id, freelancerName, freelancerEmail, createdAt }[]`. `freelancerName` is the profile `legalName` or null.
+    - `POST /ca/requests/claim` `{ invitationCode }` → 204 | 400 `invalid_request` | 404 `invalid_invitation`; wrong email/code, unknown or non-pending links share the same 404
+    - `GET /ca/requests` → only pending links already claimed by this CA, also matching their email: `{ id, freelancerName, freelancerEmail, createdAt }[]`. `freelancerName` is the profile `legalName` or null. An unproved account sees no requester details.
     - `POST /ca/requests/:id/accept` and `POST /ca/requests/:id/decline` → 204 | 404
-    - `POST /ca/clients/:freelancerId/end` → 204 | 404
+    - `POST /ca/clients/:freelancerId/end` `{ linkId }` → 204 | 400 `invalid_request` | 404; neither end route can affect a replacement link
 - Repository functions in a new `packages/db/src/ca-links.ts`, exported from the db index. Follow the error-wrapping and zod-parsing style in [users.ts](packages/db/src/users.ts).
 
 ### S6. CA read access to a client's records
@@ -324,6 +328,32 @@ Review-fix browser checks — **awaiting user verification:** with your existing
 
 **Acceptance:** `pnpm verify` and DB integration pass.
 
+**B3 initial implementation (2026-11-05, before review fixes):** Added `ca_links`, offline-generated migration `0008_fuzzy_killer_shrike`, shared zod contracts and `packages/db/src/ca-links.ts`. A partial unique index permits one pending/accepted request per freelancer. Creation checks only the owner's account and normalizes the target email; it never queries whether the recipient is registered. Status-checked atomic updates implement acceptance, decline, cancellation, stopping sharing and stopping management. Ended rows are retained; `GET /ca-link` returns only the current active link or null. CA responses verify the stored account role and exact invited email; accepted links record the CA id and response time. Requests project only freelancer name/email/date, with the name read from the profile's unencrypted legalName.
+
+Mounted all S5 routes in `apps/api/src/index.ts`; POST bodies use `parseJsonBody`, including empty JSON objects for transitions. Existing share throttling already covers `POST /ca-link`. Added `CaShareCard` to Profile, `CaRequestButtons` and `/ca/requests`, exact prescribed copy/error mappings, India date formatting and an updated CA landing notice linking to requests. No B4 record-reading permission or B5 portfolio was added. CA stop-managing is available through the S5 endpoint; its client-page control belongs to B5. No dependency, environment file, sponsor adapter/configuration, legal rule or feature checkbox changed. No PayPal service call, browser/helper connection, deployment, commit or publication was performed.
+
+**B3 initial automated acceptance (2026-11-05, before review fixes): PASS.** Full DB integration passes 169/169 in eight files, zero skips (138.85s). Full API integration passes 698/698 in 34 files, zero skips (876.75s). Commands: `corepack.cmd pnpm --filter @niryat/db exec vitest run --no-file-parallelism` and `corepack.cmd pnpm --filter @niryat/api exec vitest run --no-file-parallelism`, with a task-specific `TEST_DATABASE_URL` targeting a disposable PostgreSQL 17 `niryat_test` database. These are the direct equivalents of `test:db`, avoiding those wrappers' private `.env` loaders. The application database was untouched. The task-created `--rm` test container was stopped/removed successfully after the passing API suite. Migration generation also used a temporary offline Drizzle config, removed afterwards.
+
+Full web tests pass 490/490 in 35 files, including the final sharing-date markup. Focused DB tests pass 13/13, API request tests 24/24 and limiter tests 12/12. Updated A2's share-rate-limit test to remove its reserved-route stub and expect the real route's exact `400 invalid_request` for its null body; exact `429`/Retry-After, user-isolation and reset assertions are retained. `corepack.cmd pnpm verify` passes all 27 tasks (19 cached, 3m10.359s), plus root Biome/scaffold and 14 script tests. Its ordinary no-DB suites skip 90 DB and 236 API tests, covered by the complete integrations above. `corepack.cmd pnpm build` passes all nine tasks (two cached, fresh Next production build including `/ca/requests`, 3m37.989s). `git diff --check` passes. Logs: `.tmp/b3-db-integration.log`, `.tmp/b3-api-focused.log`, `.tmp/b3-api-integration.log`, `.tmp/b3-rate-limit.log`, `.tmp/b3-verify-complete.log`, `.tmp/b3-build.log`. The known sandbox Git dirty-hash warning did not fail verification/build. These are pre-review results; current review-fix results and migration guidance follow.
+
+**Strict B3 review fixes 1 then 2 (2026-11-05):** Fixed the invitation proof first and verified it before changing end semantics. Creation now generates a UUID plus 256 random bits and returns the code only in the successful no-store creation response. Only SHA-256 is stored in `ca_links.invitation_code_hash`. `CaShareCard` shows it once for the matching pending link; a full page reload or leaving the page loses the plaintext, with explicit cancel/recreate instructions. The freelancer gives it privately to the intended CA. `CaInvitationForm` posts it to `/ca/requests/claim`, whose atomic email/hash/status match binds `ca_user_id`. GET requests and accept/decline additionally require that binding. An attacker registering the invited email gets an empty list and 404 for responses without the code. Wrong-email, wrong/malformed/ended codes fail without revealing requester details. Matching pending claims are idempotent; an accepted, declined or cancelled code cannot be reused. No code goes in URLs, GET responses, logs or persistent browser storage. Signup email verification itself remains outside this change; the private invitation is the added authorization proof.
+
+Migration `0009_quick_overlord` adds the hash and an active-link CHECK. It ends unproved pre-fix pending and accepted links, preserves their history and sets `ended_at`, with null `ended_by` to avoid inventing a user action. The upgrade was verified against an actual migration-0008 disposable database containing both states, and preserved all three user rows. Existing application shares must be recreated after migration.
+
+After issue 1 passed its focused DB (13), API (28), shared (113) and full web (495) checks, issue 2 added the required `{ linkId }` body to both end routes. Each repository update matches this id, its owner/CA and status in the same statement. `CaShareCard` sends its displayed link id. Stale freelancer cancel/stop requests and CA stop-managing requests return exact 404 without changing a replacement link; missing/malformed ids return 400 with field names only. Future B5 portfolio rows include `linkId` so its stop-managing control can use the same contract. No B4 read permission, auth-account workflow, dependency, environment file, sponsor integration/configuration, legal rule or feature checkbox changed. No PayPal service action, browser/helper connection, deployment, commit or publication was performed.
+
+**Review-fix automated acceptance (2026-11-05): PASS.** Focused final DB 16/16; focused final API 33/33; shared 114/114; full web 495/495 in 35 files. Full DB integration passes 174/174 in eight files, zero skips (25.32s). Full API integration passes 707/707 in 34 files, zero skips (524.97s). Commands: `corepack.cmd pnpm --filter @niryat/db exec vitest run --no-file-parallelism` and the matching `@niryat/api` command, with a task-specific `TEST_DATABASE_URL` targeting only a disposable PostgreSQL 17 `niryat_test` database. These direct equivalents of `test:db` avoid private `.env` loaders; the application database was untouched. The separate upgrade assertion verified both legacy states against migration 0009 before integration resets. Generation used a removed temporary offline Drizzle config.
+
+`corepack.cmd pnpm verify` passes all 27 tasks (nine cached, 2m22.86s), including fresh API/web typechecks, root Biome/scaffold and 14 script tests. Ordinary no-DB runs skip 95 DB and 245 API tests, covered by the complete integrations above. `corepack.cmd pnpm build` passes all nine tasks (two cached, fresh Next production assets, 2m15.111s). `git diff --check` passes. The task-created `--rm` PostgreSQL container was stopped/removed successfully after integration passed. The known sandbox Git dirty-hash warning was nonfatal. Logs: `.tmp/b3-fix1-*.log`, `.tmp/b3-fix2-*.log`, `.tmp/b3-fixes-db-integration.log`, `.tmp/b3-fixes-api-integration.log`, `.tmp/b3-fixes-verify.log`, `.tmp/b3-fixes-build.log`. Browser checks below remain awaiting the user.
+
+**B3 manual checks — awaiting user verification:**
+1. Prerequisites: your existing local database/auth configuration and separate freelancer/CA browser profiles. From the root run `corepack.cmd pnpm db:migrate` through migration **0009**, then `corepack.cmd pnpm dev` (web `http://localhost:3000`, API `http://localhost:3001`). Migration 0009 intentionally ends pre-fix active shares; re-invite. Reload old tabs so they use the new `{ linkId }` end contract. No mail service or PayPal operation is needed.
+2. As freelancer, sign in at `http://localhost:3000/login`, open `/profile` and find **Your CA**. Your own email must show **“Enter your CA's email, not your own.”** Enter the CA email and choose **Send request**. Expect the normalized waiting notice and **Invitation code (shown once)**. Copy the code and send it privately to the intended CA. Reload the page: the code must be absent and the page must explain cancellation/recreation if lost. Do not post a real code in logs, screenshots or a public channel.
+3. As CA, sign in at `http://localhost:3000/ca/login` and open `/ca/requests`. Before code entry, expect no requester details, including if this CA signed up after the invitation. Enter a wrong code: expect a visible error. Enter the genuine code under a different CA email: expect an error and no details. Sign in with the invited email, enter the genuine code and choose **Open request**: expect the freelancer name (or email), India request date and **Accept**/**Decline**. No code should appear in the URL. Choose **Decline**: the row disappears and the owner can create a new invitation with a new code.
+4. Create and redeem a new request, then **Accept**. Refresh the freelancer profile: expect the sharing date and **Stop sharing**. Stop it: expect the email form again. Also cancel a pending request with **Cancel request**. Old codes must no longer open either ended request. Accepted codes likewise cannot reopen it. Matching email alone, even with a known request id, must never allow accept/decline before code redemption.
+5. Check a stale freelancer tab: keep tab A showing request X; in tab B cancel X and create Y to another CA. In tab A choose the old **Cancel request**. Expect the not-found error; refresh and verify Y remains waiting. Repeat for an accepted X using **Stop sharing**. Missing end bodies now return 400, rather than operating on whichever link happens to be current.
+6. To check CA stop-managing before B5 adds the client control, get the freelancer id from `http://localhost:3000/api/auth/me` and current `link.id` from `/api/ca-link` in the freelancer browser. After a claim/accept, run in the CA browser console: `fetch('/api/ca/clients/<freelancer-id>/end', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ linkId: '<current-link-id>' }) }).then(r => r.status)`. Expect 204. Create, redeem and accept a replacement for the same CA, then repeat the old end call with the old id: expect 404, and the owner's refreshed profile must still show the new share. Repeating an accept/decline also returns 404.
+7. Check narrow-screen layout, dark mode, keyboard labels/focus, read-only code copying and disabled saving controls. No client records become accessible in B3; the CA landing notice still says viewing records is coming next. These browser/visual/keyboard outcomes remain unverified until you report them.
 ### B4. CA read access to a client's records (P0)
 
 **Objective:** implement S6.
@@ -350,7 +380,7 @@ Also: `GET /invoices` as CA contains no action payloads or file tokens; every no
 **New API endpoint** `GET /ca/portfolio` (`readCaSession`), returning one row per accepted link:
 
 ```
-{ freelancerId, name, email, healthScore | null, unpaidCount, overdueCount,
+{ linkId, freelancerId, name, email, healthScore | null, unpaidCount, overdueCount,
   nextDeadline: { date, title } | null, firaMissingCount, pendingApprovals, sharedSince }
 ```
 
@@ -542,7 +572,7 @@ Proposed entries (the implementer may polish but not change meaning):
   - historical invoices, payments with fee/net, one refund, one dispute and FIRA lines via `insertDemoLedger` / `seedFiraDemo`.
 - **Safety requirement:** seeded invoices that look unpaid must have `paypalInvoiceId = null` or a status that excludes them from reminder candidates ([reminders.ts](apps/api/src/reminders.ts) skips null ids), so judges are **never offered an approval that will fail at PayPal**. Verify after seeding by running a close against the seed and asserting zero proposals for seeded invoices.
 - **Extra freelancers:** smaller ledgers with different health (one healthy; one with an overdue RBI deadline).
-- **Judge CA:** `accepted` links to all three freelancers.
+- **Judge CA:** `accepted` links to all three freelancers, created through the invitation claim/accept helpers so every active link has proof; never log plaintext seed codes.
 
 **API:** `POST /auth/judge` `{ as: "freelancer" | "ca" }` → 404 unless `JUDGE_MODE === "true"`. Otherwise it starts a session for the fixed judge account with its role. It is rate-limited (S8 `auth`).
 
@@ -585,7 +615,7 @@ Only if every P0 and P1 task is done. Let freelancers drag their **own tasks** (
 
 ## 3. Non-goals (do not build)
 
-- CA writes of any kind except the GSTR-1 CSV download and link accept/decline/stop. **CAs never approve, propose or send PayPal actions.** CA proposals into the approval queue are future work.
+- CA writes of any kind except the GSTR-1 CSV download and link claim/accept/decline/stop. **CAs never approve, propose or send PayPal actions.** CA proposals into the approval queue are future work.
 - Email or notification delivery for share requests; CA identity verification (ICAI number); CA firms with several staff; more than one active CA per freelancer; CA billing.
 - PayPal Partner Referrals (one seller per deployment remains, disclosed).
 - A chatbot; new agent PayPal actions; Toolkit write tools.

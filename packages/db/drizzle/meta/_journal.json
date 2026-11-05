@@ -57,6 +57,20 @@
       "when": 1793847817194,
       "tag": "0007_windy_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793854205180,
+      "tag": "0008_fuzzy_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793857442583,
+      "tag": "0009_quick_overlord",
+      "breakpoints": true
     }
   ]
 }

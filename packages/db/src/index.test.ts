@@ -2,10 +2,11 @@ import { getTableName } from "drizzle-orm";
 import { expect, it } from "vitest";
 import * as schema from "./schema";
 
-it("exports all fourteen planned tables without opening a connection", () => {
+it("exports all fifteen tables without opening a connection", () => {
   expect(Object.values(schema).map(getTableName).sort()).toEqual(
     [
       "users",
+      "ca_links",
       "profiles",
       "clients",
       "invoices",

@@ -705,6 +705,36 @@ export const sessionUserSchema = z.object({
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
+export const caLinkInputSchema = z.object({
+  caEmail: z.string().trim().toLowerCase().pipe(z.email()),
+});
+export const caLinkSchema = z.object({
+  id: z.uuid(),
+  caEmail: z.email(),
+  status: z.enum(["pending", "accepted", "ended"]),
+  createdAt: z.iso.datetime(),
+  respondedAt: z.iso.datetime().nullable(),
+});
+export type CaLink = z.infer<typeof caLinkSchema>;
+export const caLinkResponseSchema = z.object({ link: caLinkSchema.nullable() });
+export const caInvitationCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.[a-f0-9]{64}$/);
+export const caLinkCreatedSchema = z.object({
+  link: caLinkSchema,
+  invitationCode: caInvitationCodeSchema,
+});
+export const caClaimInputSchema = z.object({ invitationCode: caInvitationCodeSchema });
+export const caLinkEndInputSchema = z.strictObject({ linkId: z.uuid() });
+export const caRequestSchema = z.object({
+  id: z.uuid(),
+  freelancerName: z.string().nullable(),
+  freelancerEmail: z.email(),
+  createdAt: z.iso.datetime(),
+});
+export const caRequestsSchema = z.array(caRequestSchema);
+
 export const agentRunKinds = ["monthly_close", "reminders", "extraction", "dashboard"] as const;
 export type AgentRunKind = (typeof agentRunKinds)[number];
 export const agentRunTriggers = ["manual", "scheduled", "nightly"] as const;
