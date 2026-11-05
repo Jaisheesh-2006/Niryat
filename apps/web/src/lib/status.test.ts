@@ -11,12 +11,48 @@ import { expect, it } from "vitest";
 import {
   actionStatusLabel,
   actionTone,
+  agentActor,
+  agentToolLabel,
   approvalKind,
   approvalTitle,
   invoiceFira,
   invoiceStatus,
   type Tone,
 } from "./status";
+
+it("names the agent and system actors", () => {
+  expect(agentActor).toEqual({ agent: "Claude", system: "Niryat" });
+});
+
+it.each([
+  ["get_invoice", "Read a PayPal invoice"],
+  ["paypal_get_invoice", "Read a PayPal invoice"],
+  ["list_invoices", "Read PayPal invoices"],
+  ["paypal_list_invoices", "Read PayPal invoices"],
+  ["get_dispute", "Read a PayPal dispute"],
+  ["paypal_get_dispute", "Read a PayPal dispute"],
+  ["list_disputes", "Read PayPal disputes"],
+  ["paypal_list_disputes", "Read PayPal disputes"],
+  ["list_transactions", "Read PayPal transactions"],
+  ["paypal_list_transactions", "Read PayPal transactions"],
+  ["list_open_invoices", "Read unpaid invoices"],
+  ["get_client_history", "Read a client's history"],
+  ["list_open_disputes", "Read open disputes"],
+  ["get_month_overview", "Read the month's overview"],
+  ["list_fira_issues", "Read FIRA issues"],
+  ["propose_reminder", "Drafted a reminder for your approval"],
+  ["suggest_task", "Suggested a task"],
+  ["write_summary", "Wrote the summary"],
+])("labels the %s tool", (tool, label) => {
+  expect(agentToolLabel(tool)).toBe(label);
+});
+
+it.each(["future_tool", "paypal_future_tool", "toString"])(
+  "keeps the unknown tool name %s",
+  (tool) => {
+    expect(agentToolLabel(tool)).toBe(tool);
+  },
+);
 
 function action(paypalAction: Action["paypalAction"], payload: Action["payload"] = {}): Action {
   return actionSchema.parse({

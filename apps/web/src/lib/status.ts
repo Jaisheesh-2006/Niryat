@@ -1,12 +1,43 @@
 import {
   type Action,
   type ActionStatus,
+  type AgentRun,
   type FiraStatus,
   type Invoice,
   reminderStageSchema,
 } from "@niryat/shared";
 
 export type Tone = "success" | "attention" | "danger" | "neutral";
+
+export const agentActor: Record<AgentRun["toolCalls"][number]["actor"], string> = {
+  agent: "Claude",
+  system: "Niryat",
+};
+
+const agentToolLabels: ReadonlyMap<string, string> = new Map([
+  ["get_invoice", "Read a PayPal invoice"],
+  ["paypal_get_invoice", "Read a PayPal invoice"],
+  ["list_invoices", "Read PayPal invoices"],
+  ["paypal_list_invoices", "Read PayPal invoices"],
+  ["get_dispute", "Read a PayPal dispute"],
+  ["paypal_get_dispute", "Read a PayPal dispute"],
+  ["list_disputes", "Read PayPal disputes"],
+  ["paypal_list_disputes", "Read PayPal disputes"],
+  ["list_transactions", "Read PayPal transactions"],
+  ["paypal_list_transactions", "Read PayPal transactions"],
+  ["list_open_invoices", "Read unpaid invoices"],
+  ["get_client_history", "Read a client's history"],
+  ["list_open_disputes", "Read open disputes"],
+  ["get_month_overview", "Read the month's overview"],
+  ["list_fira_issues", "Read FIRA issues"],
+  ["propose_reminder", "Drafted a reminder for your approval"],
+  ["suggest_task", "Suggested a task"],
+  ["write_summary", "Wrote the summary"],
+]);
+
+export function agentToolLabel(tool: string): string {
+  return agentToolLabels.get(tool) ?? tool;
+}
 
 export const invoiceStatus: Record<Invoice["status"], { label: string; tone: Tone }> = {
   issued: { label: "Issued", tone: "neutral" },

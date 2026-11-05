@@ -605,7 +605,7 @@ it("renders failed AI with retained drafts, figures, priorities, reminders and t
     "Note from Claude",
     "Monthly close (scheduled) 1 Nov 2026, 00:00 IST:",
     "Tool calls (1)",
-    "paypal_get_invoice",
+    "Read a PayPal invoice",
     "Test citation",
     inProgress,
     unknownOutcome,
@@ -617,6 +617,123 @@ it("renders failed AI with retained drafts, figures, priorities, reminders and t
   expect(html).not.toContain("Reviewed by Claude.");
   expect(html.match(/Send PayPal&#x27;s standard reminder/g)).toHaveLength(5);
   expect(html.match(/<button[^>]*>Reject<\/button>/g)).toHaveLength(2);
+});
+
+it("opens the latest tool log and its history, with older logs and raw details closed", async () => {
+  const call = run.toolCalls[0];
+  if (!call) throw new Error("Missing tool-call fixture");
+  vi.mocked(apiGet).mockResolvedValue({
+    runs: [
+      run,
+      {
+        ...run,
+        id: "10000000-0000-4000-8000-000000000004",
+        startedAt: "2026-10-30T18:30:00Z",
+        toolCalls: [{ ...call, actor: "system", tool: "future_tool", ok: false }],
+      },
+    ],
+    approvals: [],
+  });
+  const html = renderToStaticMarkup(await Close());
+  expect(html.match(/<details[^>]*><summary>[^<]*<\/summary>/g)).toEqual([
+    '<details class="card" open=""><summary>History</summary>',
+    '<details open=""><summary>Tool calls (1)</summary>',
+    "<details><summary>Show details</summary>",
+    "<details><summary>Tool calls (1)</summary>",
+    "<details><summary>Show details</summary>",
+  ]);
+  expect(html).toContain("<td>Claude</td><td>Read a PayPal invoice</td>");
+  expect(html).toContain("<td>Niryat</td><td>future_tool</td><td>Failed");
+  expect(html.replace(/\s+/g, " ")).toContain(
+    "Claude read your PayPal records with read-only tools. Nothing was sent or changed. Every PayPal action below waits for your approval.",
+  );
+  expect(html.match(/Claude read your PayPal records/g)).toHaveLength(1);
+  expect(html).toContain("<p>Every PayPal action below waits for your approval.</p>");
+  expect(html).toContain("<details><summary>Show details</summary><pre>");
+  expect(html).toContain("&quot;input&quot;");
+  expect(html).toContain("&quot;output&quot;");
+  expect(html).toContain(action.invoiceId);
+});
+
+it("keeps empty history closed when there are no runs", async () => {
+  vi.mocked(apiGet).mockResolvedValue({ runs: [], approvals: [] });
+  const html = renderToStaticMarkup(await Close());
+  expect(html).toContain('<details class="card"><summary>History</summary>');
+  expect(html).not.toContain("Tool calls (");
+});
+
+it.each(["unavailable", "budget_exhausted"] as const)(
+  "does not claim Claude read PayPal when AI is %s",
+  async (status) => {
+    vi.mocked(apiGet).mockResolvedValue({
+      runs: [
+        {
+          ...run,
+          summary: { ...summary, ai: { status, costUsd: "0" } },
+          toolCalls: run.toolCalls.map((call) => ({
+            ...call,
+            actor: "system",
+            tool: "claude",
+            output: { status, costUsd: "0" },
+          })),
+        },
+      ],
+      approvals: [],
+    });
+    const html = renderToStaticMarkup(await Close());
+    expect(html).not.toContain("Claude read your PayPal records");
+    expect(html).toContain("<p>Every PayPal action below waits for your approval.</p>");
+    expect(html).toContain(
+      status === "unavailable" ? "AI is not configured." : "The monthly AI budget is used up.",
+    );
+  },
+);
+
+it.each(["running", "completed"] as const)(
+  "does not claim Claude read PayPal for an empty %s run",
+  async (status) => {
+    vi.mocked(apiGet).mockResolvedValue({
+      runs: [{ ...run, status, summary: null, toolCalls: [] }],
+      approvals: [],
+    });
+    const html = renderToStaticMarkup(await Close());
+    expect(html).not.toContain("Claude read your PayPal records");
+    expect(html).toContain("<p>Every PayPal action below waits for your approval.</p>");
+    expect(html).toContain('<details open=""><summary>Tool calls (0)</summary>');
+  },
+);
+
+it.each([
+  ["a failed PayPal read", "agent", "paypal_get_invoice", false],
+  ["a local agent read", "agent", "get_month_overview", true],
+  ["a system read", "system", "paypal_get_invoice", true],
+  ["an unknown PayPal tool", "agent", "paypal_future_tool", true],
+] as const)("does not claim Claude read PayPal after %s", async (_case, actor, tool, ok) => {
+  vi.mocked(apiGet).mockResolvedValue({
+    runs: [{ ...run, toolCalls: run.toolCalls.map((call) => ({ ...call, actor, tool, ok })) }],
+    approvals: [],
+  });
+  const html = renderToStaticMarkup(await Close());
+  expect(html).not.toContain("Claude read your PayPal records");
+  expect(html).toContain("<p>Every PayPal action below waits for your approval.</p>");
+});
+
+it.each([
+  "paypal_get_invoice",
+  "paypal_list_invoices",
+  "paypal_get_dispute",
+  "paypal_list_disputes",
+  "paypal_list_transactions",
+])("reports the successful %s read even if AI later failed", async (tool) => {
+  vi.mocked(apiGet).mockResolvedValue({
+    runs: [{ ...run, toolCalls: run.toolCalls.map((call) => ({ ...call, tool })) }],
+    approvals: [],
+  });
+  const html = renderToStaticMarkup(await Close());
+  expect(html).toContain("The AI step failed.");
+  expect(html).toContain(
+    "Claude read your PayPal records with read-only tools. Nothing was sent or changed.",
+  );
 });
 
 it.each(["covered", "not_due", "not_needed"] as const)(

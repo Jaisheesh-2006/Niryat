@@ -9,7 +9,7 @@ import { StatusBadge } from "../../../components/StatusBadge";
 import { apiGet } from "../../../lib/api";
 import { formatDate, formatDateTime, formatMoney, formatMonth } from "../../../lib/format";
 import { daysRemainingLabel } from "../../../lib/forms";
-import { approvalKind, approvalTitle } from "../../../lib/status";
+import { agentActor, agentToolLabel, approvalKind, approvalTitle } from "../../../lib/status";
 
 export const metadata = { title: "Monthly close" };
 
@@ -33,6 +33,13 @@ const runLabels = {
   dashboard: "Dashboard",
 };
 const statusLabels = { running: "Running", completed: "Completed", failed: "Failed" };
+const paypalReadTools = [
+  "paypal_get_invoice",
+  "paypal_list_invoices",
+  "paypal_get_dispute",
+  "paypal_list_disputes",
+  "paypal_list_transactions",
+];
 
 export default async function Close() {
   const { runs, approvals } = (await apiGet("/close", closePageSchema)) ?? {
@@ -210,7 +217,7 @@ export default async function Close() {
           )}
         </section>
       )}
-      <details className="card">
+      <details className="card" open={runs.length > 0}>
         <summary>History</summary>
         <h3>Earlier reminders</h3>
         {earlier.map((action) => (
@@ -237,8 +244,16 @@ export default async function Close() {
                 {statusLabels[run.status]}
               </StatusBadge>
             </p>
-            <details>
+            <details open={run.id === latest?.id}>
               <summary>Tool calls ({run.toolCalls.length})</summary>
+              <p>
+                {run.toolCalls.some(
+                  (call) =>
+                    call.actor === "agent" && call.ok && paypalReadTools.includes(call.tool),
+                ) &&
+                  "Claude read your PayPal records with read-only tools. Nothing was sent or changed. "}
+                Every PayPal action below waits for your approval.
+              </p>
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -253,13 +268,16 @@ export default async function Close() {
                     {run.toolCalls.map((call) => (
                       <tr key={call.seq}>
                         <td>{call.seq}</td>
-                        <td>{call.actor}</td>
-                        <td>{call.tool}</td>
+                        <td>{agentActor[call.actor]}</td>
+                        <td>{agentToolLabel(call.tool)}</td>
                         <td>
                           {call.ok ? "Completed" : "Failed"}
-                          <pre>
-                            {JSON.stringify({ input: call.input, output: call.output }, null, 2)}
-                          </pre>
+                          <details>
+                            <summary>Show details</summary>
+                            <pre>
+                              {JSON.stringify({ input: call.input, output: call.output }, null, 2)}
+                            </pre>
+                          </details>
                         </td>
                       </tr>
                     ))}
