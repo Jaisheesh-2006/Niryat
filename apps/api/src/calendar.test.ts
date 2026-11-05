@@ -1,4 +1,4 @@
-import { advanceTaxDates, gstr1Period, gstr1PeriodsDueBetween } from "@niryat/rules";
+import { advanceTaxDates, cite, gstr1Period, gstr1PeriodsDueBetween } from "@niryat/rules";
 import { calendarEventSchema, type Invoice, type InvoiceView } from "@niryat/shared";
 import { describe, expect, it } from "vitest";
 import { buildCalendarEvents } from "./calendar";
@@ -79,6 +79,9 @@ describe("calendar events", () => {
         state: "upcoming",
         href: "/profile",
         ruleId: "LUT_REQUIRED",
+        action:
+          "Ask your CA to renew your LUT on the GST portal, then update the dates in your profile.",
+        source: cite(rules, "LUT_REQUIRED").source,
       },
       {
         id: "gstr1:2026-10",
@@ -88,6 +91,9 @@ describe("calendar events", () => {
         state: "upcoming",
         href: "/gstr1?period=2026-10",
         ruleId: "GSTR1_6A",
+        action:
+          "Ask your CA to file GSTR-1 for this period using the export file from the GSTR-1 page.",
+        source: cite(rules, "GSTR1_6A").source,
       },
       {
         id: "advance-tax:2026-12-15",
@@ -97,6 +103,9 @@ describe("calendar events", () => {
         state: "upcoming",
         href: "/advance-tax?taxYear=2026-27",
         ruleId: "ADVANCE_TAX_DATES",
+        action:
+          "Review your advance-tax estimate with your CA and pay any amount due on the income-tax portal.",
+        source: cite(rules, "ADVANCE_TAX_DATES").source,
       },
       {
         id: "advance-tax:2027-03-15",
@@ -106,6 +115,9 @@ describe("calendar events", () => {
         state: "upcoming",
         href: "/advance-tax?taxYear=2026-27",
         ruleId: "ADVANCE_TAX_DATES",
+        action:
+          "Review your advance-tax estimate with your CA and pay any amount due on the income-tax portal.",
+        source: cite(rules, "ADVANCE_TAX_DATES").source,
       },
       {
         id: `rbi:${invoice.id}`,
@@ -115,6 +127,9 @@ describe("calendar events", () => {
         state: "upcoming",
         href,
         ruleId: "RBI_REALISATION",
+        action:
+          "Follow up with your client for payment and ask your bank about an extension if the export payment is delayed.",
+        source: cite(rules, "RBI_REALISATION").source,
       },
       {
         id: "credit-note:REFUND-1",
@@ -124,12 +139,16 @@ describe("calendar events", () => {
         state: "upcoming",
         href,
         ruleId: "CREDIT_NOTE",
+        action: "Ask your CA to declare this refund's credit note in your GST return.",
+        source: cite(rules, "CREDIT_NOTE").source,
       },
       {
         id: "dispute:DISPUTE-1",
         date: "2026-10-30",
         kind: "dispute_response",
         title: "Overdue: Respond to PayPal dispute DISPUTE-1",
+        action: "Review the dispute in PayPal and submit your response there if it is still open.",
+        source: null,
         state: "overdue",
         href,
         ruleId: null,
@@ -139,6 +158,9 @@ describe("calendar events", () => {
         date: "2026-11-30",
         kind: "recurring_invoice",
         title: `Upcoming: Expected PayPal recurring invoice (series of ${invoice.number})`,
+        action:
+          "Check in PayPal whether the expected invoice was created and review it before taking any action.",
+        source: null,
         state: "upcoming",
         href,
         ruleId: null,
@@ -147,6 +169,10 @@ describe("calendar events", () => {
     for (const event of expected) expect(result).toContainEqual(event);
     expect(new Set(result.map((event) => event.kind)).size).toBe(7);
     expect(calendarEventSchema.array().parse(result)).toEqual(result);
+    for (const event of result) {
+      expect(event.action.length).toBeGreaterThan(0);
+      expect(event.source).toBe(event.ruleId === null ? null : cite(rules, event.ruleId).source);
+    }
   });
 
   it("uses compliance overdue status and distinguishes resolved disputes and elapsed filing dates", () => {
@@ -176,6 +202,41 @@ describe("calendar events", () => {
       "upcoming",
     );
     expect(events().find((event) => event.id === "advance-tax:2026-09-15")?.state).toBe("past");
+  });
+
+  it("keeps old unpaid deadlines and open disputes but excludes old resolved disputes", () => {
+    const old = toInvoiceView(
+      {
+        ...invoice,
+        date: "2025-01-01",
+        type: "one_time",
+        recurrence: null,
+        refunds: [],
+        refundedTotal: "0.00",
+        disputes: invoice.disputes.flatMap((dispute) => [
+          { ...dispute, responseDueDate: "2026-01-01" },
+          {
+            ...dispute,
+            paypalDisputeId: "RESOLVED-OLD",
+            responseDueDate: "2026-01-01",
+            status: "RESOLVED",
+          },
+        ]),
+      },
+      true,
+      today,
+    );
+    const result = events([old]).filter((event) => event.href.startsWith("/invoices"));
+    expect(result.map(({ id, date, state }) => ({ id, date, state }))).toEqual([
+      { id: `rbi:${invoice.id}`, date: "2025-10-01", state: "overdue" },
+      { id: "dispute:DISPUTE-1", date: "2026-01-01", state: "overdue" },
+    ]);
+    const paid = toInvoiceView(
+      { ...old, paidTotal: "100.00", status: "paid", disputes: [] },
+      true,
+      today,
+    );
+    expect(events([paid]).some((event) => event.kind === "rbi_deadline")).toBe(false);
   });
 
   it("includes both window edges and excludes adjacent dates", () => {

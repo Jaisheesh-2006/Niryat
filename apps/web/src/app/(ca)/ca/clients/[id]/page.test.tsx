@@ -91,6 +91,9 @@ const event = {
   date: "2026-11-11",
   kind: "gstr1_due",
   title: "GSTR-1 due",
+  action: "Ask your CA to file GSTR-1.",
+  source: "GST source",
+  ruleId: "GSTR1_6A",
   state: "upcoming",
   href: "/gstr1",
 };

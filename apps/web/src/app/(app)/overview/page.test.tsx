@@ -85,6 +85,8 @@ function event(index: number, state: CalendarEvent["state"]): CalendarEvent {
     state,
     href: `/invoices#invoice-${index}`,
     ruleId: null,
+    action: "Review this deadline with your CA.",
+    source: null,
   };
 }
 

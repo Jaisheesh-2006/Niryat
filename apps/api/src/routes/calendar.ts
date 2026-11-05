@@ -1,7 +1,8 @@
-import { getProfile, listInvoices } from "@niryat/db";
-import { calendarEventSchema } from "@niryat/shared";
+import { getProfile, listCaClients, listInvoices } from "@niryat/db";
+import { caCalendarSchema, calendarEventSchema } from "@niryat/shared";
 import { Hono } from "hono";
 import { clientAccessDenied, readClientAccess } from "../auth/client-access";
+import { readCaSession } from "../auth/session";
 import { buildCalendarEvents } from "../calendar";
 import { toInvoiceView } from "../compliance";
 import { rules, todayInIndia } from "../rules";
@@ -23,6 +24,35 @@ export function calendarRoutes(
     return c.json(
       calendarEventSchema.array().parse(buildCalendarEvents({ profile, views }, today, rules)),
     );
+  });
+  routes.get("/ca/calendar", async (c) => {
+    const caId = await readCaSession(c, deps.sessionSecret);
+    if (!caId) return c.json({ error: "unauthenticated" }, 401);
+    const clients = (await listCaClients(deps.db, caId)).map((client) => ({
+      id: client.freelancerId,
+      name: client.name ?? "Unnamed freelancer",
+    }));
+    const today = todayInIndia();
+    const events = await Promise.all(
+      clients.map(async (client) => {
+        const [profile, invoices] = await Promise.all([
+          getProfile(deps.db, client.id, deps.encryptionKey),
+          listInvoices(deps.db, client.id),
+        ]);
+        const views = invoices.map((invoice) =>
+          toInvoiceView(invoice, profile?.gstRegistered ?? null, today),
+        );
+        return buildCalendarEvents({ profile: profile ?? null, views }, today, rules).map(
+          (event) => ({
+            ...event,
+            freelancerId: client.id,
+            id: `${client.id}:${event.id}`,
+            href: `/ca/clients/${client.id}`,
+          }),
+        );
+      }),
+    );
+    return c.json(caCalendarSchema.parse({ clients, events: events.flat() }));
   });
   return routes;
 }

@@ -47,6 +47,7 @@ export default async function Calendar() {
                     </td>
                     <td>
                       <Link href={event.href}>{event.title}</Link>
+                      <p>{event.action}</p>
                     </td>
                   </tr>
                 ))}

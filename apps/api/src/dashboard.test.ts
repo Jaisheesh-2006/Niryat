@@ -209,6 +209,8 @@ describe("CA portfolio row", () => {
     date,
     kind: "gstr1_due" as const,
     title: `Due ${date}`,
+    action: "Ask your CA to file GSTR-1.",
+    source: null,
     state,
     href: "/gstr1",
     ruleId: null,

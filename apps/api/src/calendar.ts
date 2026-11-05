@@ -1,5 +1,6 @@
 import {
   advanceTaxDates,
+  cite,
   financialYear,
   gstr1Period,
   gstr1PeriodsDueBetween,
@@ -7,6 +8,22 @@ import {
 } from "@niryat/rules";
 import type { CalendarEvent, InvoiceView, ProfileInput } from "@niryat/shared";
 import { z } from "zod";
+
+const calendarActions = {
+  lut_renewal:
+    "Ask your CA to renew your LUT on the GST portal, then update the dates in your profile.",
+  gstr1_due:
+    "Ask your CA to file GSTR-1 for this period using the export file from the GSTR-1 page.",
+  advance_tax:
+    "Review your advance-tax estimate with your CA and pay any amount due on the income-tax portal.",
+  rbi_deadline:
+    "Follow up with your client for payment and ask your bank about an extension if the export payment is delayed.",
+  credit_note_declare_by: "Ask your CA to declare this refund's credit note in your GST return.",
+  dispute_response:
+    "Review the dispute in PayPal and submit your response there if it is still open.",
+  recurring_invoice:
+    "Check in PayPal whether the expected invoice was created and review it before taking any action.",
+} satisfies Record<CalendarEvent["kind"], string>;
 
 export function buildCalendarEvents(
   input: {
@@ -24,11 +41,17 @@ export function buildCalendarEvents(
   const start = from.toISOString().slice(0, 10);
   const end = to.toISOString().slice(0, 10);
   const events = new Map<string, CalendarEvent>();
-  function add(event: Omit<CalendarEvent, "state">, overdue = false) {
-    if (event.date < start || event.date > end) return;
+  function add(event: Omit<CalendarEvent, "state" | "action" | "source">, overdue = false) {
+    if ((event.date < start && !overdue) || event.date > end) return;
     const state = overdue ? "overdue" : event.date < today ? "past" : "upcoming";
     const prefix = { overdue: "Overdue: ", upcoming: "Upcoming: ", past: "Past: " }[state];
-    events.set(event.id, { ...event, state, title: prefix + event.title });
+    events.set(event.id, {
+      ...event,
+      state,
+      title: prefix + event.title,
+      action: calendarActions[event.kind],
+      source: event.ruleId === null ? null : cite(rules, event.ruleId).source,
+    });
   }
 
   const { profile } = input;

@@ -399,11 +399,21 @@ export const calendarEventSchema = z.object({
     "recurring_invoice",
   ]),
   title: z.string(),
+  action: z.string().min(1),
+  source: z.string().nullable(),
   state: z.enum(["overdue", "upcoming", "past"]),
   href: z.string().startsWith("/"),
   ruleId: z.string().nullable(),
 });
 export type CalendarEvent = z.infer<typeof calendarEventSchema>;
+
+export const caCalendarEventSchema = calendarEventSchema.extend({ freelancerId: z.uuid() });
+export type CaCalendarEvent = z.infer<typeof caCalendarEventSchema>;
+export const caCalendarSchema = z.object({
+  clients: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  events: caCalendarEventSchema.array(),
+});
+export type CaCalendar = z.infer<typeof caCalendarSchema>;
 
 export const gstRateSchema = z
   .string()

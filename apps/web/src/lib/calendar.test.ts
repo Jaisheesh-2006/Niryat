@@ -1,6 +1,6 @@
 import { type CalendarEvent, calendarEventSchema } from "@niryat/shared";
 import { expect, it } from "vitest";
-import { calendarResources, deadlineList, toBryntumEvents } from "./calendar";
+import { caCalendarResources, calendarResources, deadlineList, toBryntumEvents } from "./calendar";
 
 it.each(["overdue", "upcoming", "past"] as const)(
   "maps an all-day %s event and preserves its title and link",
@@ -13,6 +13,8 @@ it.each(["overdue", "upcoming", "past"] as const)(
       state,
       href: "/invoices#invoice-1",
       ruleId: "RBI_REALISATION",
+      action: "Ask your client for payment.",
+      source: "RBI source",
     });
     expect(toBryntumEvents([event])).toEqual([
       {
@@ -24,6 +26,8 @@ it.each(["overdue", "upcoming", "past"] as const)(
         resourceId: "rbi",
         cls: `niryat-${state}`,
         href: event.href,
+        action: event.action,
+        source: event.source,
       },
     ]);
     expect(event.date).toBe("2026-12-31");
@@ -32,6 +36,38 @@ it.each(["overdue", "upcoming", "past"] as const)(
 
 it("maps an empty calendar", () => {
   expect(toBryntumEvents([])).toEqual([]);
+});
+
+it("assigns client resources and cycles token colours without merging equal names", () => {
+  const clients = Array.from({ length: 6 }, (_, i) => ({ id: `client-${i}`, name: "Same name" }));
+  const resources = caCalendarResources(clients);
+  expect(resources).toHaveLength(6);
+  for (const [index, resource] of resources.entries()) {
+    expect(resource).toEqual({
+      ...clients[index],
+      eventColor: calendarResources[index % 4]?.eventColor,
+    });
+    const event: CalendarEvent & { freelancerId: string } = {
+      freelancerId: resource.id,
+      id: `${resource.id}:tax`,
+      date: "2026-11-05",
+      kind: "advance_tax",
+      title: "Upcoming tax",
+      state: "upcoming",
+      href: `/ca/clients/${resource.id}`,
+      action: "Review with your CA.",
+      source: "Tax source",
+      ruleId: "ADVANCE_TAX_DATES",
+    };
+    expect(toBryntumEvents([event])[0]).toMatchObject({
+      resourceId: resource.id,
+      href: event.href,
+      action: event.action,
+      source: event.source,
+    });
+    expect(deadlineList([event], 10)[0]?.freelancerId).toBe(resource.id);
+  }
+  expect(caCalendarResources([])).toEqual([]);
 });
 
 it("assigns every event kind to its category resource", () => {
@@ -53,6 +89,8 @@ it("assigns every event kind to its category resource", () => {
       state: "upcoming",
       href: "/calendar",
       ruleId: null,
+      action: "Review this deadline with your CA.",
+      source: null,
     };
     const mapped = toBryntumEvents([event])[0];
     expect(mapped?.resourceId).toBe(categories[kind]);
@@ -69,7 +107,17 @@ it("assigns every event kind to its category resource", () => {
 
 it("keeps every overdue event and only N upcoming events, sorted by date then id", () => {
   function event(id: string, date: string, state: CalendarEvent["state"]): CalendarEvent {
-    return { id, date, state, kind: "rbi_deadline", title: id, href: "/invoices", ruleId: null };
+    return {
+      id,
+      date,
+      state,
+      kind: "rbi_deadline",
+      title: id,
+      href: "/invoices",
+      ruleId: null,
+      action: "Review with your CA.",
+      source: null,
+    };
   }
   const events = [
     event("upcoming-c", "2026-11-04", "upcoming"),

@@ -23,6 +23,8 @@ function event(state: CalendarEvent["state"], day: number) {
     state,
     href: `/invoices#invoice-${state}-${day}`,
     ruleId: "RBI_REALISATION",
+    action: "Ask your client for payment.",
+    source: "RBI source",
   });
 }
 
@@ -45,6 +47,7 @@ it("server-renders all overdue and only the first ten upcoming links in date ord
   for (const state of ["Overdue", "Upcoming", "Past"]) expect(html).toContain(`>${state}</li>`);
   for (const item of events.filter((item) => item.state === "overdue")) {
     expect(html).toContain(`href="${item.href}"`);
+    expect(html).toContain(`<p>${item.action}</p>`);
   }
   for (let day = 1; day <= 10; day++) {
     expect(html).toContain(`href="/invoices#invoice-upcoming-${day}"`);

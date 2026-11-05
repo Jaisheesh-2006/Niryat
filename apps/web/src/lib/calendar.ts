@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "@niryat/shared";
+import type { CaCalendar, CalendarEvent } from "@niryat/shared";
 
 export const calendarResources = [
   { id: "gst", name: "GST", eventColor: "var(--niryat-cat-gst)" },
@@ -7,7 +7,7 @@ export const calendarResources = [
   { id: "paypal", name: "PayPal", eventColor: "var(--niryat-cat-paypal)" },
 ];
 
-function calendarResourceId(kind: CalendarEvent["kind"]) {
+export function calendarResourceId(kind: CalendarEvent["kind"]) {
   switch (kind) {
     case "lut_renewal":
     case "gstr1_due":
@@ -27,10 +27,10 @@ function calendarResourceId(kind: CalendarEvent["kind"]) {
   }
 }
 
-export function deadlineList(
-  events: readonly CalendarEvent[],
+export function deadlineList<Event extends CalendarEvent>(
+  events: readonly Event[],
   upcomingLimit: number,
-): CalendarEvent[] {
+): Event[] {
   const sorted = [...events].sort(
     (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
   );
@@ -40,7 +40,15 @@ export function deadlineList(
   ];
 }
 
-export function toBryntumEvents(events: readonly CalendarEvent[]) {
+export function caCalendarResources(clients: CaCalendar["clients"]) {
+  return clients.map((client, index) => ({
+    ...client,
+    eventColor:
+      calendarResources[index % calendarResources.length]?.eventColor ?? "var(--niryat-cat-gst)",
+  }));
+}
+
+export function toBryntumEvents(events: readonly (CalendarEvent & { freelancerId?: string })[]) {
   return events.map((event) => {
     const end = new Date(`${event.date}T00:00:00Z`);
     end.setUTCDate(end.getUTCDate() + 1);
@@ -50,9 +58,11 @@ export function toBryntumEvents(events: readonly CalendarEvent[]) {
       startDate: `${event.date}T00:00:00`,
       endDate: `${end.toISOString().slice(0, 10)}T00:00:00`,
       allDay: true,
-      resourceId: calendarResourceId(event.kind),
+      resourceId: event.freelancerId ?? calendarResourceId(event.kind),
       cls: `niryat-${event.state}`,
       href: event.href,
+      action: event.action,
+      source: event.source,
     };
   });
 }
