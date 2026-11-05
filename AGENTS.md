@@ -81,5 +81,14 @@ Node/pnpm version pins are intentional; pnpm records exact release-age exception
 
 Work on one spec per task. Plan before multi-file changes, keep commits small, and read the nearest nested AGENTS.md first. Never commit or publish unless requested.
 Current state: phase statuses are in [build flow](docs/build-flow.md). The active task plan is the local, git-ignored current-phase-plan.md, if present. PayPal facts are in [sandbox findings](docs/paypal-sandbox-findings.md).
+
+Whenever a task changes sponsor-related code, configuration, behavior or deployment setup, update every affected sponsor document in the same task:
+- AG Studio: [AG_STUDIO.md](docs/AG_STUDIO.md).
+- Render: [RENDER.md](docs/RENDER.md).
+- Bryntum: [BRYUNTUM.md](docs/BRYUNTUM.md).
+- APIMatic: [apimatic-usage.md](docs/apimatic-usage.md).
+
+Record the date, what changed and why, relevant file paths, verification results and any pending checks or known limitations. Document only changes actually made and results actually verified.
+
 Whenever an APIMatic tool is used (the PayPal Context Plugin's paypal:* skills or any other APIMatic tooling), add an entry to [APIMatic usage](docs/apimatic-usage.md) in the same task: date, tool, purpose and outcome. It is evidence for the APIMatic sponsor prize.
 See [architecture](docs/architecture.md), [PayPal](docs/paypal.md), [rules](docs/rules-sources.md), [glossary](docs/glossary.md), [ADRs](docs/decisions/), [verification](docs/verification.md) and [APIMatic usage](docs/apimatic-usage.md).
