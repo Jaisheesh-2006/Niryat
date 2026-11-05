@@ -3,11 +3,12 @@ import { inrRateSchema, invoiceCurrencies } from "@niryat/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 import { advanceTaxEstimate } from "../advance-tax";
-import { readSession } from "../auth/session";
+import { clientAccessDenied, readClientAccess } from "../auth/client-access";
 import { todayInIndia } from "../rules";
 import type { AppDeps } from "./auth";
 
 const querySchema = z.strictObject({
+  client: z.uuid().optional(),
   taxYear: z
     .string()
     .refine((value) => {
@@ -39,8 +40,9 @@ const querySchema = z.strictObject({
 export function advanceTaxRoutes(deps: AppDeps): Hono {
   const routes = new Hono();
   routes.get("/advance-tax", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const access = await readClientAccess(c, deps, c.req.query("client"));
+    if (!access) return clientAccessDenied(c, deps.sessionSecret);
+    const { userId } = access;
     const query = querySchema.safeParse(c.req.query());
     if (!query.success || Object.values(c.req.queries()).some((values) => values.length > 1)) {
       return c.json({ error: "invalid_query" }, 400);

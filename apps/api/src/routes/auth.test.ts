@@ -237,9 +237,9 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
     const me = await app.request("/auth/me", { headers: { Cookie: cookie } });
     expect(await me.json()).toEqual({ ...user, role });
     expect((await findUserByEmail(t.db, credentials.email))?.role).toBe(role);
-    const health = await app.request("/health-check", { headers: { Cookie: cookie } });
-    expect(health.status).toBe(role === "ca" ? 401 : 404);
-    expect(await health.json()).toEqual({
+    const profile = await app.request("/profile", { headers: { Cookie: cookie } });
+    expect(profile.status).toBe(role === "ca" ? 401 : 404);
+    expect(await profile.json()).toEqual({
       error: role === "ca" ? "unauthenticated" : "not_found",
     });
   });
@@ -288,9 +288,9 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
               ...user,
               role,
             });
-            const health = await app.request("/health-check", { headers });
-            expect(health.status).toBe(role === "ca" ? 401 : 404);
-            expect(await health.json()).toEqual({
+            const profile = await app.request("/profile", { headers });
+            expect(profile.status).toBe(role === "ca" ? 401 : 404);
+            expect(await profile.json()).toEqual({
               error: role === "ca" ? "unauthenticated" : "not_found",
             });
           }
@@ -389,9 +389,9 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
     const response = await app.request("/auth/me", { headers });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ...user, role: "ca" });
-    const health = await app.request("/health-check", { headers });
-    expect(health.status).toBe(401);
-    expect(await health.json()).toEqual({ error: "unauthenticated" });
+    const profile = await app.request("/profile", { headers });
+    expect(profile.status).toBe(401);
+    expect(await profile.json()).toEqual({ error: "unauthenticated" });
     const logout = await app.request("/auth/logout", {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },

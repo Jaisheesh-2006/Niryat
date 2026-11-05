@@ -7,6 +7,7 @@ import {
   endCaClientLink,
   endCaLink,
   getCaLink,
+  hasAcceptedCaLink,
   listCaRequests,
   respondToCaRequest,
 } from "./ca-links";
@@ -44,6 +45,21 @@ describe.skipIf(!testDatabaseUrl)("CA links", () => {
     if (!row) throw new Error("Expected stored link");
     return row;
   }
+
+  it("grants access only to the accepted CA/client pair and revokes it on end", async () => {
+    expect(await hasAcceptedCaLink(t.db, caId, freelancerId)).toBe(false);
+    const { link, invitationCode } = await invite();
+    expect(await hasAcceptedCaLink(t.db, caId, freelancerId)).toBe(false);
+    expect(await claimCaRequest(t.db, caId, invitationCode)).toBe(true);
+    expect(await hasAcceptedCaLink(t.db, caId, freelancerId)).toBe(false);
+    expect(await respondToCaRequest(t.db, caId, link.id, "accept", now)).toBe(true);
+    expect(await hasAcceptedCaLink(t.db, caId, freelancerId)).toBe(true);
+    expect(await hasAcceptedCaLink(t.db, randomUUID(), freelancerId)).toBe(false);
+    expect(await hasAcceptedCaLink(t.db, caId, randomUUID())).toBe(false);
+    expect(await hasAcceptedCaLink(t.db, freelancerId, caId)).toBe(false);
+    expect(await endCaClientLink(t.db, caId, freelancerId, link.id, now)).toBe(true);
+    expect(await hasAcceptedCaLink(t.db, caId, freelancerId)).toBe(false);
+  });
 
   it("normalizes email and accepts a request created before the CA account exists", async () => {
     expect(await getCaLink(t.db, freelancerId)).toBeNull();

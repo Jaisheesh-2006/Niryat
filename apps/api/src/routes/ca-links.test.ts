@@ -172,11 +172,10 @@ describe.skipIf(!testDatabaseUrl)("CA link routes", () => {
         : null,
     );
     if (response === "decline") expect((await invite()).link.id).not.toBe(link.id);
-    // Acceptance in B3 must not grant record or PayPal access before B4.
-    expect(
-      (await app.request(`/health-check?client=${owner.id}`, { headers: { Cookie: ca.cookie } }))
-        .status,
-    ).toBe(401);
+    // Acceptance grants B4 read access; a decline grants none, and writes stay freelancer-only.
+    const read = await app.request(`/tasks?client=${owner.id}`, { headers: { Cookie: ca.cookie } });
+    expect(read.status).toBe(response === "accept" ? 200 : 404);
+    expect(await read.json()).toEqual(response === "accept" ? [] : { error: "not_found" });
     expect((await post("/invoices", ca.cookie)).status).toBe(401);
   });
 

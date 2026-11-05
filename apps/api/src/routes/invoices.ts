@@ -23,6 +23,7 @@ import { invoiceInputSchema, refundInputSchema } from "@niryat/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 import { actionHandlers } from "../actions";
+import { clientAccessDenied, readClientAccess } from "../auth/client-access";
 import { readSession } from "../auth/session";
 import { toInvoiceView } from "../compliance";
 import { newFileToken, pdfKey } from "../files";
@@ -34,14 +35,18 @@ import { parseJsonBody } from "./body";
 export function invoiceRoutes(deps: AppDeps): Hono {
   const routes = new Hono();
   routes.get("/invoices", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const access = await readClientAccess(c, deps, c.req.query("client"));
+    if (!access) return clientAccessDenied(c, deps.sessionSecret);
+    const { userId } = access;
     const gstRegistered = await gstRegistration(deps.db, userId);
     const today = todayInIndia();
     return c.json(
-      (await listInvoices(deps.db, userId)).map((invoice) =>
-        toInvoiceView(invoice, gstRegistered, today),
-      ),
+      (await listInvoices(deps.db, userId)).map((invoice) => {
+        const view = toInvoiceView(invoice, gstRegistered, today);
+        if (access.viewer === "owner") return view;
+        const { action, refundActions, pdfUrl, ...clientView } = view;
+        return clientView;
+      }),
     );
   });
   routes.post("/invoices", async (c) => {

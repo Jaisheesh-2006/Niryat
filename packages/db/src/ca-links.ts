@@ -27,6 +27,31 @@ const linkFields = {
   respondedAt: caLinks.respondedAt,
 };
 
+export async function hasAcceptedCaLink(
+  db: Db,
+  caId: string,
+  freelancerId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: caLinks.id })
+    .from(caLinks)
+    .where(
+      and(
+        eq(caLinks.caUserId, caId),
+        eq(caLinks.freelancerUserId, freelancerId),
+        eq(caLinks.status, "accepted"),
+      ),
+    )
+    .limit(1)
+    .catch(() => {
+      throw new Error("CA client access lookup failed");
+    });
+  if (!row) return false;
+  if (!z.object({ id: z.uuid() }).safeParse(row).success)
+    throw new Error("Stored CA client access is invalid");
+  return true;
+}
+
 export async function getCaLink(db: Db, freelancerId: string): Promise<CaLink | null> {
   const [row] = await db
     .select(linkFields)

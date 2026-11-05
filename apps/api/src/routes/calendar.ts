@@ -1,7 +1,7 @@
 import { getProfile, listInvoices } from "@niryat/db";
 import { calendarEventSchema } from "@niryat/shared";
 import { Hono } from "hono";
-import { readSession } from "../auth/session";
+import { clientAccessDenied, readClientAccess } from "../auth/client-access";
 import { buildCalendarEvents } from "../calendar";
 import { toInvoiceView } from "../compliance";
 import { rules, todayInIndia } from "../rules";
@@ -12,8 +12,9 @@ export function calendarRoutes(
 ): Hono {
   const routes = new Hono();
   routes.get("/calendar", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const access = await readClientAccess(c, deps, c.req.query("client"));
+    if (!access) return clientAccessDenied(c, deps.sessionSecret);
+    const { userId } = access;
     const today = todayInIndia();
     const profile = (await getProfile(deps.db, userId, deps.encryptionKey)) ?? null;
     const views = (await listInvoices(deps.db, userId)).map((invoice) =>

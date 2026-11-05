@@ -1,6 +1,7 @@
 import { completeTask, listTasks } from "@niryat/db";
 import { Hono } from "hono";
 import { z } from "zod";
+import { clientAccessDenied, readClientAccess } from "../auth/client-access";
 import { readSession } from "../auth/session";
 import type { AppDeps } from "./auth";
 import { parseJsonBody } from "./body";
@@ -8,8 +9,9 @@ import { parseJsonBody } from "./body";
 export function taskRoutes(deps: AppDeps): Hono {
   const routes = new Hono();
   routes.get("/tasks", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const access = await readClientAccess(c, deps, c.req.query("client"));
+    if (!access) return clientAccessDenied(c, deps.sessionSecret);
+    const { userId } = access;
     return c.json(await listTasks(deps.db, userId));
   });
   routes.post("/tasks/:id/done", async (c) => {

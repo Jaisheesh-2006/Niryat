@@ -8,6 +8,7 @@ import {
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
+import { clientAccessDenied, readClientAccess } from "../auth/client-access";
 import { readSession } from "../auth/session";
 import { extractPdfText, matchFiraLines, parseFiraText } from "../fira";
 import type { AppDeps } from "./auth";
@@ -16,8 +17,9 @@ import { parseJsonBody } from "./body";
 export function firaRoutes(deps: AppDeps): Hono {
   const routes = new Hono();
   routes.get("/fira", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const access = await readClientAccess(c, deps, c.req.query("client"));
+    if (!access) return clientAccessDenied(c, deps.sessionSecret);
+    const { userId } = access;
     return c.json(await listFiraDocuments(deps.db, userId));
   });
   routes.post(

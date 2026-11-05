@@ -2,18 +2,22 @@ import { gstr1ExportRows } from "@niryat/rules";
 import { gstr1FileRequestSchema, gstr1FileSchema, gstr1PeriodSchema } from "@niryat/shared";
 import { Hono } from "hono";
 import { z } from "zod";
-import { readSession } from "../auth/session";
+import { clientAccessDenied, readClientAccess } from "../auth/client-access";
 import { gstr1Csv, gstr1Preview } from "../gstr1";
 import { rules, todayInIndia } from "../rules";
 import type { AppDeps } from "./auth";
 
-const querySchema = z.strictObject({ period: gstr1PeriodSchema.optional() });
+const querySchema = z.strictObject({
+  client: z.uuid().optional(),
+  period: gstr1PeriodSchema.optional(),
+});
 
 export function gstr1Routes(deps: AppDeps): Hono {
   const routes = new Hono();
   routes.get("/gstr1", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const access = await readClientAccess(c, deps, c.req.query("client"));
+    if (!access) return clientAccessDenied(c, deps.sessionSecret);
+    const { userId } = access;
     const query = querySchema.safeParse(c.req.query());
     if (!query.success || (c.req.queries("period")?.length ?? 0) > 1) {
       return c.json({ error: "invalid_period" }, 400);
@@ -23,8 +27,9 @@ export function gstr1Routes(deps: AppDeps): Hono {
     return c.json(result.preview);
   });
   routes.post("/gstr1/file", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    const access = await readClientAccess(c, deps, c.req.query("client"));
+    if (!access) return clientAccessDenied(c, deps.sessionSecret);
+    const { userId } = access;
     if (c.req.header("Content-Type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") {
       return c.json({ error: "unsupported_media_type" }, 415);
     }
