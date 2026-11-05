@@ -1,6 +1,6 @@
 import { type CalendarEvent, calendarEventSchema } from "@niryat/shared";
 import { expect, it } from "vitest";
-import { deadlineList, toBryntumEvents } from "./calendar";
+import { calendarResources, deadlineList, toBryntumEvents } from "./calendar";
 
 it.each(["overdue", "upcoming", "past"] as const)(
   "maps an all-day %s event and preserves its title and link",
@@ -21,8 +21,8 @@ it.each(["overdue", "upcoming", "past"] as const)(
         startDate: "2026-12-31T00:00:00",
         endDate: "2027-01-01T00:00:00",
         allDay: true,
+        resourceId: "rbi",
         cls: `niryat-${state}`,
-        eventColor: `var(--niryat-${state})`,
         href: event.href,
       },
     ]);
@@ -32,6 +32,39 @@ it.each(["overdue", "upcoming", "past"] as const)(
 
 it("maps an empty calendar", () => {
   expect(toBryntumEvents([])).toEqual([]);
+});
+
+it("assigns every event kind to its category resource", () => {
+  const categories = {
+    lut_renewal: "gst",
+    gstr1_due: "gst",
+    credit_note_declare_by: "gst",
+    advance_tax: "income_tax",
+    rbi_deadline: "rbi",
+    dispute_response: "paypal",
+    recurring_invoice: "paypal",
+  } satisfies Record<CalendarEvent["kind"], string>;
+  for (const kind of calendarEventSchema.shape.kind.options) {
+    const event: CalendarEvent = {
+      id: kind,
+      date: "2026-11-05",
+      kind,
+      title: `Upcoming: ${kind}`,
+      state: "upcoming",
+      href: "/calendar",
+      ruleId: null,
+    };
+    const mapped = toBryntumEvents([event])[0];
+    expect(mapped?.resourceId).toBe(categories[kind]);
+    expect(calendarResources.some((resource) => resource.id === mapped?.resourceId)).toBe(true);
+    expect(mapped).not.toHaveProperty("eventColor");
+  }
+  expect(calendarResources).toEqual([
+    { id: "gst", name: "GST", eventColor: "var(--niryat-cat-gst)" },
+    { id: "income_tax", name: "Income tax", eventColor: "var(--niryat-cat-income-tax)" },
+    { id: "rbi", name: "RBI payment deadlines", eventColor: "var(--niryat-cat-rbi)" },
+    { id: "paypal", name: "PayPal", eventColor: "var(--niryat-cat-paypal)" },
+  ]);
 });
 
 it("keeps every overdue event and only N upcoming events, sorted by date then id", () => {

@@ -2,6 +2,7 @@ import { BryntumCalendar } from "@bryntum/calendar-react";
 import type { CalendarEvent } from "@niryat/shared";
 import { isValidElement } from "react";
 import { expect, it, vi } from "vitest";
+import { calendarResources } from "../lib/calendar";
 import CalendarView from "./CalendarView";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
@@ -17,7 +18,7 @@ vi.mock("react", async (importOriginal) => ({
   useRef: () => ({ current: null }),
 }));
 
-it("keeps month/list modes read-only and navigates only for known local events", () => {
+it("shows category filters and five read-only modes, navigating only for known local events", () => {
   const event: CalendarEvent = {
     id: "rbi:invoice-1",
     date: "2026-11-01",
@@ -35,6 +36,9 @@ it("keeps month/list modes read-only and navigates only for known local events",
       readOnly: boolean;
       mode: string;
       modes: Record<string, boolean>;
+      sidebar: { collapsed: boolean; items: { resourceFilter: boolean } };
+      resources: typeof calendarResources;
+      events: { resourceId: string; cls: string; name: string }[];
       onEventClick: (click: { eventRecord: { id: string } }) => void;
     }>(element)
   ) {
@@ -45,11 +49,18 @@ it("keeps month/list modes read-only and navigates only for known local events",
   expect(element.props.mode).toBe("month");
   expect(element.props.modes).toEqual({
     day: false,
-    week: false,
+    week: true,
     month: true,
-    year: false,
-    agenda: false,
+    year: true,
+    agenda: true,
     list: true,
+  });
+  expect(element.props.sidebar).toEqual({ collapsed: false, items: { resourceFilter: true } });
+  expect(element.props.resources).toEqual(calendarResources);
+  expect(element.props.events[0]).toMatchObject({
+    resourceId: "rbi",
+    cls: "niryat-upcoming",
+    name: event.title,
   });
 
   element.props.onEventClick({ eventRecord: { id: event.id } });

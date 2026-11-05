@@ -25,6 +25,10 @@
   --niryat-upcoming: #1f6f5c;
   --niryat-past: #6b7280;
   --niryat-event-text: #fff;
+  --niryat-cat-gst: #1f6f5c;
+  --niryat-cat-income-tax: #7048a5;
+  --niryat-cat-rbi: #8a4508;
+  --niryat-cat-paypal: #375c78;
   --niryat-space-1: 4px;
   --niryat-space-2: 8px;
   --niryat-space-3: 12px;
@@ -68,6 +72,10 @@
     --niryat-upcoming: #7dd3b7;
     --niryat-past: #c3c8d1;
     --niryat-event-text: #14251f;
+    --niryat-cat-gst: #7dd3b7;
+    --niryat-cat-income-tax: #c7b0ef;
+    --niryat-cat-rbi: #ffc690;
+    --niryat-cat-paypal: #a7cbea;
     --niryat-shadow-card: none;
     --niryat-shadow-popover: none;
     color-scheme: dark;
@@ -1052,21 +1060,17 @@ button:has(.spinner)::before {
 }
 .niryat-overdue {
   color: var(--niryat-overdue);
-  --niryat-event-color: var(--niryat-overdue);
 }
 .niryat-upcoming {
   color: var(--niryat-upcoming);
-  --niryat-event-color: var(--niryat-upcoming);
 }
 .niryat-past {
   color: var(--niryat-past);
-  --niryat-event-color: var(--niryat-past);
 }
 .calendar-legend .niryat-past {
   color: var(--niryat-muted);
 }
 .b-cal-event-wrap:is(.niryat-overdue, .niryat-upcoming, .niryat-past) .b-cal-event {
-  background-color: var(--niryat-event-color);
   color: var(--niryat-event-text);
 }
 .dashboard-studio {
