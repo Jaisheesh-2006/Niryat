@@ -4,16 +4,12 @@ import {
   endCaClientLink,
   endCaLink,
   getCaLink,
-  getProfile,
-  listCaClients,
   listCaRequests,
-  listInvoices,
-  listReminderActions,
   respondToCaRequest,
 } from "@niryat/db";
-import { evaluateHealth } from "@niryat/rules";
 import {
   caClaimInputSchema,
+  caDashboardSchema,
   caLinkEndInputSchema,
   caLinkInputSchema,
   caPortfolioSchema,
@@ -21,10 +17,8 @@ import {
 import { Hono } from "hono";
 import { z } from "zod";
 import { readCaSession, readSession } from "../auth/session";
-import { buildCalendarEvents } from "../calendar";
-import { toInvoiceView } from "../compliance";
-import { buildPortfolioRow } from "../dashboard";
-import { rules, todayInIndia } from "../rules";
+import { loadCaDashboard } from "../ca-dashboard";
+import { todayInIndia } from "../rules";
 import type { AppDeps } from "./auth";
 import { parseJsonBody } from "./body";
 
@@ -65,33 +59,13 @@ export function caLinkRoutes(deps: AppDeps): Hono {
   routes.get("/ca/portfolio", async (c) => {
     const userId = await readCaSession(c, deps.sessionSecret);
     if (!userId) return c.json({ error: "unauthenticated" }, 401);
-    const today = todayInIndia();
-    const rows = await Promise.all(
-      (await listCaClients(deps.db, userId)).map(async (client) => {
-        const id = client.freelancerId;
-        const [profile, invoices, reminders] = await Promise.all([
-          getProfile(deps.db, id, deps.encryptionKey),
-          listInvoices(deps.db, id),
-          // shortcut: counts proposed reminders among the latest 50 (as /close does); add a count query if clients exceed that.
-          listReminderActions(deps.db, id, 50),
-        ]);
-        const views = invoices.map((invoice) =>
-          toInvoiceView(invoice, profile?.gstRegistered ?? null, today),
-        );
-        return buildPortfolioRow(client, {
-          views,
-          health: profile ? evaluateHealth(profile, { today, rules }) : null,
-          events: buildCalendarEvents({ profile: profile ?? null, views }, today, rules),
-          reminders,
-        });
-      }),
-    );
-    rows.sort(
-      (a, b) =>
-        b.overdueCount - a.overdueCount ||
-        (a.nextDeadline?.date ?? "~").localeCompare(b.nextDeadline?.date ?? "~"),
-    );
-    return c.json(caPortfolioSchema.parse(rows));
+    const dashboard = await loadCaDashboard(deps, userId, todayInIndia());
+    return c.json(caPortfolioSchema.parse(dashboard.portfolio));
+  });
+  routes.get("/ca/dashboard", async (c) => {
+    const userId = await readCaSession(c, deps.sessionSecret);
+    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+    return c.json(caDashboardSchema.parse(await loadCaDashboard(deps, userId, todayInIndia())));
   });
   routes.post("/ca/requests/claim", async (c) => {
     const userId = await readCaSession(c, deps.sessionSecret);

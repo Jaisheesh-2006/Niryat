@@ -7,7 +7,7 @@ import { dashboardInitialState, dashboardSources } from "../lib/dashboard";
 import { createDashboardAdapter, DASHBOARD_PROMPT_STARTERS } from "../lib/dashboard-adapter";
 
 // D12 tokens switch for dark mode in globals.css, so the theme follows them.
-const theme = studioTheme.withParams({
+export const theme = studioTheme.withParams({
   accentColor: "var(--niryat-primary)",
   backgroundColor: "var(--niryat-surface)",
   foregroundColor: "var(--niryat-text)",
@@ -22,7 +22,7 @@ const theme = studioTheme.withParams({
   chartPaletteStrokes3Color: "var(--niryat-neutral-strong)",
   chartPaletteStrokes4Color: "var(--niryat-danger)",
 });
-const modules = [AgStudioAiModule];
+export const modules = [AgStudioAiModule];
 // Module-level so a re-render keeps the same harness setup.
 const ai: AgAiHarnessSetup = ({ api }) =>
   createAiHarness(api, {

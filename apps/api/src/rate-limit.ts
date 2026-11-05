@@ -1,7 +1,7 @@
 import { getConnInfo } from "@hono/node-server/conninfo";
 import type { MiddlewareHandler } from "hono";
 import { z } from "zod";
-import { readSession } from "./auth/session";
+import { readAnySession, readSession } from "./auth/session";
 import type { AppDeps } from "./routes/auth";
 
 export const RATE_LIMITS = {
@@ -51,7 +51,12 @@ export function rateLimitMiddleware(
   return async (c, next) => {
     const group = routeGroups[c.req.path];
     if (!deps.rateLimits || c.req.method !== "POST" || !group) return next();
-    const userId = group === "auth" ? undefined : await readSession(c, deps.sessionSecret);
+    const userId =
+      group === "auth"
+        ? undefined
+        : c.req.path === "/dashboard/turn"
+          ? (await readAnySession(c, deps.sessionSecret))?.userId
+          : await readSession(c, deps.sessionSecret);
     if (group !== "auth" && !userId) return next();
     // Render overwrites this header; Next preserves it over the workspace-private network.
     const forwarded = ipSchema.safeParse(

@@ -26,6 +26,7 @@ describe.skipIf(!testDatabaseUrl)("CA link routes", () => {
     ["POST", "/ca-link/end", "freelancer"],
     ["GET", "/ca/requests", "ca"],
     ["GET", "/ca/portfolio", "ca"],
+    ["GET", "/ca/dashboard", "ca"],
     ["POST", "/ca/requests/claim", "ca"],
     ["POST", `/ca/requests/${id}/accept`, "ca"],
     ["POST", `/ca/requests/${id}/decline`, "ca"],

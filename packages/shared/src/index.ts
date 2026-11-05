@@ -755,6 +755,16 @@ export const caPortfolioSchema = z.array(
 );
 export type CaPortfolio = z.infer<typeof caPortfolioSchema>;
 
+const freelancerFields = { freelancerId: z.uuid(), freelancerName: z.string() };
+export const caDashboardSchema = z.object({
+  asOf: z.iso.date(),
+  financialYear: z.string(),
+  portfolio: caPortfolioSchema,
+  invoices: z.array(dashboardSchema.shape.invoices.element.extend(freelancerFields)),
+  payments: z.array(dashboardSchema.shape.payments.element.extend(freelancerFields)),
+});
+export type CaDashboard = z.infer<typeof caDashboardSchema>;
+
 export const agentRunKinds = ["monthly_close", "reminders", "extraction", "dashboard"] as const;
 export type AgentRunKind = (typeof agentRunKinds)[number];
 export const agentRunTriggers = ["manual", "scheduled", "nightly"] as const;

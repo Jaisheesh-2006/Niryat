@@ -167,7 +167,6 @@ describe("client access on adopted read routes", () => {
   it.each([
     ["POST", "/clients"],
     ["POST", "/close"],
-    ["POST", "/dashboard/turn"],
     ["POST", "/extract"],
     ["POST", "/fira"],
     ["POST", "/invoices"],
@@ -181,6 +180,17 @@ describe("client access on adopted read routes", () => {
       body: "{}",
     });
     expect(response.status).toBe(401);
+    expect(db.hasAcceptedCaLink).not.toHaveBeenCalled();
+  });
+
+  it("rejects a client query on the CA's portfolio assistant", async () => {
+    const response = await app.request(`/dashboard/turn?client=${client}`, {
+      method: "POST",
+      headers: { Cookie: cookies.ca, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_query" });
     expect(db.hasAcceptedCaLink).not.toHaveBeenCalled();
   });
 });

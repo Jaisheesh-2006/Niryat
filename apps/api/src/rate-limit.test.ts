@@ -208,6 +208,24 @@ describe("route rate limits", () => {
     expect((await post(app)).status).toBe(400);
   });
 
+  it("limits CA portfolio questions to the same six requests per IP/user", async () => {
+    const app = limitedApp();
+    const cookie = await cookieFor(randomUUID(), base.sessionSecret, "ca");
+    const other = await cookieFor(randomUUID(), base.sessionSecret, "ca");
+    for (let index = 0; index < 6; index++) {
+      expect((await post(app, "/dashboard/turn", "192.0.2.1", cookie)).status).toBe(503);
+    }
+    const blocked = await post(app, "/dashboard/turn", "192.0.2.1", cookie);
+    expect(blocked.status).toBe(429);
+    expect(await blocked.json()).toEqual({ error: "rate_limited" });
+    expect(blocked.headers.get("Retry-After")).toBe("60");
+    expect((await post(app, "/dashboard/turn", "192.0.2.1", other)).status).toBe(503);
+    expect((await post(app, "/dashboard/turn", "192.0.2.2", cookie)).status).toBe(503);
+    expect((await post(app, "/dashboard/turn", "192.0.2.1", `${cookie}tampered`)).status).toBe(401);
+    expect((await post(app, "/close", "192.0.2.1", cookie)).status).toBe(401);
+    expect((await post(app, "/extract", "192.0.2.1", cookie)).status).toBe(401);
+  });
+
   it("reserves an independent ten-per-hour share budget for each IP/user", async () => {
     const app = limitedApp();
     const cookie = await cookieFor(randomUUID(), base.sessionSecret);
