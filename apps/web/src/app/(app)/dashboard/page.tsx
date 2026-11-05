@@ -4,6 +4,7 @@ import { Dashboard as DashboardView } from "../../../components/Dashboard";
 import { EmptyState } from "../../../components/EmptyState";
 import { ChartColumn } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { DASHBOARD_EMPTY } from "../../../lib/dashboard";
 
@@ -22,6 +23,12 @@ export default async function Dashboard() {
         title="Dashboard"
         description="Ask Claude a question in plain English, or explore the widgets. Figures come from your PayPal records."
       />
+      <p>
+        <Term term="fira" />
+      </p>
+      <p>
+        <Term term="realisation" />
+      </p>
       {/* Payments are listed through invoices, so no invoices means no data at all. */}
       {dashboard?.invoices.length ? (
         <div className="card">

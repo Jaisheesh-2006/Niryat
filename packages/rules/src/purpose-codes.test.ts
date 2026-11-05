@@ -81,16 +81,31 @@ describe("purpose-code suggestions", () => {
   });
 });
 
+it("gives every high-severity purpose-code flag an action and bank confirmation", () => {
+  const flags = ["P0104", "P0301", "P9999"].flatMap((purposeCode) =>
+    checkPurposeCode({ purposeCode, workType: "software" }, rules),
+  );
+  expect(flags).toHaveLength(3);
+  for (const flag of flags) {
+    expect(flag.severity).toBe("high");
+    expect(flag.message).toMatch(/\b(?:ask|update)\b/i);
+    expect(flag.message).toContain("your bank");
+    expect(flag.note).toBe(CA_NOTE);
+  }
+});
+
 describe("purpose-code profile flags", () => {
   const missingCode = {
     code: "purpose_code_missing",
     severity: "medium",
-    message: "No purpose code saved. Add the purpose code set in your PayPal account.",
+    message:
+      "No code for foreign payments (purpose code) is saved. Add the code set in your PayPal account to your profile.",
   };
   const missingWork = {
     code: "work_type_missing",
     severity: "low",
-    message: "Describe your work so we can check your purpose code.",
+    message:
+      "Add a description of your work to your profile so we can check your code for foreign payments (purpose code).",
   };
 
   it.each([
@@ -103,7 +118,7 @@ describe("purpose-code profile flags", () => {
           code: "purpose_code_mismatch",
           severity: "medium",
           message:
-            "Your work looks like P0802 (Software consulting), but your purpose code is P1006 (Business and management consultancy).",
+            "Your work looks like P0802 (Software consulting), but your purpose code is P1006 (Business and management consultancy). Ask your bank to confirm the code for your work, then update it in PayPal and your profile.",
         },
       ],
     },
@@ -116,7 +131,7 @@ describe("purpose-code profile flags", () => {
           code: "purpose_code_goods_or_travel",
           severity: "high",
           message:
-            "P0104 (Cross border delivery of goods and services) is not a services code. Its RBI description is: Receipts against export of goods not covered by GR/PP/SOFTEX/EC copy of shipping bill (intermediary/transit trade)",
+            "P0104 (Cross border delivery of goods and services) is not a services code. Its RBI description is: Receipts against export of goods not covered by GR/PP/SOFTEX/EC copy of shipping bill (intermediary/transit trade). Ask your bank which services code to use, then update it in PayPal and your profile.",
         },
       ],
     },
@@ -128,7 +143,7 @@ describe("purpose-code profile flags", () => {
           code: "purpose_code_goods_or_travel",
           severity: "high",
           message:
-            "P0301 (Business related travel purchase) is not a services code. Its RBI description is: Purchases towards travel (TCs, currency notes, TT/SWIFT transfers)",
+            "P0301 (Business related travel purchase) is not a services code. Its RBI description is: Purchases towards travel (TCs, currency notes, TT/SWIFT transfers). Ask your bank which services code to use, then update it in PayPal and your profile.",
         },
       ],
     },
@@ -139,7 +154,8 @@ describe("purpose-code profile flags", () => {
         {
           code: "purpose_code_not_offered",
           severity: "high",
-          message: "P9999 is not one of the purpose codes PayPal India offers.",
+          message:
+            "P9999 is not one of the purpose codes PayPal India offers. Ask your bank which offered code to use, then update it in PayPal and your profile.",
         },
       ],
     },

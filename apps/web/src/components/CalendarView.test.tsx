@@ -23,7 +23,7 @@ it("shows category filters and five read-only modes, navigating only for known l
     id: "rbi:invoice-1",
     date: "2026-11-01",
     kind: "rbi_deadline",
-    title: "Upcoming: RBI deadline for invoice 1",
+    title: "Upcoming: Export payment deadline (RBI) for invoice 1",
     state: "upcoming",
     href: "/invoices#invoice-1",
     ruleId: "RBI_REALISATION",

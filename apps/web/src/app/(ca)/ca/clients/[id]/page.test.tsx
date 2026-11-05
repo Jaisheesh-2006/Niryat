@@ -164,7 +164,7 @@ it("reads every section for this client and renders only the allowed controls", 
   expect(buttons).toEqual([
     "Stop managing this client",
     "Show period",
-    "Download GSTR-1 Table 6A file",
+    "Download export sales file (GSTR-1 Table 6A)",
   ]);
   const forms = html.match(/<form[^>]*>/g) ?? [];
   expect(forms).toEqual([

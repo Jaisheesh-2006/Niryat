@@ -5,6 +5,7 @@ import { CaDashboard } from "../../../components/CaDashboard";
 import { EmptyState } from "../../../components/EmptyState";
 import { Users } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate } from "../../../lib/format";
 
@@ -22,6 +23,12 @@ export default async function CaClients() {
   return (
     <>
       <PageHeader title="Clients" description="View records shared by your freelancer clients." />
+      <p>
+        <Term term="fira" />
+      </p>
+      <p>
+        <Term term="realisation" />
+      </p>
       {portfolio.length === 0 ? (
         <EmptyState icon={Users} title="No clients yet">
           <a href="/ca/requests">Accept a request</a> from a freelancer client to see their records
@@ -48,7 +55,7 @@ export default async function CaClients() {
                   <th scope="col">Unpaid invoices</th>
                   <th scope="col">Overdue invoices</th>
                   <th scope="col">Next deadline</th>
-                  <th scope="col">Missing FIRA</th>
+                  <th scope="col">Missing payment proof</th>
                   <th scope="col">Approvals waiting</th>
                   <th scope="col">Shared since</th>
                 </tr>

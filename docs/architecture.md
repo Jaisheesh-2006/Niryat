@@ -90,6 +90,8 @@ B6 (2026-11-05) adds `/ca` as a distinct AG Studio portfolio dashboard with five
 
 ## Storage and runtime
 
+The web app's `lib/glossary.ts` supplies plain explanations and responsibility labels. `Term.tsx` renders visible text before an accessible abbreviation without JavaScript; native disclosures collect explanations on busy record/calendar pages. D1/D2 reuse it across freelancer, CA and public pages. Rules remain the sole source of legal calculations; revised wording retains citations, PDF/CSV/PayPal text contracts and user approval.
+
 apps/web uses Next.js App Router; apps/api uses Hono on Node 24. Shared packages export TypeScript source; their build step checks types, while Next produces production assets. apps/worker registers the `monthlyClose` task with Render's SDK and a 900-second timeout, validates input and calls the shared close composition root.
 
 The web app proxies /api/* to the API through Next rewrites, so the session cookie stays same-origin.

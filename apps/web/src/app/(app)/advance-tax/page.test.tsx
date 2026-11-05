@@ -17,7 +17,7 @@ beforeEach(() => {
         state: "uncertain",
         reason: "profession_unknown",
         message:
-          "Answer the specified-profession question on your profile to check presumptive taxation.",
+          "Answer the profession question on your profile to check the simpler income calculation scheme (presumptive taxation).",
         citation: { ruleId: "PRESUMPTIVE_TAX", source: "Fixture source", effectiveFrom: null },
       },
       deemedIncomeInr: null,
@@ -36,7 +36,9 @@ it("formats receipts while retaining unavailable estimate labels and the CA note
   const html = renderToStaticMarkup(await AdvanceTax({ searchParams: Promise.resolve({}) }));
   expect(html).toContain('class="num">$100.00</td>');
   expect(html).toContain("Gross receipts: Not available. Estimate — confirm with your CA.");
-  expect(html).toContain("Deemed income: Not available. Estimate — confirm with your CA.");
+  expect(html).toContain(
+    "Income under this scheme (deemed income): Not available. Estimate — confirm with your CA.",
+  );
   expect(html).toContain("Estimated tax: Not available. Estimate — confirm with your CA.");
 });
 

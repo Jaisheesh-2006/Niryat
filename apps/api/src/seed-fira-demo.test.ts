@@ -324,7 +324,9 @@ describe.skipIf(!testDatabaseUrl)("FIRA demo seed", () => {
       { state: "matched", confidence: "1.00" },
       null,
     ]);
-    expect(document.lines.at(-1)?.note).toMatch(/^No PayPal payment/);
+    expect(document.lines.at(-1)?.note).toBe(
+      `No recorded PayPal payment matches this amount and currency within 7 days of ${lines.at(-1)?.date}. Check the date, amount and currency against PayPal and your PDF.`,
+    );
     const invoiceResponse = await app.request("/invoices", { headers: { Cookie: cookie } });
     expect(invoiceResponse.status).toBe(200);
     expect(

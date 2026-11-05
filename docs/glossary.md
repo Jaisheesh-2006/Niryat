@@ -1,5 +1,7 @@
 # Glossary
 
+The web app's plain explanations live in [glossary.ts](../apps/web/src/lib/glossary.ts) and are rendered by [Term](../apps/web/src/components/Term.tsx), with visible text and an accessible abbreviation that works without JavaScript. D1/D2 reuse those entries across pages; this document retains the project meanings and review limits below.
+
 Terminology follows [PLAN](PLAN.md); legal wording, dates and applicability require the review recorded in [rules sources](rules-sources.md).
 
 | Term                   | Meaning in this project                                                                                                                                                                                                                                 |

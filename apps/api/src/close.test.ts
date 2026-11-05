@@ -479,7 +479,7 @@ describe.skipIf(!testDatabaseUrl)("monthly close orchestration", () => {
       tasksCreated: 3,
       focus: [
         { label: "Dispute PP-DISPUTE (invoice 2026-27/0001)", reason },
-        { label: "FIRA line dated 2026-10-30", reason },
+        { label: "Payment proof (FIRA) line dated 2026-10-30", reason },
       ],
     });
     const tasks = await storage.listTasks(t.db, userId);
@@ -487,7 +487,7 @@ describe.skipIf(!testDatabaseUrl)("monthly close orchestration", () => {
       expect.arrayContaining([
         `Contact Synthetic Client about invoice 2026-27/0001. Claude's reason: ${reason}`,
         `Review PayPal dispute PP-DISPUTE on invoice 2026-27/0001. Claude's reason: ${reason}`,
-        `Review the FIRA line dated 2026-10-30 on the FIRA page. Claude's reason: ${reason}`,
+        `Review the payment proof (FIRA) line dated 2026-10-30 on the Payment proof page. Claude's reason: ${reason}`,
       ]),
     );
     expect(tasks.find((t) => t.sourceRuleId === "REALISATION_ADJUSTMENT")?.dueDate).toBe(
@@ -739,7 +739,7 @@ describe.skipIf(!testDatabaseUrl)("monthly close orchestration", () => {
     expect((await latest()).summary?.fira.state).toBe("missing");
     expect((await latest()).summary?.tasksCreated).toBe(1);
     expect((await storage.listTasks(t.db, userId))[0]?.message).toBe(
-      "Upload your PayPal FIRA for October 2026 so Niryat can match it to that month's PayPal payments.",
+      "Upload your PayPal payment proof (FIRA) for October 2026 so Niryat can match it to that month's PayPal payments.",
     );
     await startAndExecute(deps, input(), new Date(now.getTime() + 1000));
     expect(await storage.listTasks(t.db, userId)).toHaveLength(1);

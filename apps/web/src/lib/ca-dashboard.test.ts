@@ -210,7 +210,7 @@ describe("CA portfolio sources and widgets", () => {
       ),
     ).toBe(true);
     expect(CA_DASHBOARD_PROMPT_STARTERS.map(({ prompt }) => prompt)).toEqual([
-      "Which clients have missing FIRAs?",
+      "Which clients are missing payment proof?",
       "Who has invoices closest to the RBI deadline?",
       "Show PayPal fees by freelancer this year",
     ]);

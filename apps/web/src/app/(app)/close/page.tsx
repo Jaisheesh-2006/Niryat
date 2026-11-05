@@ -6,6 +6,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { CircleCheck } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate, formatDateTime, formatMoney, formatMonth } from "../../../lib/format";
 import { daysRemainingLabel } from "../../../lib/forms";
@@ -15,7 +16,7 @@ export const metadata = { title: "Monthly close" };
 
 const firaLabels = {
   covered: "Uploaded",
-  missing: "Missing: upload it on the FIRA page",
+  missing: "Missing: upload it on the Payment proof page",
   not_due: "Not due yet (month in progress)",
   not_needed: "No PayPal payments this month",
 };
@@ -64,6 +65,12 @@ export default async function Close() {
         description="Claude reviews your PayPal month, explains what needs attention and proposes PayPal reminders. Nothing is sent to PayPal until you approve it."
         actions={<CloseButton />}
       />
+      <p>
+        <Term term="fira" />
+      </p>
+      <p>
+        <Term term="realisation" />
+      </p>
       {latest?.status === "running" && (
         <div className="banner" data-tone="neutral" role="status">
           <span className="spinner" aria-hidden="true" />

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { PageHeader } from "../../../components/PageHeader";
+import { Term } from "../../../components/Term";
 import { apiUrl } from "../../../lib/env";
 import { formatDate, formatMoney } from "../../../lib/format";
 
@@ -57,7 +58,7 @@ export default async function AdvanceTax({
   if (!result.ok) {
     return (
       <>
-        <PageHeader title="Advance tax" />
+        <PageHeader title="Income tax payments" description={<Term term="advance_tax" />} />
         <p>{estimateNote}</p>
         <p>{result.message}</p>
         <Link href="/advance-tax">Reset estimate</Link>
@@ -67,7 +68,7 @@ export default async function AdvanceTax({
   const { estimate } = result;
   return (
     <>
-      <PageHeader title="Advance tax" />
+      <PageHeader title="Income tax payments" description={<Term term="advance_tax" />} />
       <p>{estimateNote}</p>
       <form className="card" method="get">
         <label htmlFor="taxYear">Tax year</label>
@@ -120,7 +121,10 @@ export default async function AdvanceTax({
         </table>
       </div>
       <section className="card">
-        <h2>Presumptive eligibility</h2>
+        <h2>Simpler income calculation</h2>
+        <p>
+          <Term term="presumptive" />
+        </p>
         <p>{estimate.eligibility.message}</p>
         <p>
           Rule {estimate.eligibility.citation.ruleId}: {estimate.eligibility.citation.source}.
@@ -134,7 +138,7 @@ export default async function AdvanceTax({
           . {estimateNote}
         </p>
         <p>
-          Deemed income:{" "}
+          Income under this scheme (deemed income):{" "}
           {estimate.deemedIncomeInr === null
             ? "Not available"
             : formatMoney(estimate.deemedIncomeInr, "INR")}

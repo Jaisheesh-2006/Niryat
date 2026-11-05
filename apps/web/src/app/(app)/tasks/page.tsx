@@ -6,6 +6,7 @@ import { ListChecks } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { TaskDoneButton } from "../../../components/TaskDoneButton";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate } from "../../../lib/format";
 
@@ -18,17 +19,32 @@ export default async function Tasks() {
     refund_recorded: "Refund recorded",
     dispute_opened: "Dispute opened",
     dispute_lost: "Dispute lost",
-    fira_missing: "FIRA missing",
+    fira_missing: "Payment proof missing",
     rbi_deadline_passed: "RBI deadline passed",
     agent_suggestion: "Suggested by Claude",
   };
 
   return (
     <>
-      <PageHeader title="Tasks" />
+      <PageHeader
+        title="Tasks"
+        description="Review what needs your attention and mark each task done after you handle it."
+      />
+      <details>
+        <summary>What these task terms mean</summary>
+        <p>
+          <Term term="fira" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+        <p>
+          <Term term="credit_note" />
+        </p>
+      </details>
       {openTasks.length === 0 ? (
         <EmptyState icon={ListChecks} title="No open tasks">
-          Niryat adds tasks when a refund, dispute, FIRA or deadline needs you.
+          Niryat adds tasks when a refund, dispute, payment proof or deadline needs your attention.
         </EmptyState>
       ) : (
         <div className="card table-wrap">

@@ -1,6 +1,12 @@
 # Render change record
 
-Recorded 2026-11-04. Scope: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. The Blueprint and application changes are implemented; hosted deployment and browser results remain awaiting user verification.
+Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. Hosted deployment and browser results remain awaiting user verification.
+
+## D2: monthly-close task wording
+
+Recorded 2026-11-05. [apps/api/src/close.ts](../apps/api/src/close.ts), shared by local and Workflows closes, now says “payment proof (FIRA)” and points to the renamed “Payment proof” navigation page in newly generated task messages and focus labels. It prepares the same records; workflow inputs, dispatch, persistence, deduplication, approval boundaries and retry behavior are retained. [API calendar](../apps/api/src/calendar.ts) and [FIRA matching](../apps/api/src/fira.ts) changes are also string-only. No Blueprint, environment key, schedule, worker code, dependency or deployment changed. E1/E2 reliability work remains outside D1/D2.
+
+The user approved the [D2 rules-message log](IMPROVEMENTS.md#d2-review-log) before UI/API wording work. Step 4 ordinary API tests passed 507 with 250 database skips; final database-backed checks are recorded in [D2 verification](IMPROVEMENTS.md#d2-verification-and-manual-checks). Saved task text is not migrated; existing deduplicated tasks can retain earlier wording. No PayPal service call, hosted execution or browser/helper connection was performed. After the user deploys, the same D2 manual checks can be repeated on the hosted URLs; hosted runtime behavior and E1/E2 reliability remain **awaiting user verification**.
 
 ## A1: production mode and security headers
 

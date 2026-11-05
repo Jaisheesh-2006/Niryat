@@ -22,12 +22,32 @@ const profile: ProfileInput = {
   specifiedProfession: null,
 };
 
+it("gives every high-severity health flag an action and a responsible person", () => {
+  const flags = [
+    ...checkLut({ ...profile, lutNumber: null }, today, rules),
+    ...checkLut({ ...profile, lutValidFrom: "2026-11-01" }, today, rules),
+    ...checkLut({ ...profile, lutValidTo: "2026-10-25" }, today, rules),
+    ...checkGstThreshold({ gstRegistered: false, expectedTurnoverInr: 2_000_001 }, rules),
+  ];
+  expect(flags.map(({ code }) => code)).toEqual([
+    "lut_missing",
+    "lut_not_started",
+    "lut_expired",
+    "gst_threshold_exceeded",
+  ]);
+  for (const flag of flags) {
+    expect(flag.severity).toBe("high");
+    expect(flag.message).toMatch(/\b(?:ask|add|file|update|check)\b/i);
+    expect(flag.message).toMatch(/\b(?:you|your CA)\b/i);
+  }
+});
+
 describe("LUT validity", () => {
   const missing: Pick<HealthFlag, "code" | "severity" | "message"> = {
     code: "lut_missing",
     severity: "high",
     message:
-      "No LUT on file. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund.",
+      "No yearly export form (LUT) is saved. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund. Ask your CA to file form RFD-11, then update your profile.",
   };
 
   it.each<{
@@ -51,7 +71,8 @@ describe("LUT validity", () => {
         {
           code: "lut_not_started",
           severity: "high",
-          message: "Your LUT is valid only from 2026-11-01. Exports before then are not covered.",
+          message:
+            "Your yearly export form (LUT) is valid only from 2026-11-01. Exports before then are not covered. Ask your CA how to handle any earlier invoices.",
         },
       ],
     },
@@ -63,7 +84,8 @@ describe("LUT validity", () => {
         {
           code: "lut_expiring",
           severity: "low",
-          message: "Your LUT expires on 2026-11-25. File a new LUT for the next financial year.",
+          message:
+            "Your yearly export form (LUT) expires on 2026-11-25. Ask your CA to file a new form RFD-11 for the next financial year, then update your profile.",
         },
       ],
     },
@@ -75,7 +97,8 @@ describe("LUT validity", () => {
         {
           code: "lut_expiring",
           severity: "low",
-          message: "Your LUT expires on 2026-10-26. File a new LUT for the next financial year.",
+          message:
+            "Your yearly export form (LUT) expires on 2026-10-26. Ask your CA to file a new form RFD-11 for the next financial year, then update your profile.",
         },
       ],
     },
@@ -87,7 +110,7 @@ describe("LUT validity", () => {
           code: "lut_expired",
           severity: "high",
           message:
-            "Your LUT expired on 2026-10-25. File a new LUT (FORM GST RFD-11) before your next export invoice.",
+            "Your yearly export form (LUT) expired on 2026-10-25. Ask your CA to file a new form RFD-11 before your next export invoice, then update your profile.",
         },
       ],
     },
@@ -126,7 +149,7 @@ describe("GST threshold", () => {
           code: "turnover_missing",
           severity: "low",
           message:
-            "Add your expected turnover for this financial year so we can check the ₹20 lakh GST registration threshold.",
+            "Add your expected turnover for this financial year to your profile so we can check the ₹20 lakh GST registration threshold.",
         },
       ],
     },
@@ -140,7 +163,7 @@ describe("GST threshold", () => {
           code: "gst_threshold_near",
           severity: "medium",
           message:
-            "Expected turnover of ₹16,00,000 is close to the ₹20 lakh GST registration threshold (₹10 lakh in some special-category States).",
+            "Expected turnover of ₹16,00,000 is close to the ₹20 lakh GST registration threshold (₹10 lakh in some special-category States). Ask your CA when you need to register.",
         },
       ],
     },
@@ -152,7 +175,7 @@ describe("GST threshold", () => {
           code: "gst_threshold_near",
           severity: "medium",
           message:
-            "Expected turnover of ₹20,00,000 is close to the ₹20 lakh GST registration threshold (₹10 lakh in some special-category States).",
+            "Expected turnover of ₹20,00,000 is close to the ₹20 lakh GST registration threshold (₹10 lakh in some special-category States). Ask your CA when you need to register.",
         },
       ],
     },
@@ -164,7 +187,7 @@ describe("GST threshold", () => {
           code: "gst_threshold_exceeded",
           severity: "high",
           message:
-            "Expected turnover of ₹20,00,001 is above ₹20 lakh, so GST registration is required (₹10 lakh in some special-category States).",
+            "Expected turnover of ₹20,00,001 is above ₹20 lakh, so GST registration is required (₹10 lakh in some special-category States). Ask your CA to help you register.",
         },
       ],
     },
@@ -257,7 +280,8 @@ describe("health report", () => {
       if (flag.code === "gstin_missing") {
         expect(flag).toMatchObject({
           severity: "medium",
-          message: "GSTIN missing. Export invoices must show your GSTIN.",
+          message:
+            "Your GST identification number (GSTIN) is missing. Add it to your profile; export invoices must show it.",
           citation: { ruleId: "EXPORT_INVOICE_FIELDS" },
         });
       }

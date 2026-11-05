@@ -17,6 +17,35 @@ const answers: ExportAnswers = {
   sameEstablishment: false,
 };
 
+it("gives every failed or unknown export check an action and a responsible person", () => {
+  const scenarios = [
+    { country: "IN", answers },
+    { country: "US", answers: { ...answers, supplierInIndia: false } },
+    { country: "US", answers: { ...answers, clientPresentInIndia: true } },
+    { country: "US", answers: { ...answers, sameEstablishment: true } },
+    { country: "US", answers: { ...answers, paidInForeignCurrency: false } },
+    {
+      country: "US",
+      answers: {
+        supplierInIndia: null,
+        clientPresentInIndia: null,
+        paidInForeignCurrency: null,
+        sameEstablishment: null,
+      },
+    },
+  ];
+  const warnings = scenarios.flatMap((input) =>
+    checkExportConditions(input, { today, rules }).conditions.filter(
+      ({ status }) => status !== "pass",
+    ),
+  );
+  expect(new Set(warnings.map(({ id }) => id)).size).toBe(5);
+  for (const warning of warnings) {
+    expect(warning.message).toMatch(/\b(?:ask|check|answer|confirm)\b/i);
+    expect(warning.message).toMatch(/\b(?:you|your|the client country you entered)\b/i);
+  }
+});
+
 describe("export conditions", () => {
   it("passes all five conditions in order for an eligible US client", () => {
     const result = checkExportConditions({ country: "US", answers }, { today, rules });
@@ -44,7 +73,8 @@ describe("export conditions", () => {
         id: "foreign_exchange",
         status: "pass",
         reference: "IGST Act 2017, s. 2(6)(iv)",
-        message: "Paid in convertible foreign exchange.",
+        message:
+          "Payment is in foreign currency that can be exchanged (convertible foreign exchange).",
       },
       {
         id: "not_same_person",
@@ -75,13 +105,15 @@ describe("export conditions", () => {
           id: "recipient_outside_india",
           status: "fail",
           reference: "IGST Act 2017, s. 2(6)(ii)",
-          message: "The client is in India. PayPal also blocks invoices to India-based recipients.",
+          message:
+            "The client is in India. PayPal also blocks invoices to India-based recipients. Check the client country you entered.",
         },
         {
           id: "place_of_supply_outside_india",
           status: "fail",
           reference: "IGST Act 2017, s. 2(6)(iii), s. 13(2)-(3)",
-          message: "The client is in India, so the place of supply is India.",
+          message:
+            "The client is in India, so the place of supply is India. Ask your CA how to invoice this service.",
         },
       ]);
     },
@@ -98,7 +130,8 @@ describe("export conditions", () => {
       condition: {
         id: "supplier_in_india",
         status: "fail",
-        message: "You do not supply this service from India, so it is not an export from India.",
+        message:
+          "You do not supply this service from India, so it is not an export from India. Ask your CA how to invoice it.",
       },
     },
     {
@@ -108,7 +141,7 @@ describe("export conditions", () => {
         id: "place_of_supply_outside_india",
         status: "fail",
         message:
-          "Work that needs the client physically present in India is supplied where it is performed, which is India.",
+          "Work that needs the client physically present in India is supplied where it is performed, which is India. Ask your CA how to invoice it.",
       },
     },
     {
@@ -127,7 +160,8 @@ describe("export conditions", () => {
       condition: {
         id: "not_same_person",
         status: "fail",
-        message: "Payments between establishments of the same person are not an export.",
+        message:
+          "Payments between establishments of the same person are not an export. Ask your CA how to record this payment.",
       },
     },
   ])("blocks eligibility for $name", ({ changes, condition }) => {
@@ -172,7 +206,7 @@ describe("export conditions", () => {
       {
         id: "foreign_exchange",
         status: "unknown",
-        message: "Answer: will the client pay in foreign currency?",
+        message: "Answer: will your client pay in foreign currency?",
       },
       {
         id: "not_same_person",

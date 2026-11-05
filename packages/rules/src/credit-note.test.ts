@@ -9,6 +9,18 @@ const rules = parseRules(readFileSync(RULES_FILE_URL, "utf8"));
 const invoice = { number: "2026-27/0001", date: "2026-10-26", currency: "USD" };
 const refund = { refundId: "REFUND-1", date: "2026-10-27", amount: "40" };
 
+it("gives both credit-note deadline outcomes an action and a responsible person", () => {
+  for (const date of ["2027-11-30", "2027-12-01"]) {
+    const note = creditNoteFor(
+      { gstRegistered: true, invoice, refund: { ...refund, date } },
+      rules,
+    );
+    expect(note).not.toBeNull();
+    expect(note?.message).toMatch(/\b(?:report|ask)\b/i);
+    expect(note?.message).toMatch(/\b(?:you|your CA)\b/i);
+  }
+});
+
 describe("credit-note data", () => {
   it.each([
     ["2026-10-26", "2027-11-30"],
@@ -28,7 +40,7 @@ describe("credit-note data", () => {
       igst: "USD 0.00",
       declareBy,
       late: false,
-      message: `You may issue a GST credit note for USD 40.00 against invoice 2026-27/0001. Declare it in GSTR-1 by ${declareBy}, or by your annual return date if that is earlier. Under LUT there is no IGST to adjust; the credit note corrects the export value.`,
+      message: `You may issue a document to adjust your GST invoice (credit note) for USD 40.00 against invoice 2026-27/0001. Report it in your GST sales return (GSTR-1) by ${declareBy}, or by your annual return date if that is earlier. Under your yearly export form (LUT), there is no IGST to adjust; the credit note corrects the export value.`,
       citation: cite(rules, "CREDIT_NOTE"),
     });
     expect(creditNoteSchema.safeParse(result).success).toBe(true);
@@ -45,8 +57,8 @@ describe("credit-note data", () => {
     expect(result?.late).toBe(late);
     expect(result?.message).toBe(
       late
-        ? "The last date to declare a credit note against invoice 2026-27/0001 was 2027-11-30. Ask your CA how to treat this refund."
-        : "You may issue a GST credit note for USD 40.00 against invoice 2026-27/0001. Declare it in GSTR-1 by 2027-11-30, or by your annual return date if that is earlier. Under LUT there is no IGST to adjust; the credit note corrects the export value.",
+        ? "The last date to report an adjustment (credit note) for invoice 2026-27/0001 was 2027-11-30. Ask your CA how to treat this refund."
+        : "You may issue a document to adjust your GST invoice (credit note) for USD 40.00 against invoice 2026-27/0001. Report it in your GST sales return (GSTR-1) by 2027-11-30, or by your annual return date if that is earlier. Under your yearly export form (LUT), there is no IGST to adjust; the credit note corrects the export value.",
     );
     expect(result?.citation).toEqual(cite(rules, "CREDIT_NOTE"));
   });

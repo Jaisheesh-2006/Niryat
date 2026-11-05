@@ -185,7 +185,7 @@ async function executeRun(
             dueDate: null,
             sourceRuleId: "RBI_REALISATION",
             dedupeKey: `fira:${run.userId}:${run.month}`,
-            message: `Upload your PayPal FIRA for ${label} so Niryat can match it to that month's PayPal payments.`,
+            message: `Upload your PayPal payment proof (FIRA) for ${label} so Niryat can match it to that month's PayPal payments.`,
           });
           if (inserted) tasksCreated += 1;
         }
@@ -421,7 +421,7 @@ async function executeRun(
             case "confirm_fira_match":
               if (!line) throw new Error("unknown_entity");
               invoiceId = line.match?.invoiceId ?? null;
-              message = `Review the FIRA line dated ${line.date} on the FIRA page. Claude's reason: ${task.reason}`;
+              message = `Review the payment proof (FIRA) line dated ${line.date} on the Payment proof page. Claude's reason: ${task.reason}`;
               break;
             default: {
               const never: never = task.kind;
@@ -456,7 +456,7 @@ async function executeRun(
             break;
           }
           case "fira_line":
-            label = `FIRA line dated ${lines.find((l) => l.id === item.entityId)?.date}`;
+            label = `Payment proof (FIRA) line dated ${lines.find((l) => l.id === item.entityId)?.date}`;
             break;
           default: {
             const never: never = item.entityType;

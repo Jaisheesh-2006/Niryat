@@ -3,7 +3,7 @@ import type { AgDataSourcesDefinition, AgReportState } from "ag-studio";
 import { dashboardSources } from "./dashboard";
 
 export const CA_DASHBOARD_PROMPT_STARTERS = [
-  "Which clients have missing FIRAs?",
+  "Which clients are missing payment proof?",
   "Who has invoices closest to the RBI deadline?",
   "Show PayPal fees by freelancer this year",
 ].map((prompt) => ({ label: prompt, prompt }));
@@ -53,7 +53,7 @@ export function caDashboardSources(dashboard: CaDashboard): AgDataSourcesDefinit
           { id: "healthScore", name: "Health score", format: "integerFormat" },
           { id: "unpaidCount", name: "Unpaid invoices", format: "integerFormat" },
           { id: "overdueCount", name: "Overdue invoices", format: "integerFormat" },
-          { id: "firaMissingCount", name: "Missing FIRA", format: "integerFormat" },
+          { id: "firaMissingCount", name: "Missing payment proof", format: "integerFormat" },
           { id: "nextDeadline", name: "Next deadline", format: "dateFormat" },
           { id: "pendingApprovals", name: "Approvals waiting", format: "integerFormat" },
         ],
@@ -167,7 +167,7 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
               valueKey: [{ id: "clients.firaMissingCount", aggregation: "sum" }],
               tooltipKey: [],
             },
-            format: title("Missing FIRA by freelancer"),
+            format: title("Missing payment proof by freelancer"),
           },
         },
         widgetLayout: {

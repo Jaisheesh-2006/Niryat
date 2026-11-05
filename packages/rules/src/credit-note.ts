@@ -26,8 +26,8 @@ export function creditNoteFor(
     declareBy,
     late,
     message: late
-      ? `The last date to declare a credit note against invoice ${invoice.number} was ${declareBy}. Ask your CA how to treat this refund.`
-      : `You may issue a GST credit note for ${value} against invoice ${invoice.number}. Declare it in GSTR-1 by ${declareBy}, or by your annual return date if that is earlier. Under LUT there is no IGST to adjust; the credit note corrects the export value.`,
+      ? `The last date to report an adjustment (credit note) for invoice ${invoice.number} was ${declareBy}. Ask your CA how to treat this refund.`
+      : `You may issue a document to adjust your GST invoice (credit note) for ${value} against invoice ${invoice.number}. Report it in your GST sales return (GSTR-1) by ${declareBy}, or by your annual return date if that is earlier. Under your yearly export form (LUT), there is no IGST to adjust; the credit note corrects the export value.`,
     citation: cite(rules, "CREDIT_NOTE"),
   };
 }

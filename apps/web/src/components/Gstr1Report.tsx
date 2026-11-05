@@ -4,13 +4,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { apiUrl } from "../lib/env";
 import { formatDate, formatMoney } from "../lib/format";
+import { invoiceStatus } from "../lib/status";
 import { Gstr1Download } from "./Gstr1Download";
 
 export const gstr1Messages: Record<string, string> = {
   not_gst_registered:
-    "GSTR-1 data is only for GST-registered users. If you have registered, update your profile.",
+    "GST sales return (GSTR-1) data is only for GST-registered freelancers. If registered, the freelancer needs to update their profile.",
   gstr1_frequency_missing:
-    "Choose how you file GSTR-1 (monthly or quarterly) on your profile first.",
+    "The filing frequency is missing. The freelancer needs to choose monthly or quarterly filing for their GST sales return (GSTR-1) in Profile.",
   invalid_period: "Choose a valid reporting period for your filing frequency.",
 };
 
@@ -86,15 +87,15 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
                     <td className="mono">{invoice.number}</td>
                     <td>{formatDate(invoice.date)}</td>
                     <td className="num">{formatMoney(invoice.amount, invoice.currency)}</td>
-                    <td>{invoice.status}</td>
+                    <td>{invoiceStatus[invoice.status].label}</td>
                     <td>
                       {invoice.lutCovered ? (
                         "Covered"
                       ) : (
                         <>
-                          Invoice {invoice.number} is not covered by your LUT on{" "}
-                          {formatDate(invoice.date)}, so it needs IGST. It is not in this file; ask
-                          your CA.
+                          Invoice {invoice.number} is not covered by your yearly export form (LUT)
+                          on {formatDate(invoice.date)}, so it needs IGST. It is not in this file.
+                          Ask your CA how to report this invoice.
                           <p>
                             Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with
                             your CA.
@@ -111,7 +112,8 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
       )}
       <h2>Refunds</h2>
       <p>
-        Refunds are not in this file. Declare credit notes for them in GSTR-1 Table 9B with your CA.
+        Refunds are not in this file. Ask your CA to report invoice adjustments (credit notes) in
+        GSTR-1 Table 9B.
       </p>
       <ul>
         {preview.refunds.map((refund) => (
@@ -130,7 +132,7 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
           </li>
         ))}
       </ul>
-      <h2>Reconciliation</h2>
+      <h2>Check the totals</h2>
       <div className="card table-wrap">
         <table>
           <thead>

@@ -165,7 +165,7 @@ describe("FIRA matching", () => {
           position: 1,
           paymentId: "payment-1",
           confidence: "0.60",
-          note: "Reference matches, but the amount or currency differs from the PayPal payment.",
+          note: "The payment reference matches, but its amount or currency differs from PayPal. Check both records before confirming this match.",
         },
       ]);
     },
@@ -189,7 +189,7 @@ describe("FIRA matching", () => {
         position: 1,
         paymentId: "payment-1",
         confidence: "0.70",
-        note: "Matched on amount, currency and date only. Confirm this is the right payment.",
+        note: "Only the amount, currency and date match. Check your PayPal records and confirm this is the right payment.",
       },
     ]);
     expect(
@@ -212,7 +212,7 @@ describe("FIRA matching", () => {
         position: 1,
         paymentId: null,
         confidence: null,
-        note: "No PayPal payment in your ledger matches this amount and currency within 7 days of 2026-10-05.",
+        note: "No recorded PayPal payment matches this amount and currency within 7 days of 2026-10-05. Check the date, amount and currency against PayPal and your PDF.",
       },
     ]);
   });
@@ -243,7 +243,7 @@ describe("FIRA matching", () => {
           position: 1,
           paymentId: "first",
           confidence: "0.50",
-          note: "2 payments match the amount, currency and date. Confirm this is the right one.",
+          note: "2 payments match the amount, currency and date. Check your PayPal records and confirm which payment belongs to this line.",
         },
       ]);
     },
@@ -253,7 +253,7 @@ describe("FIRA matching", () => {
     const results = matchFiraLines([line, { ...line, position: 2 }], [candidate]);
     expect(results.map((result) => result.paymentId)).toEqual(["payment-1", null]);
     expect(results[1]?.note).toBe(
-      "No PayPal payment in your ledger matches this amount and currency within 7 days of 2026-10-05.",
+      "No recorded PayPal payment matches this amount and currency within 7 days of 2026-10-05. Check the date, amount and currency against PayPal and your PDF.",
     );
   });
 
@@ -290,7 +290,7 @@ describe("FIRA matching", () => {
       position: 1,
       paymentId: null,
       confidence: null,
-      note: "No PayPal payment in your ledger matches this amount and currency within 7 days of 2026-10-05.",
+      note: "No recorded PayPal payment matches this amount and currency within 7 days of 2026-10-05. Check the date, amount and currency against PayPal and your PDF.",
     });
   });
 });

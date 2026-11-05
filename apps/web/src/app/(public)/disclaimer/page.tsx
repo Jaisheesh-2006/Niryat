@@ -1,21 +1,31 @@
+import { PageHeader } from "../../../components/PageHeader";
+
 export const metadata = { title: "Disclaimer" };
 
 export default function Disclaimer() {
   return (
     <>
-      <h1>Disclaimer</h1>
+      <PageHeader
+        title="Disclaimer"
+        description="Understand what Niryat prepares and what you should confirm with your chartered accountant."
+      />
       <p>
-        Niryat prepares information and documents to help users and their chartered accountants. It
-        does not provide tax or legal advice, does not file returns on anyone&apos;s behalf, and
-        only takes PayPal actions (such as sending invoices or reminders) after the user approves
-        them. Rules are sourced, versioned and checked against official primary texts, but have not
-        been reviewed by a chartered accountant; this is a known limitation of the hackathon build.
-        Each deployment also acts on one PayPal seller account; connecting each user&apos;s own
-        PayPal account (Partner Referrals) is future work (
+        Niryat prepares information and documents for you and your chartered accountant (CA). It
+        does not provide tax or legal advice or file returns for you. Every PayPal action, including
+        sending invoices and reminders, needs your approval.
+      </p>
+      <p>
+        Rules have sources and versions and have been checked against official primary texts. A CA
+        has not reviewed them; this is a known limitation of this hackathon build. Confirm anything
+        you act on with a qualified CA.
+      </p>
+      <p>
+        Each deployment uses one PayPal seller account. Connecting each user&apos;s own PayPal
+        account through Partner Referrals is future work (
         <a href="https://github.com/Jaisheesh-2006/Niryat/blob/main/docs/paypal-sandbox-findings.md#multi-seller-partner-referrals-limitation-and-future-work-2026-10-29">
           findings
         </a>
-        ). Confirm anything you act on with a qualified CA.
+        ).
       </p>
     </>
   );

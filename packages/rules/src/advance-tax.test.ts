@@ -50,6 +50,25 @@ describe("tax years and advance-tax dates", () => {
   });
 });
 
+it("gives every uncertain or ineligible tax result an action and a responsible person", () => {
+  const scenarios = [
+    { ...eligibilityInput, specifiedProfession: null },
+    { ...eligibilityInput, specifiedProfession: false },
+    { ...eligibilityInput, grossReceiptsInr: null },
+    { ...eligibilityInput, grossReceiptsInr: "5000000.01" },
+    { ...eligibilityInput, grossReceiptsInr: "7500000.01" },
+  ];
+  for (const input of scenarios) {
+    const result = presumptiveEligibility(input, rules);
+    expect(result.state).not.toBe("eligible");
+    expect(result.message).toMatch(/\b(?:answer|enter|ask|check)\b/i);
+    expect(result.message).toMatch(/\b(?:you|your)\b/i);
+  }
+  const missingEstimate = advanceTaxSchedule({ ...scheduleInput, estimatedTaxInr: null }, rules);
+  expect(missingEstimate.message).toMatch(/\benter\b/i);
+  expect(missingEstimate.message).toContain("your");
+});
+
 describe("presumptive eligibility", () => {
   it.each([
     {
@@ -58,7 +77,7 @@ describe("presumptive eligibility", () => {
       state: "uncertain",
       reason: "profession_unknown",
       message:
-        "Answer the specified-profession question on your profile to check presumptive taxation.",
+        "Answer the profession question on your profile to check the simpler income calculation scheme (presumptive taxation).",
     },
     {
       specifiedProfession: null,
@@ -66,7 +85,7 @@ describe("presumptive eligibility", () => {
       state: "uncertain",
       reason: "profession_unknown",
       message:
-        "Answer the specified-profession question on your profile to check presumptive taxation.",
+        "Answer the profession question on your profile to check the simpler income calculation scheme (presumptive taxation).",
     },
     {
       specifiedProfession: false,
@@ -74,7 +93,7 @@ describe("presumptive eligibility", () => {
       state: "not_eligible",
       reason: "not_specified_profession",
       message:
-        "Presumptive taxation does not apply because you said your work is not a specified profession.",
+        "The simpler income calculation scheme (presumptive taxation) does not apply because you said your work is not a specified profession. Ask your CA how to calculate your income.",
     },
     {
       specifiedProfession: false,
@@ -82,7 +101,7 @@ describe("presumptive eligibility", () => {
       state: "not_eligible",
       reason: "not_specified_profession",
       message:
-        "Presumptive taxation does not apply because you said your work is not a specified profession.",
+        "The simpler income calculation scheme (presumptive taxation) does not apply because you said your work is not a specified profession. Ask your CA how to calculate your income.",
     },
     {
       specifiedProfession: true,
@@ -97,7 +116,7 @@ describe("presumptive eligibility", () => {
       state: "uncertain",
       reason: "cash_share_unknown",
       message:
-        "Your PayPal receipts are between 5000000 and 7500000. Presumptive taxation applies only if cash receipts are at most 5% of all receipts, and Niryat sees only PayPal.",
+        "Your PayPal receipts are between 5000000 and 7500000. The simpler income calculation scheme (presumptive taxation) applies only if cash receipts are at most 5% of all receipts, and Niryat sees only PayPal. Ask your CA to check receipts from all sources.",
     },
     {
       specifiedProfession: true,
@@ -105,7 +124,7 @@ describe("presumptive eligibility", () => {
       state: "uncertain",
       reason: "cash_share_unknown",
       message:
-        "Your PayPal receipts are between 5000000 and 7500000. Presumptive taxation applies only if cash receipts are at most 5% of all receipts, and Niryat sees only PayPal.",
+        "Your PayPal receipts are between 5000000 and 7500000. The simpler income calculation scheme (presumptive taxation) applies only if cash receipts are at most 5% of all receipts, and Niryat sees only PayPal. Ask your CA to check receipts from all sources.",
     },
     {
       specifiedProfession: true,
@@ -113,7 +132,7 @@ describe("presumptive eligibility", () => {
       state: "not_eligible",
       reason: "over_limit",
       message:
-        "Your PayPal receipts for tax year 2026-27 are above 7500000, so presumptive taxation does not apply.",
+        "Your PayPal receipts for tax year 2026-27 are above 7500000, so the simpler income calculation scheme (presumptive taxation) does not apply. Ask your CA how to calculate your income.",
     },
   ])(
     "$specifiedProfession / $grossReceiptsInr => $reason",
@@ -139,7 +158,7 @@ describe("presumptive eligibility", () => {
       reason: null,
       deemedIncomeInr,
       message:
-        "Presumptive taxation may apply: your PayPal receipts for tax year 2026-27 are within 5000000 and you said your work is a specified profession. Deemed income is 50% of gross receipts. This assumes you are a resident individual.",
+        "The simpler income calculation scheme (presumptive taxation) may apply: your PayPal receipts for tax year 2026-27 are within 5000000 and you said your work is a specified profession. Income under this scheme (deemed income) is 50% of gross receipts. This assumes you are a resident individual. Confirm eligibility with your CA.",
       citation: cite(rules, "PRESUMPTIVE_TAX"),
     });
   });

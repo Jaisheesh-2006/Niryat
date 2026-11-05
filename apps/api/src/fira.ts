@@ -164,7 +164,7 @@ export function matchFiraLines(
       confidence: exact ? "1.00" : "0.60",
       note: exact
         ? null
-        : "Reference matches, but the amount or currency differs from the PayPal payment.",
+        : "The payment reference matches, but its amount or currency differs from PayPal. Check both records before confirming this match.",
     });
     used.add(candidate.paymentId);
   }
@@ -189,8 +189,8 @@ export function matchFiraLines(
       confidence: pool.length === 1 ? "0.70" : "0.50",
       note:
         pool.length === 1
-          ? "Matched on amount, currency and date only. Confirm this is the right payment."
-          : `${pool.length} payments match the amount, currency and date. Confirm this is the right one.`,
+          ? "Only the amount, currency and date match. Check your PayPal records and confirm this is the right payment."
+          : `${pool.length} payments match the amount, currency and date. Check your PayPal records and confirm which payment belongs to this line.`,
     });
     used.add(candidate.paymentId);
   }
@@ -200,7 +200,7 @@ export function matchFiraLines(
         position: line.position,
         paymentId: null,
         confidence: null,
-        note: `No PayPal payment in your ledger matches this amount and currency within 7 days of ${line.date}.`,
+        note: `No recorded PayPal payment matches this amount and currency within 7 days of ${line.date}. Check the date, amount and currency against PayPal and your PDF.`,
       },
   );
 }

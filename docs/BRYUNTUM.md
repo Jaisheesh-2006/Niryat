@@ -1,6 +1,12 @@
 # Bryntum change record
 
-Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0). C1 is recorded below on 2026-11-05. This file retains the existing `BRYUNTUM.md` filename.
+Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0). Later tasks are dated separately below. This file retains the existing `BRYUNTUM.md` filename.
+
+## D1/D2: plain calendar wording
+
+Recorded 2026-11-05. The [calendar API builder](../apps/api/src/calendar.ts) now labels the yearly export form, GST sales return, income-tax payments, export-payment deadline and invoice adjustments in plain words before LUT/GSTR-1/RBI/credit-note terms. Actions identify the CA, bank, user or PayPal as before. The owner and CA calendar pages add one-line descriptions and native disclosures containing the shared glossary explanations; the CA client-record page also explains terms before its records. IDs, dates, state/window rules, citations, percentages, links, categories/resources, filters, tooltip safety and read-only behavior are retained. This is wording work under [D1/D2](IMPROVEMENTS.md#d1-plain-language-glossary-and-term-helper-p0); the user approved the rules-message review gate before UI/API wording work began.
+
+Step 3 web tests passed 541/541. The revised API calendar exact-title/action suite passed 16/16; final checks are recorded in [D2 verification](IMPROVEMENTS.md#d2-verification-and-manual-checks). No package, wrapper option, palette, licence setting or deployment changed. Browser layout, long-title wrapping, keyboard/no-JavaScript disclosures and licence/trial coverage remain **awaiting user verification**. Follow the D2 prerequisites, then open `/calendar` as the freelancer and `/ca/calendar` as their accepted CA. Expand “What these deadlines mean”; compare dates/categories/links with existing records, then inspect the updated titles/actions in tooltips and fallback tables. January–December year navigation, repeating client colours and loaded snapshots retain the previously documented limits.
 
 ## A1: shared security headers
 

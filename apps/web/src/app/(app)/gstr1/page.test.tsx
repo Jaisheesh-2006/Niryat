@@ -71,7 +71,7 @@ it("renders the server preview and eight API-supplied periods without recomputin
   );
   expect(html).toContain("Rule GSTR1_6A: Source citation. Verify with your CA.");
   expect(html).toContain(
-    "Refunds are not in this file. Declare credit notes for them in GSTR-1 Table 9B with your CA.",
+    "Refunds are not in this file. Ask your CA to report invoice adjustments (credit notes) in GSTR-1 Table 9B.",
   );
 });
 
@@ -183,7 +183,7 @@ it("forwards the selected period and renders exclusions without requesting their
   );
   expect(fetcher.mock.calls[0]?.[0]).toEqual(new URL("http://localhost:3001/gstr1?period=2026-10"));
   expect(html).toContain(
-    "Invoice 2026-27/0002 is not covered by your LUT on 1 Oct 2026, so it needs IGST. It is not in this file; ask your CA.",
+    "Invoice 2026-27/0002 is not covered by your yearly export form (LUT) on 1 Oct 2026, so it needs IGST. It is not in this file. Ask your CA how to report this invoice.",
   );
   expect(html).not.toContain(`name="gst-${excluded.invoiceId}"`);
 });
@@ -204,26 +204,26 @@ it("labels both rate inputs, connects their help, and supplies no GST default", 
     expect(input).toContain("aria-describedby=");
     expect(input).not.toContain("value=");
   }
-  expect(html).toContain("Download GSTR-1 Table 6A file");
+  expect(html).toContain("Download export sales file (GSTR-1 Table 6A)");
 });
 
 it.each([
   [
     403,
     "not_gst_registered",
-    "GSTR-1 data is only for GST-registered users. If you have registered, update your profile.",
+    "GST sales return (GSTR-1) data is only for GST-registered freelancers. If registered, the freelancer needs to update their profile.",
   ],
   [
     409,
     "gstr1_frequency_missing",
-    "Choose how you file GSTR-1 (monthly or quarterly) on your profile first.",
+    "The filing frequency is missing. The freelancer needs to choose monthly or quarterly filing for their GST sales return (GSTR-1) in Profile.",
   ],
   [400, "invalid_period", "Choose a valid reporting period for your filing frequency."],
 ] as const)("renders the expected message for HTTP %s", async (status, error, message) => {
   fetcher.mockResolvedValue(Response.json({ error }, { status }));
   const html = renderToStaticMarkup(await Gstr1({ searchParams: Promise.resolve({}) }));
   expect(html).toContain(message);
-  expect(html).not.toContain("Download GSTR-1 Table 6A file");
+  expect(html).not.toContain("Download export sales file (GSTR-1 Table 6A)");
   expect(html).not.toContain("Reconciliation");
 });
 
@@ -240,7 +240,7 @@ it("renders an empty period and disables download", async () => {
   const html = renderToStaticMarkup(await Gstr1({ searchParams: Promise.resolve({}) }));
   expect(html).toContain("No export invoices are dated in this period.");
   expect(html).toContain(
-    '<button type="submit" disabled="">Download GSTR-1 Table 6A file</button>',
+    '<button type="submit" disabled="">Download export sales file (GSTR-1 Table 6A)</button>',
   );
 });
 

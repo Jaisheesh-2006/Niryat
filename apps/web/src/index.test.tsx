@@ -68,7 +68,7 @@ afterEach(() => {
 it("renders the home page with sign-up and sign-in links without external services", () => {
   const html = renderToStaticMarkup(<Home />);
   expect(html).toContain(
-    '<h1 class="display">Run your export business on PayPal. Niryat keeps it legal in India.</h1>',
+    '<h1 class="display">Prepare your Indian export records from PayPal.</h1>',
   );
   expect(html).toContain('href="/signup"');
   expect(html).toContain('href="/login"');
@@ -100,16 +100,16 @@ it("renders the PLAN section 23 disclaimer without a session", () => {
   expect(disclaimerMetadata.title).toBe("Disclaimer");
   expect(html).toContain("<h1>Disclaimer</h1>");
   expect(text).toContain(
-    "Niryat prepares information and documents to help users and their chartered accountants.",
+    "Niryat prepares information and documents for you and your chartered accountant (CA).",
   );
   expect(text).toContain(
-    "It does not provide tax or legal advice, does not file returns on anyone's behalf, and only takes PayPal actions (such as sending invoices or reminders) after the user approves them.",
+    "It does not provide tax or legal advice or file returns for you. Every PayPal action, including sending invoices and reminders, needs your approval.",
   );
   expect(text).toContain(
-    "Rules are sourced, versioned and checked against official primary texts, but have not been reviewed by a chartered accountant; this is a known limitation of the hackathon build.",
+    "Rules have sources and versions and have been checked against official primary texts. A CA has not reviewed them; this is a known limitation of this hackathon build.",
   );
   expect(text).toContain(
-    "Each deployment also acts on one PayPal seller account; connecting each user's own PayPal account (Partner Referrals) is future work (findings).",
+    "Each deployment uses one PayPal seller account. Connecting each user's own PayPal account through Partner Referrals is future work (findings).",
   );
   expect(text).toContain("Confirm anything you act on with a qualified CA.");
 });

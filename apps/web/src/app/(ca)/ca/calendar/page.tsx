@@ -2,6 +2,7 @@ import { caCalendarSchema } from "@niryat/shared";
 import Link from "next/link";
 import { CaCalendarView } from "../../../../components/CaCalendarView";
 import { PageHeader } from "../../../../components/PageHeader";
+import { Term } from "../../../../components/Term";
 import { apiGet } from "../../../../lib/api";
 import { deadlineList } from "../../../../lib/calendar";
 import { formatDate } from "../../../../lib/format";
@@ -17,7 +18,31 @@ export default async function CaCalendar() {
   const deadlines = deadlineList(calendar.events, 10);
   return (
     <>
-      <PageHeader title="Client compliance calendar" />
+      <PageHeader
+        title="Client compliance calendar"
+        description="Review shared clients' deadlines and the next action for each one."
+      />
+      <details>
+        <summary>What these deadlines mean</summary>
+        <p>
+          <Term term="lut" />
+        </p>
+        <p>
+          <Term term="gstr1" />
+        </p>
+        <p>
+          <Term term="advance_tax" />
+        </p>
+        <p>
+          <Term term="presumptive" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+        <p>
+          <Term term="credit_note" />
+        </p>
+      </details>
       <p>Deadlines for clients who have accepted sharing with you. View only.</p>
       {calendar.clients.length ? (
         <CaCalendarView {...calendar} />

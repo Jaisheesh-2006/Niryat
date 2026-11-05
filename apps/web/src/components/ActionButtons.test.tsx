@@ -599,7 +599,7 @@ it("renders failed AI with retained drafts, figures, priorities, reminders and t
     "Summary for October 2026",
     "As of 1 Dec 2026",
     "Gross $1,500.00, PayPal fees Not provided by PayPal, net Not provided by PayPal",
-    "Missing: upload it on the FIRA page; 2 lines need your confirmation; 1 lines not matched",
+    "Missing: upload it on the Payment proof page; 2 lines need your confirmation; 1 lines not matched",
     "PayPal sync failed; figures may be incomplete.",
     "The AI step failed.",
     "Note from Claude",
@@ -769,7 +769,7 @@ it.each(["covered", "not_due", "not_needed"] as const)(
 );
 
 it.each([
-  ["fira_missing", "FIRA missing"],
+  ["fira_missing", "Payment proof missing"],
   ["rbi_deadline_passed", "RBI deadline passed"],
   ["agent_suggestion", "Suggested by Claude"],
 ])("renders the %s task label", async (type, label) => {

@@ -2,6 +2,7 @@ import { calendarEventSchema } from "@niryat/shared";
 import Link from "next/link";
 import { ComplianceCalendar } from "../../../components/ComplianceCalendar";
 import { PageHeader } from "../../../components/PageHeader";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { deadlineList } from "../../../lib/calendar";
 import { formatDate } from "../../../lib/format";
@@ -13,7 +14,31 @@ export default async function Calendar() {
   const deadlines = deadlineList(events, 10);
   return (
     <>
-      <PageHeader title="Compliance calendar" />
+      <PageHeader
+        title="Compliance calendar"
+        description="See what is due, what to do next and which rule sets each deadline."
+      />
+      <details>
+        <summary>What these deadlines mean</summary>
+        <p>
+          <Term term="lut" />
+        </p>
+        <p>
+          <Term term="gstr1" />
+        </p>
+        <p>
+          <Term term="advance_tax" />
+        </p>
+        <p>
+          <Term term="presumptive" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+        <p>
+          <Term term="credit_note" />
+        </p>
+      </details>
       <ul aria-label="Calendar legend" className="calendar-legend">
         <li className="badge niryat-overdue" data-tone="danger">
           Overdue

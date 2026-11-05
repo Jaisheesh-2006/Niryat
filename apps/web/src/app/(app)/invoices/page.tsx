@@ -7,6 +7,7 @@ import { FileText } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
 import { RefundForm } from "../../../components/RefundForm";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate, formatDateTime, formatMoney } from "../../../lib/format";
 import { daysRemainingLabel } from "../../../lib/forms";
@@ -25,6 +26,7 @@ export default async function Invoices() {
     <>
       <PageHeader
         title="Invoices"
+        description="Prepare invoices, review payment records and approve each PayPal action yourself."
         actions={
           <details className="card" open={(invoices ?? []).length === 0}>
             <summary>New invoice</summary>
@@ -32,6 +34,18 @@ export default async function Invoices() {
           </details>
         }
       />
+      <details>
+        <summary>What these payment terms mean</summary>
+        <p>
+          <Term term="fira" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+        <p>
+          <Term term="credit_note" />
+        </p>
+      </details>
       {(invoices ?? []).length === 0 && (
         <EmptyState icon={FileText} title="No invoices yet">
           Paste a client email and Claude fills in the invoice for you.
@@ -223,7 +237,7 @@ export default async function Invoices() {
                 </div>
               </>
             )}
-            <h3>Realisation</h3>
+            <h3>Export money received</h3>
             <dl>
               <dt>Export value</dt>
               <dd className="num">

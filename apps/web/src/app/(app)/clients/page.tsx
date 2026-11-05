@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ClientForm } from "../../../components/ClientForm";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import type { Tone } from "../../../lib/status";
 
@@ -30,6 +31,7 @@ export default async function Clients() {
     <>
       <PageHeader
         title="Clients and export check"
+        description={<Term term="export_conditions" />}
         actions={
           <details className="card" open={clients.length === 0}>
             <summary>Add a client</summary>
@@ -77,12 +79,14 @@ export default async function Clients() {
             </div>
             {eligible ? (
               <p>
-                <strong>Zero-rated export invoice: allowed.</strong>
+                <strong>Export invoice with zero GST: allowed.</strong>
               </p>
             ) : (
               <>
                 <p>
-                  <strong>Zero-rated export invoice: blocked.</strong>
+                  <strong>
+                    Export invoice with zero GST: blocked. Check the reasons below with your CA.
+                  </strong>
                 </p>
                 <ul>
                   {conditions

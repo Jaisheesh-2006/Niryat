@@ -30,7 +30,7 @@ const agentToolLabels: ReadonlyMap<string, string> = new Map([
   ["get_client_history", "Read a client's history"],
   ["list_open_disputes", "Read open disputes"],
   ["get_month_overview", "Read the month's overview"],
-  ["list_fira_issues", "Read FIRA issues"],
+  ["list_fira_issues", "Read payment proof issues"],
   ["propose_reminder", "Drafted a reminder for your approval"],
   ["suggest_task", "Suggested a task"],
   ["write_summary", "Wrote the summary"],
@@ -45,13 +45,13 @@ export const healthSeverity: Record<
   HealthFlag["severity"],
   { label: string; tone: Tone; order: number }
 > = {
-  high: { label: "High", tone: "danger", order: 0 },
-  medium: { label: "Medium", tone: "attention", order: 1 },
-  low: { label: "Low", tone: "neutral", order: 2 },
+  high: { label: "Act now", tone: "danger", order: 0 },
+  medium: { label: "Needs attention", tone: "attention", order: 1 },
+  low: { label: "Plan ahead", tone: "neutral", order: 2 },
 };
 
 export const invoiceStatus: Record<Invoice["status"], { label: string; tone: Tone }> = {
-  issued: { label: "Issued", tone: "neutral" },
+  issued: { label: "Prepared", tone: "neutral" },
   sent: { label: "Sent through PayPal", tone: "neutral" },
   partially_paid: { label: "Partly paid", tone: "attention" },
   paid: { label: "Paid", tone: "success" },
@@ -60,9 +60,9 @@ export const invoiceStatus: Record<Invoice["status"], { label: string; tone: Ton
 };
 
 export const invoiceFira: Record<FiraStatus, { label: string; tone: Tone }> = {
-  matched: { label: "Matched to FIRA", tone: "success" },
-  pending: { label: "Pending", tone: "neutral" },
-  missing: { label: "Missing from FIRA", tone: "danger" },
+  matched: { label: "Payment proof matched", tone: "success" },
+  pending: { label: "Payment proof not yet matched", tone: "neutral" },
+  missing: { label: "Payment proof missing", tone: "danger" },
 };
 
 const actionStatus: Record<ActionStatus, { label: string; tone: Tone }> = {

@@ -115,7 +115,7 @@ export function Gstr1Download({
         </fieldset>
       ))}
       <button type="submit" disabled={submitting || covered.length === 0}>
-        Download GSTR-1 Table 6A file
+        Download export sales file (GSTR-1 Table 6A)
       </button>
       <noscript>
         <p>Enable JavaScript to enter rates and download the file.</p>

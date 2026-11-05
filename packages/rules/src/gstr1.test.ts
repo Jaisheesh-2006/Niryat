@@ -195,6 +195,22 @@ const invoice = {
 };
 const lut = { from: "2026-04-01", to: "2027-03-31" };
 
+it("gives every LUT exclusion an action and CA responsibility", () => {
+  for (const coverage of [
+    null,
+    { from: "2026-11-01", to: "2027-03-31" },
+    { from: "2026-04-01", to: "2026-10-14" },
+  ]) {
+    const result = gstr1ExportRows({ invoices: [invoice], lut: coverage }, rules);
+    expect(result.rows).toEqual([]);
+    expect(result.excluded).toHaveLength(1);
+    for (const warning of result.excluded) {
+      expect(warning.message).toMatch(/\b(?:ask|report)\b/i);
+      expect(warning.message).toContain("your CA");
+    }
+  }
+});
+
 describe("GSTR-1 WOPAY export rows", () => {
   it.each(["0", "5", "12", "18", "0.25", "100"])(
     "preserves an explicit GST percentage %s without charging tax",
@@ -236,7 +252,7 @@ describe("GSTR-1 WOPAY export rows", () => {
               number: invoice.number,
               date,
               reason: "lut_not_valid",
-              message: `Invoice ${invoice.number} is not covered by your LUT on ${date}, so it needs IGST. It is not in this file; ask your CA.`,
+              message: `Invoice ${invoice.number} is not covered by your yearly export form (LUT) on ${date}, so it needs IGST. It is not in this file. Ask your CA how to report this invoice.`,
             },
           ],
     );

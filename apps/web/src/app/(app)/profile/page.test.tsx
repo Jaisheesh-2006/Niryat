@@ -15,7 +15,7 @@ it("fetches sharing separately from a missing profile and shows the CA card", as
     .mockResolvedValueOnce({ link: null });
   const html = renderToStaticMarkup(await Profile());
   expect(apiGet).toHaveBeenNthCalledWith(3, "/ca-link", caLinkResponseSchema);
-  expect(html).toContain("Compliance profile</h1>");
+  expect(html).toContain("Your business profile</h1>");
   expect(html).toContain("Share your records with your CA");
   expect(html).toContain("Send request</button>");
 });

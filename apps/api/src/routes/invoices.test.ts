@@ -591,7 +591,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
         status: "open",
         dueDate: deadline.deadline,
         message:
-          `The RBI deadline to receive payment for invoice ${sent.number} was 2027-07-26. ` +
+          `The deadline for export money to reach India (RBI payment deadline) for invoice ${sent.number} was 2027-07-26. ` +
           "Ask your bank (AD bank) whether it can extend the deadline.",
         sourceRuleId: "RBI_REALISATION",
       }),
@@ -628,8 +628,8 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     const response = await post(cookie, "/invoices", input);
     expect(response.status).toBe(422);
     expect(invoiceBlockedSchema.parse(await response.json()).reasons).toEqual([
-      "The client is in India. PayPal also blocks invoices to India-based recipients.",
-      "The client is in India, so the place of supply is India.",
+      "The client is in India. PayPal also blocks invoices to India-based recipients. Check the client country you entered.",
+      "The client is in India, so the place of supply is India. Ask your CA how to invoice this service.",
     ]);
     expect(await list(cookie)).toEqual([]);
     expect(objects.size).toBe(0);

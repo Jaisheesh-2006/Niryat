@@ -11,14 +11,15 @@ import { z } from "zod";
 
 const calendarActions = {
   lut_renewal:
-    "Ask your CA to renew your LUT on the GST portal, then update the dates in your profile.",
+    "Ask your CA to renew your yearly export form (LUT) on the GST portal, then update your profile dates.",
   gstr1_due:
-    "Ask your CA to file GSTR-1 for this period using the export file from the GSTR-1 page.",
+    "Ask your CA to file your GST sales return (GSTR-1) for this period. Use the export file from the GST sales return page.",
   advance_tax:
     "Review your advance-tax estimate with your CA and pay any amount due on the income-tax portal.",
   rbi_deadline:
     "Follow up with your client for payment and ask your bank about an extension if the export payment is delayed.",
-  credit_note_declare_by: "Ask your CA to declare this refund's credit note in your GST return.",
+  credit_note_declare_by:
+    "Ask your CA to report this refund's invoice adjustment (credit note) in your GST sales return.",
   dispute_response:
     "Review the dispute in PayPal and submit your response there if it is still open.",
   recurring_invoice:
@@ -61,7 +62,7 @@ export function buildCalendarEvents(
         id: `lut:${profile.lutValidTo}`,
         date: profile.lutValidTo,
         kind: "lut_renewal",
-        title: "LUT expires",
+        title: "Yearly export form (LUT) expires",
         href: "/profile",
         ruleId: "LUT_REQUIRED",
       });
@@ -73,7 +74,7 @@ export function buildCalendarEvents(
           id: `gstr1:${period}`,
           date: dueDate,
           kind: "gstr1_due",
-          title: `GSTR-1 due for ${label}`,
+          title: `GST sales return (GSTR-1) due for ${label}`,
           href: `/gstr1?period=${period}`,
           ruleId: "GSTR1_6A",
         });
@@ -90,8 +91,8 @@ export function buildCalendarEvents(
         date,
         kind: "advance_tax",
         title: date.endsWith("-03-15")
-          ? "Advance tax: 100% due (presumptive filers pay it all by this date)"
-          : `Advance tax: ${cumulativePercent}% of the year's tax due`,
+          ? "Income tax payment (advance tax): 100% due. Filers using the simpler scheme (presumptive taxation) pay it all by this date."
+          : `Income tax payment (advance tax): ${cumulativePercent}% of the year's tax due`,
         href: `/advance-tax?taxYear=${taxYear}`,
         ruleId: "ADVANCE_TAX_DATES",
       });
@@ -106,7 +107,7 @@ export function buildCalendarEvents(
           id: `rbi:${view.id}`,
           date: deadline.deadline,
           kind: "rbi_deadline",
-          title: `RBI deadline for invoice ${view.number}`,
+          title: `Export payment deadline (RBI) for invoice ${view.number}`,
           href,
           ruleId: "RBI_REALISATION",
         },
@@ -118,7 +119,7 @@ export function buildCalendarEvents(
         id: `credit-note:${note.refundId}`,
         date: note.declareBy,
         kind: "credit_note_declare_by",
-        title: `Declare credit note for invoice ${view.number}`,
+        title: `Report invoice adjustment (credit note) for invoice ${view.number}`,
         href,
         ruleId: "CREDIT_NOTE",
       });

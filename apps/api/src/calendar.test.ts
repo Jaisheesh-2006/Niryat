@@ -75,31 +75,31 @@ describe("calendar events", () => {
         id: "lut:2027-03-31",
         date: "2027-03-31",
         kind: "lut_renewal",
-        title: "Upcoming: LUT expires",
+        title: "Upcoming: Yearly export form (LUT) expires",
         state: "upcoming",
         href: "/profile",
         ruleId: "LUT_REQUIRED",
         action:
-          "Ask your CA to renew your LUT on the GST portal, then update the dates in your profile.",
+          "Ask your CA to renew your yearly export form (LUT) on the GST portal, then update your profile dates.",
         source: cite(rules, "LUT_REQUIRED").source,
       },
       {
         id: "gstr1:2026-10",
         date: "2026-11-11",
         kind: "gstr1_due",
-        title: "Upcoming: GSTR-1 due for October 2026",
+        title: "Upcoming: GST sales return (GSTR-1) due for October 2026",
         state: "upcoming",
         href: "/gstr1?period=2026-10",
         ruleId: "GSTR1_6A",
         action:
-          "Ask your CA to file GSTR-1 for this period using the export file from the GSTR-1 page.",
+          "Ask your CA to file your GST sales return (GSTR-1) for this period. Use the export file from the GST sales return page.",
         source: cite(rules, "GSTR1_6A").source,
       },
       {
         id: "advance-tax:2026-12-15",
         date: "2026-12-15",
         kind: "advance_tax",
-        title: "Upcoming: Advance tax: 75% of the year's tax due",
+        title: "Upcoming: Income tax payment (advance tax): 75% of the year's tax due",
         state: "upcoming",
         href: "/advance-tax?taxYear=2026-27",
         ruleId: "ADVANCE_TAX_DATES",
@@ -111,7 +111,8 @@ describe("calendar events", () => {
         id: "advance-tax:2027-03-15",
         date: "2027-03-15",
         kind: "advance_tax",
-        title: "Upcoming: Advance tax: 100% due (presumptive filers pay it all by this date)",
+        title:
+          "Upcoming: Income tax payment (advance tax): 100% due. Filers using the simpler scheme (presumptive taxation) pay it all by this date.",
         state: "upcoming",
         href: "/advance-tax?taxYear=2026-27",
         ruleId: "ADVANCE_TAX_DATES",
@@ -123,7 +124,7 @@ describe("calendar events", () => {
         id: `rbi:${invoice.id}`,
         date: "2026-10-31",
         kind: "rbi_deadline",
-        title: `Upcoming: RBI deadline for invoice ${invoice.number}`,
+        title: `Upcoming: Export payment deadline (RBI) for invoice ${invoice.number}`,
         state: "upcoming",
         href,
         ruleId: "RBI_REALISATION",
@@ -135,11 +136,12 @@ describe("calendar events", () => {
         id: "credit-note:REFUND-1",
         date: "2026-11-30",
         kind: "credit_note_declare_by",
-        title: `Upcoming: Declare credit note for invoice ${invoice.number}`,
+        title: `Upcoming: Report invoice adjustment (credit note) for invoice ${invoice.number}`,
         state: "upcoming",
         href,
         ruleId: "CREDIT_NOTE",
-        action: "Ask your CA to declare this refund's credit note in your GST return.",
+        action:
+          "Ask your CA to report this refund's invoice adjustment (credit note) in your GST sales return.",
         source: cite(rules, "CREDIT_NOTE").source,
       },
       {
@@ -180,11 +182,11 @@ describe("calendar events", () => {
     const result = events([overdueView], "2026-11-01");
     expect(result.find((event) => event.kind === "rbi_deadline")).toMatchObject({
       state: "overdue",
-      title: `Overdue: RBI deadline for invoice ${invoice.number}`,
+      title: `Overdue: Export payment deadline (RBI) for invoice ${invoice.number}`,
     });
     expect(result.find((event) => event.id === "gstr1:2026-09")).toMatchObject({
       state: "past",
-      title: "Past: GSTR-1 due for September 2026",
+      title: "Past: GST sales return (GSTR-1) due for September 2026",
     });
     const resolved = {
       ...view,

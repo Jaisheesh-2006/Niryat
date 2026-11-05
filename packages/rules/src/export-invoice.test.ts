@@ -36,6 +36,31 @@ const invoice = {
   amount: "100",
 };
 
+it("gives each invoice blocker an action and a responsible person", () => {
+  const result = prepareExportInvoice(
+    {
+      profile: {
+        ...profile,
+        lutNumber: "AD27₹001",
+        lutValidFrom: null,
+        gstin: null,
+        legalName: null,
+        address: null,
+      },
+      client: { ...client, country: "IN", address: null, name: "株式会社" },
+      invoice,
+    },
+    { rules },
+  );
+  expect(result.ok).toBe(false);
+  if (result.ok) throw new Error("Expected invoice blockers");
+  expect(result.reasons).toHaveLength(9);
+  for (const reason of result.reasons) {
+    expect(reason).toMatch(/\b(?:ask|check|add|edit)\b/i);
+    expect(reason).toMatch(/\b(?:you|your|add|edit)\b/i);
+  }
+});
+
 describe("export invoice preparation", () => {
   it.each([
     ["100", "USD 100.00"],
@@ -137,7 +162,7 @@ describe("export invoice preparation", () => {
       expect(prepareExportInvoice({ profile: savedProfile, client, invoice }, { rules })).toEqual({
         ok: false,
         reasons: [
-          "The LUT reference has characters the invoice PDF cannot print. Edit the LUT reference in your profile.",
+          "Your yearly export form (LUT) reference has characters the invoice PDF cannot print. Edit the reference in your profile.",
         ],
       });
     },
@@ -164,33 +189,37 @@ describe("export invoice preparation", () => {
       name: "India recipient",
       clientChanges: { country: "IN" },
       reasons: [
-        "The client is in India. PayPal also blocks invoices to India-based recipients.",
-        "The client is in India, so the place of supply is India.",
+        "The client is in India. PayPal also blocks invoices to India-based recipients. Check the client country you entered.",
+        "The client is in India, so the place of supply is India. Ask your CA how to invoice this service.",
       ],
     },
     {
       name: "LUT expired on the invoice date",
       profileChanges: { lutValidTo: "2026-10-25" },
       reasons: [
-        "Your LUT expired on 2026-10-25. File a new LUT (FORM GST RFD-11) before your next export invoice.",
+        "Your yearly export form (LUT) expired on 2026-10-25. Ask your CA to file a new form RFD-11 before your next export invoice, then update your profile.",
       ],
     },
     {
       name: "missing LUT",
       profileChanges: { lutNumber: null },
       reasons: [
-        "No LUT on file. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund.",
+        "No yearly export form (LUT) is saved. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund. Ask your CA to file form RFD-11, then update your profile.",
       ],
     },
     {
       name: "LUT not yet valid",
       profileChanges: { lutValidFrom: "2026-10-27" },
-      reasons: ["Your LUT is valid only from 2026-10-27. Exports before then are not covered."],
+      reasons: [
+        "Your yearly export form (LUT) is valid only from 2026-10-27. Exports before then are not covered. Ask your CA how to handle any earlier invoices.",
+      ],
     },
     {
       name: "missing GSTIN",
       profileChanges: { gstin: null },
-      reasons: ["GSTIN missing. Export invoices must show your GSTIN."],
+      reasons: [
+        "Your GST identification number (GSTIN) is missing. Add it to your profile; export invoices must show it.",
+      ],
     },
     {
       name: "missing supplier and recipient particulars",
@@ -225,11 +254,11 @@ describe("export invoice preparation", () => {
       },
       clientChanges: { country: "IN", address: null, name: "株式会社" },
       reasons: [
-        "The client is in India. PayPal also blocks invoices to India-based recipients.",
-        "The client is in India, so the place of supply is India.",
-        "No LUT on file. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund.",
-        "The LUT reference has characters the invoice PDF cannot print. Edit the LUT reference in your profile.",
-        "GSTIN missing. Export invoices must show your GSTIN.",
+        "The client is in India. PayPal also blocks invoices to India-based recipients. Check the client country you entered.",
+        "The client is in India, so the place of supply is India. Ask your CA how to invoice this service.",
+        "No yearly export form (LUT) is saved. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund. Ask your CA to file form RFD-11, then update your profile.",
+        "Your yearly export form (LUT) reference has characters the invoice PDF cannot print. Edit the reference in your profile.",
+        "Your GST identification number (GSTIN) is missing. Add it to your profile; export invoices must show it.",
         "Add your legal name to your profile. Invoices must show the supplier's name.",
         "Add your business address to your profile. Invoices must show the supplier's address.",
         "Add the client's address. Export invoices must show the recipient's address and the delivery address.",

@@ -190,7 +190,7 @@ export function gstr1ExportRows(
         number,
         date,
         reason: "lut_not_valid",
-        message: `Invoice ${number} is not covered by your LUT on ${date}, so it needs IGST. It is not in this file; ask your CA.`,
+        message: `Invoice ${number} is not covered by your yearly export form (LUT) on ${date}, so it needs IGST. It is not in this file. Ask your CA how to report this invoice.`,
       });
       continue;
     }

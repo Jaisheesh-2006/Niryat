@@ -9,7 +9,7 @@ it.each(["overdue", "upcoming", "past"] as const)(
       id: "rbi:invoice-1",
       date: "2026-12-31",
       kind: "rbi_deadline",
-      title: `${{ overdue: "Overdue", upcoming: "Upcoming", past: "Past" }[state]}: RBI deadline for invoice 1`,
+      title: `${{ overdue: "Overdue", upcoming: "Upcoming", past: "Past" }[state]}: Export payment deadline (RBI) for invoice 1`,
       state,
       href: "/invoices#invoice-1",
       ruleId: "RBI_REALISATION",

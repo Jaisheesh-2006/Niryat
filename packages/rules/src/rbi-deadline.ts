@@ -49,8 +49,8 @@ export function realisationDeadline(
         ? REMINDER_STAGES[1]
         : REMINDER_STAGES[0];
   const message = overdue
-    ? `The RBI deadline to receive payment for invoice ${invoice.number} was ${deadline}. Ask your bank (AD bank) whether it can extend the deadline.`
-    : `Receive the full payment for invoice ${invoice.number} by ${deadline}.`;
+    ? `The deadline for export money to reach India (RBI payment deadline) for invoice ${invoice.number} was ${deadline}. Ask your bank (AD bank) whether it can extend the deadline.`
+    : `You need to receive the full export payment in India for invoice ${invoice.number} by ${deadline}.`;
 
   return {
     deadline,

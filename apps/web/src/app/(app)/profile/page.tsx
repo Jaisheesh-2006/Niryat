@@ -21,7 +21,10 @@ export default async function Profile() {
 
   return (
     <>
-      <PageHeader title="Compliance profile" />
+      <PageHeader
+        title="Your business profile"
+        description="Add the details used to check your export invoices and payment records."
+      />
       <ProfileForm initial={profile} codes={catalogue.codes} />
       <CaShareCard link={share.link} />
     </>

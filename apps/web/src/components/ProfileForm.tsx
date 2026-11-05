@@ -4,6 +4,7 @@ import type { ProfileInput, PurposeCodeEntry } from "@niryat/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { profileBody, sendJson } from "../lib/forms";
+import { Term } from "./Term";
 
 export function ProfileForm({
   initial,
@@ -75,7 +76,10 @@ export function ProfileForm({
         </div>
       </fieldset>
       <fieldset className="card">
-        <legend>GST and LUT</legend>
+        <legend>GST and your yearly export form</legend>
+        <p>
+          <Term term="lut" />
+        </p>
         <fieldset>
           <legend>Are you registered for GST?</legend>
           <label htmlFor="gstRegistered-yes">Yes</label>
@@ -97,6 +101,9 @@ export function ProfileForm({
             required
           />
         </fieldset>
+        <p>
+          <Term term="gstin" />
+        </p>
         <label htmlFor="gstin">GSTIN</label>
         <input
           id="gstin"
@@ -105,7 +112,7 @@ export function ProfileForm({
           maxLength={15}
           defaultValue={initial?.gstin ?? ""}
         />
-        <label htmlFor="lutNumber">LUT (FORM GST RFD-11) reference number</label>
+        <label htmlFor="lutNumber">LUT reference number</label>
         <input
           id="lutNumber"
           name="lutNumber"
@@ -133,7 +140,10 @@ export function ProfileForm({
             />
           </div>
         </div>
-        <label htmlFor="gstr1Frequency">How do you file GSTR-1?</label>
+        <p>
+          <Term term="gstr1" />
+        </p>
+        <label htmlFor="gstr1Frequency">How often do you file GSTR-1?</label>
         <p id="gstr1Frequency-help">Only for GST-registered users.</p>
         <select
           id="gstr1Frequency"
@@ -147,7 +157,10 @@ export function ProfileForm({
         </select>
       </fieldset>
       <fieldset className="card">
-        <legend>Work and purpose code</legend>
+        <legend>Your work and foreign payments</legend>
+        <p>
+          <Term term="purpose_code" />
+        </p>
         <label htmlFor="workType">What work do you do for foreign clients?</label>
         <textarea
           id="workType"
@@ -167,6 +180,9 @@ export function ProfileForm({
             </option>
           ))}
         </select>
+        <p>
+          <Term term="presumptive" />
+        </p>
         <label htmlFor="specifiedProfession">
           Is your work a specified profession under the Income-tax Act 2025, such as information
           technology? Ask your CA if unsure.

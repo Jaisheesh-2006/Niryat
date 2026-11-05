@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "../../../components/AuthForm";
 import { BrandMark } from "../../../components/icons";
+import { PageHeader } from "../../../components/PageHeader";
 import { PayPalLoginError } from "../../../components/PayPalLoginError";
 
 export const metadata = { title: "Create account" };
@@ -14,8 +15,7 @@ export default async function Signup({
   return (
     <div className="card auth-card">
       <BrandMark />
-      <h1>Create account</h1>
-      <p>For freelancers</p>
+      <PageHeader title="Create account" description="For freelancers" />
       <PayPalLoginError error={error} />
       <AuthForm mode="signup" />
       <div className="auth-divider">or</div>

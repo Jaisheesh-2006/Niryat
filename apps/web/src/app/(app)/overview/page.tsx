@@ -196,7 +196,14 @@ function Skeleton() {
 export default function Overview() {
   return (
     <>
-      <PageHeader title="Today" description={formatDate(new Date().toISOString())} />
+      <PageHeader
+        title="Today"
+        description={
+          <>
+            Your next actions and recent PayPal activity for {formatDate(new Date().toISOString())}.
+          </>
+        }
+      />
       <div className="stat-grid">
         <CardBoundary title="Approvals waiting">
           <Suspense fallback={<Skeleton />}>

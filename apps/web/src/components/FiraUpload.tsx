@@ -18,13 +18,13 @@ export function FiraUpload() {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         if (form.get("consent") !== "on") {
-          setMessage("Confirm that this is your own FIRA before uploading.");
+          setMessage("Confirm that this is your own payment proof (FIRA) before uploading.");
           return;
         }
         const file = form.get("file");
         if (!(file instanceof File) || file.size === 0) {
           setMessage(
-            "Niryat could not read FIRA lines from this PDF. Upload the digital FIRA PDF from PayPal, not a scan.",
+            "Niryat could not read payment details from this PDF. Upload the digital payment proof (FIRA) PDF from PayPal, not a scan.",
           );
           return;
         }
@@ -36,7 +36,7 @@ export function FiraUpload() {
         });
       }}
     >
-      <label htmlFor={id}>FIRA PDF</label>
+      <label htmlFor={id}>Payment proof PDF (FIRA)</label>
       <input
         id={id}
         name="file"
@@ -52,10 +52,10 @@ export function FiraUpload() {
           aria-describedby={message ? `${id}-error` : undefined}
           required
         />
-        This is my own FIRA. I consent to Niryat storing it.
+        This is my own payment proof (FIRA). I consent to Niryat storing it.
       </label>
       <button type="submit" disabled={isPending}>
-        {isPending ? "Reading…" : "Upload FIRA"}
+        {isPending ? "Reading…" : "Upload payment proof"}
       </button>
       {message && (
         <p id={`${id}-error`} role="alert">

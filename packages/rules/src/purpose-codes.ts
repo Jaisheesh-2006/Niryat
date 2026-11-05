@@ -249,7 +249,7 @@ export function checkPurposeCode(
         "PURPOSE_CODES",
         "purpose_code_missing",
         "medium",
-        "No purpose code saved. Add the purpose code set in your PayPal account.",
+        "No code for foreign payments (purpose code) is saved. Add the code set in your PayPal account to your profile.",
       ),
     );
   } else if (entry?.suggest === "never") {
@@ -259,7 +259,7 @@ export function checkPurposeCode(
         "PURPOSE_CODES",
         "purpose_code_goods_or_travel",
         "high",
-        `${code} (${entry.paypalLabel}) is not a services code. Its RBI description is: ${entry.annexDescription}`,
+        `${code} (${entry.paypalLabel}) is not a services code. Its RBI description is: ${entry.annexDescription}. Ask your bank which services code to use, then update it in PayPal and your profile.`,
       ),
     );
   } else if (!entry) {
@@ -269,7 +269,7 @@ export function checkPurposeCode(
         "PURPOSE_CODES",
         "purpose_code_not_offered",
         "high",
-        `${code} is not one of the purpose codes PayPal India offers.`,
+        `${code} is not one of the purpose codes PayPal India offers. Ask your bank which offered code to use, then update it in PayPal and your profile.`,
       ),
     );
   } else if (workType !== null) {
@@ -281,7 +281,7 @@ export function checkPurposeCode(
           "PURPOSE_CODES",
           "purpose_code_mismatch",
           "medium",
-          `Your work looks like ${s.code} (${s.label}), but your purpose code is ${code} (${entry.paypalLabel}).`,
+          `Your work looks like ${s.code} (${s.label}), but your purpose code is ${code} (${entry.paypalLabel}). Ask your bank to confirm the code for your work, then update it in PayPal and your profile.`,
         ),
       );
     }
@@ -293,7 +293,7 @@ export function checkPurposeCode(
         "PURPOSE_CODES",
         "work_type_missing",
         "low",
-        "Describe your work so we can check your purpose code.",
+        "Add a description of your work to your profile so we can check your code for foreign payments (purpose code).",
       ),
     );
   }

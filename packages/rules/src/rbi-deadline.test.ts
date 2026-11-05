@@ -8,6 +8,20 @@ const yaml = readFileSync(RULES_FILE_URL, "utf8");
 const rules = parseRules(yaml);
 const invoice = { number: "2026-27/0001", date: "2026-10-30", currency: "USD" };
 
+it("gives overdue RBI warnings an action and bank responsibility, retaining uncertainty", () => {
+  for (const date of [invoice.date, "2026-05-31"]) {
+    const result = realisationDeadline(
+      { invoice: { ...invoice, date }, today: "2028-01-01" },
+      rules,
+    );
+    expect(result.overdue).toBe(true);
+    expect(result.message).toMatch(/\b(?:ask|confirm)\b/i);
+    expect(result.message).toContain("your bank");
+    if (result.uncertainWindow)
+      expect(result.message).toContain("may apply; confirm with your bank");
+  }
+});
+
 describe("RBI realisation deadline", () => {
   it.each([
     ["2026-10-30", "2027-07-30"],
@@ -33,8 +47,8 @@ describe("RBI realisation deadline", () => {
     expect(result).toMatchObject({ daysRemaining, stage, overdue: daysRemaining < 0 });
     expect(result.message).toBe(
       daysRemaining < 0
-        ? "The RBI deadline to receive payment for invoice 2026-27/0001 was 2027-07-30. Ask your bank (AD bank) whether it can extend the deadline."
-        : "Receive the full payment for invoice 2026-27/0001 by 2027-07-30.",
+        ? "The deadline for export money to reach India (RBI payment deadline) for invoice 2026-27/0001 was 2027-07-30. Ask your bank (AD bank) whether it can extend the deadline."
+        : "You need to receive the full export payment in India for invoice 2026-27/0001 by 2027-07-30.",
     );
     expect(REMINDER_STAGES).toEqual([60, 30]);
   });
@@ -79,7 +93,7 @@ describe("RBI realisation deadline", () => {
     const result = realisationDeadline({ invoice: { ...invoice, date }, today: date }, rules);
     expect(result.uncertainWindow).toBe(uncertainWindow);
     expect(result.message).toBe(
-      `Receive the full payment for invoice ${invoice.number} by ${result.deadline}.${
+      `You need to receive the full export payment in India for invoice ${invoice.number} by ${result.deadline}.${
         uncertainWindow
           ? " This invoice is dated between 2025-11-14 and 2026-06-04, so a 15-month period may apply; confirm with your bank."
           : ""

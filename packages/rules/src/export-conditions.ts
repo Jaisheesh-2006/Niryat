@@ -20,7 +20,7 @@ export function checkExportConditions(
           ? "Answer: do you supply this service from India?"
           : answers.supplierInIndia
             ? "You supply the service from India."
-            : "You do not supply this service from India, so it is not an export from India.",
+            : "You do not supply this service from India, so it is not an export from India. Ask your CA how to invoice it.",
     },
     {
       id: "recipient_outside_india",
@@ -28,7 +28,7 @@ export function checkExportConditions(
       status: country === "IN" ? "fail" : "pass",
       message:
         country === "IN"
-          ? "The client is in India. PayPal also blocks invoices to India-based recipients."
+          ? "The client is in India. PayPal also blocks invoices to India-based recipients. Check the client country you entered."
           : `The client is located outside India (${country}).`,
     },
     {
@@ -42,9 +42,9 @@ export function checkExportConditions(
             : "pass",
       message:
         country === "IN"
-          ? "The client is in India, so the place of supply is India."
+          ? "The client is in India, so the place of supply is India. Ask your CA how to invoice this service."
           : answers.clientPresentInIndia === true
-            ? "Work that needs the client physically present in India is supplied where it is performed, which is India."
+            ? "Work that needs the client physically present in India is supplied where it is performed, which is India. Ask your CA how to invoice it."
             : answers.clientPresentInIndia === null
               ? "Answer: does this work need the client to be physically present with you in India?"
               : "The place of supply is the client's location, outside India.",
@@ -55,10 +55,10 @@ export function checkExportConditions(
       status: answers.paidInForeignCurrency === true ? "pass" : "unknown",
       message:
         answers.paidInForeignCurrency === true
-          ? "Paid in convertible foreign exchange."
+          ? "Payment is in foreign currency that can be exchanged (convertible foreign exchange)."
           : answers.paidInForeignCurrency === false
             ? "Payment in Indian rupees counts only where the RBI permits it. Confirm with your bank or CA."
-            : "Answer: will the client pay in foreign currency?",
+            : "Answer: will your client pay in foreign currency?",
     },
     {
       id: "not_same_person",
@@ -73,7 +73,7 @@ export function checkExportConditions(
         answers.sameEstablishment === null
           ? "Answer: is the client your own branch or establishment?"
           : answers.sameEstablishment
-            ? "Payments between establishments of the same person are not an export."
+            ? "Payments between establishments of the same person are not an export. Ask your CA how to record this payment."
             : "The client is a separate business, not your own establishment.",
     },
   ];

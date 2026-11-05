@@ -9,6 +9,7 @@ import { CaStopManagingButton } from "../../../../../components/CaStopManagingBu
 import { Gstr1Report, gstr1PreviewFor } from "../../../../../components/Gstr1Report";
 import { PageHeader } from "../../../../../components/PageHeader";
 import { StatusBadge } from "../../../../../components/StatusBadge";
+import { Term } from "../../../../../components/Term";
 import { apiGet } from "../../../../../lib/api";
 import { deadlineList } from "../../../../../lib/calendar";
 import { formatDate, formatMoney } from "../../../../../lib/format";
@@ -24,7 +25,10 @@ const caInvoicesSchema = invoiceViewSchema
 function NoAccess() {
   return (
     <>
-      <PageHeader title="Client records" />
+      <PageHeader
+        title="Client records"
+        description="View the records a freelancer has shared with you."
+      />
       <p>You no longer have access to this client.</p>
       <Link href="/ca">Back to your clients</Link>
     </>
@@ -65,7 +69,36 @@ export default async function CaClient({
         }
         actions={<CaStopManagingButton freelancerId={client.freelancerId} linkId={client.linkId} />}
       />
-
+      <details>
+        <summary>What these record terms mean</summary>
+        <p>
+          <Term term="lut" />
+        </p>
+        <p>
+          <Term term="gstin" />
+        </p>
+        <p>
+          <Term term="purpose_code" />
+        </p>
+        <p>
+          <Term term="fira" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+        <p>
+          <Term term="credit_note" />
+        </p>
+        <p>
+          <Term term="gstr1" />
+        </p>
+        <p>
+          <Term term="advance_tax" />
+        </p>
+        <p>
+          <Term term="presumptive" />
+        </p>
+      </details>
       <section aria-labelledby="client-health">
         <h2 id="client-health">Health</h2>
         {health === null ? (
@@ -75,7 +108,7 @@ export default async function CaClient({
             <p className="display">{health.score} / 100</p>
             <p className="caption">Checked on {formatDate(health.checkedOn)}</p>
             {health.flags.length === 0 ? (
-              <p>No red flags found.</p>
+              <p>No issues found in these checks.</p>
             ) : (
               [...health.flags]
                 .sort((a, b) => healthSeverity[a.severity].order - healthSeverity[b.severity].order)
@@ -116,7 +149,7 @@ export default async function CaClient({
                   <th scope="col">Received</th>
                   <th scope="col">Status</th>
                   <th scope="col">RBI deadline</th>
-                  <th scope="col">FIRA</th>
+                  <th scope="col">Payment proof</th>
                 </tr>
               </thead>
               <tbody>
@@ -193,7 +226,7 @@ export default async function CaClient({
       </section>
 
       <section aria-labelledby="client-gstr1">
-        <h2 id="client-gstr1">GSTR-1</h2>
+        <h2 id="client-gstr1">GST sales return</h2>
         {gstr1.ok ? (
           <Gstr1Report preview={gstr1.preview} client={client.freelancerId} />
         ) : (

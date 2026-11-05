@@ -4,6 +4,7 @@ import { type Client, invoiceCurrencies } from "@niryat/shared";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { invoiceBody, sendJson } from "../lib/forms";
+import { Term } from "./Term";
 
 export function InvoiceForm({
   clients,
@@ -77,7 +78,10 @@ export function InvoiceForm({
         required
         defaultValue={defaults?.description}
       />
-      <label htmlFor={`${prefix}-sac`}>SAC code (services accounting code)</label>
+      <p>
+        <Term term="sac" />
+      </p>
+      <label htmlFor={`${prefix}-sac`}>Service code (SAC)</label>
       <input id={`${prefix}-sac`} name="sac" type="text" pattern="\d{4}(\d{2})?(\d{2})?" required />
       <label htmlFor={`${prefix}-currency`}>Currency</label>
       <select id={`${prefix}-currency`} name="currency" required defaultValue={defaults?.currency}>

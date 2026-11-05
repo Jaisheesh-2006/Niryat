@@ -89,7 +89,7 @@ const labels: Record<string, string> = {
   clientId: "Client",
   type: "Invoice type",
   description: "Description of service",
-  sac: "SAC code",
+  sac: "Service code (SAC)",
   currency: "Currency",
   amount: "Amount",
   recurrence: "Repeat",
@@ -98,12 +98,12 @@ const labels: Record<string, string> = {
   "recurrence.totalCycles": "Number of invoices",
   password: "Password (12–128 characters)",
   gstRegistered: "GST registered",
-  gstin: "GSTIN",
-  lutNumber: "LUT number",
-  lutValidFrom: "LUT valid from",
-  lutValidTo: "LUT valid to",
+  gstin: "GST identification number (GSTIN)",
+  lutNumber: "Yearly export form (LUT) number",
+  lutValidFrom: "LUT start date",
+  lutValidTo: "LUT end date",
   workType: "Work description",
-  purposeCode: "Purpose code",
+  purposeCode: "Code for foreign payments (purpose code)",
   panLast4: "Last 4 characters of PAN",
   expectedTurnoverInr: "Expected turnover",
   name: "Client name",
@@ -111,7 +111,7 @@ const labels: Record<string, string> = {
   "answers.supplierInIndia": "Supplier in India",
   "answers.clientPresentInIndia": "Client present in India",
   "answers.paidInForeignCurrency": "Foreign currency",
-  "answers.sameEstablishment": "Own establishment",
+  "answers.sameEstablishment": "Your own branch or establishment",
 };
 
 type FormResult =
@@ -207,7 +207,7 @@ async function responseResult(response: Response, reminderApproval = false): Pro
     case "ai_budget_exhausted":
       return { ok: false, message: "The monthly AI budget is used up. Fill in the form below." };
     case "extraction_running":
-      return { ok: false, message: "An extraction is already running." };
+      return { ok: false, message: "Claude is already reading your text. Wait for it to finish." };
     case "extraction_failed":
       return {
         ok: false,
@@ -229,7 +229,8 @@ async function responseResult(response: Response, reminderApproval = false): Pro
     case "refund_exceeds_payment":
       return {
         ok: false,
-        message: "The refund is more than what is left to refund on this payment.",
+        message:
+          "The refund is more than what is left to refund on this payment. Enter a smaller amount.",
       };
     case "paypal_failed":
       if (!parsed.data.code) return reminderApproval ? reminderFallback : fallback;
@@ -258,21 +259,33 @@ async function responseResult(response: Response, reminderApproval = false): Pro
         message: `PayPal did not accept the request (${parsed.data.code}). Nothing else was sent. You can approve again to retry.`,
       };
     case "paypal_unavailable":
-      return { ok: false, message: "PayPal is not configured on this server." };
+      return { ok: false, message: "PayPal is unavailable. Ask the app owner to check the setup." };
     case "file_storage_unavailable":
-      return { ok: false, message: "File storage is not configured on this server." };
+      return {
+        ok: false,
+        message: "Document storage is unavailable. Ask the app owner to check the setup.",
+      };
     case "fira_duplicate":
-      return { ok: false, message: "This FIRA was already uploaded." };
+      return {
+        ok: false,
+        message: "This payment proof (FIRA) was already uploaded. Check the document list.",
+      };
     case "fira_unreadable":
       return {
         ok: false,
         message:
-          "Niryat could not read FIRA lines from this PDF. Upload the digital FIRA PDF from PayPal, not a scan.",
+          "Niryat could not read payment details from this PDF. Upload the digital payment proof (FIRA) PDF from PayPal, not a scan.",
       };
     case "consent_required":
-      return { ok: false, message: "Confirm that this is your own FIRA before uploading." };
+      return {
+        ok: false,
+        message: "Confirm that this is your own payment proof (FIRA) before uploading.",
+      };
     case "file_too_large":
-      return { ok: false, message: "The PDF is larger than 2 MB." };
+      return {
+        ok: false,
+        message: "The PDF is larger than 2 MB. Upload a PDF no larger than 2 MB.",
+      };
     case "no_suggestion":
       return {
         ok: false,
@@ -301,7 +314,7 @@ async function responseResult(response: Response, reminderApproval = false): Pro
             loginPath: "/login",
           };
     case "invalid_credentials":
-      return { ok: false, message: "Email or password is incorrect." };
+      return { ok: false, message: "Email or password is incorrect. Check both and try again." };
     case "unauthenticated":
       return { ok: false, message: "Your session has ended. Sign in again." };
     default:

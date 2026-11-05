@@ -7,17 +7,16 @@ import {
   ShieldCheck,
   UserRound,
 } from "../../components/icons";
+import { Term } from "../../components/Term";
 
 export default function Home() {
   return (
     <>
       <section className="public-hero">
-        <h1 className="display">
-          Run your export business on PayPal. Niryat keeps it legal in India.
-        </h1>
+        <h1 className="display">Prepare your Indian export records from PayPal.</h1>
         <p>
-          GST-ready invoices, FIRA matching, RBI deadlines and advance tax, built from your PayPal
-          activity. You approve every action.
+          Prepare export invoices, match foreign-payment proof and track tax and payment deadlines
+          from your PayPal activity. You approve every action.
         </p>
         <div className="hero-actions">
           <Link href="/signup" className="btn" data-variant="primary">
@@ -37,7 +36,13 @@ export default function Home() {
           <li>
             <UserRound />
             <h3>Sign in</h3>
-            <p>With PayPal: health check, purpose code and LUT.</p>
+            <p>Complete your business profile and see what needs attention.</p>
+            <p>
+              <Term term="lut" />
+            </p>
+            <p>
+              <Term term="purpose_code" />
+            </p>
           </li>
           <li>
             <FileText />
@@ -47,17 +52,32 @@ export default function Home() {
           <li>
             <CircleCheck />
             <h3>Get paid</h3>
-            <p>PayPal webhooks record fee, net and FX.</p>
+            <p>
+              PayPal records the payment, its fee, what you receive and any exchange rate it
+              provides.
+            </p>
+            <p>
+              <Term term="fira" />
+            </p>
           </li>
           <li>
             <LogOut />
             <h3>Handle changes</h3>
             <p>PayPal refunds and disputes update GST and RBI status.</p>
+            <p>
+              <Term term="realisation" />
+            </p>
           </li>
           <li>
             <CalendarCheck />
             <h3>Close the month</h3>
-            <p>FIRA matching, GSTR-1 data, advance tax and PayPal reminders.</p>
+            <p>Check payment proof, prepare tax records and approve PayPal reminders.</p>
+            <p>
+              <Term term="gstr1" />
+            </p>
+            <p>
+              <Term term="advance_tax" />
+            </p>
           </li>
         </ol>
       </section>

@@ -159,7 +159,9 @@ it("keeps a failed email login on the form and enables another attempt", async (
   await AuthForm({ mode: "login" }).props.onSubmit({ preventDefault: vi.fn(), currentTarget: {} });
   expect(replace).not.toHaveBeenCalled();
   expect(setState).toHaveBeenCalledWith(false);
-  expect(setState).toHaveBeenLastCalledWith("Email or password is incorrect.");
+  expect(setState).toHaveBeenLastCalledWith(
+    "Email or password is incorrect. Check both and try again.",
+  );
 });
 
 it.each([
@@ -219,7 +221,7 @@ it.each([
   ["close_running", "A close is already running. Wait for it to finish."],
   ["ai_unavailable", "AI is not configured, so extraction is unavailable. Fill in the form below."],
   ["ai_budget_exhausted", "The monthly AI budget is used up. Fill in the form below."],
-  ["extraction_running", "An extraction is already running."],
+  ["extraction_running", "Claude is already reading your text. Wait for it to finish."],
   ["extraction_failed", "Claude could not extract details from this text. Fill in the form below."],
 ])("explains %s", async (error, message) => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error }, { status: 503 })));
@@ -769,7 +771,7 @@ it.each([
       specifiedProfession: profession,
     });
     const html = renderToStaticMarkup(createElement(ProfileForm, { initial, codes: [] }));
-    expect(html).toContain('<label for="gstr1Frequency">How do you file GSTR-1?</label>');
+    expect(html).toContain('<label for="gstr1Frequency">How often do you file GSTR-1?</label>');
     expect(html).toContain('aria-describedby="gstr1Frequency-help"');
     expect(html).toContain("Only for GST-registered users.");
     expect(html).toContain("Monthly");
@@ -910,7 +912,8 @@ it("sends JSON and maps API field errors to labels", async () => {
   vi.stubGlobal("fetch", fetch);
   expect(await sendJson("/api/profile", "PUT", { gstin: "invalid" })).toEqual({
     ok: false,
-    message: "Check these fields: GSTIN, Own establishment, other.",
+    message:
+      "Check these fields: GST identification number (GSTIN), Your own branch or establishment, other.",
   });
   expect(fetch).toHaveBeenCalledWith("/api/profile", {
     method: "PUT",
@@ -933,7 +936,8 @@ it("maps the specified pair of invalid fields", async () => {
   );
   expect(await sendJson("/api/profile", "PUT", {})).toEqual({
     ok: false,
-    message: "Check these fields: GSTIN, Own establishment.",
+    message:
+      "Check these fields: GST identification number (GSTIN), Your own branch or establishment.",
   });
 });
 
@@ -944,14 +948,20 @@ it("accepts a 204 without attempting to parse JSON", async () => {
 
 it.each([
   ["email_taken", "That email is already registered. Sign in instead."],
-  ["invalid_credentials", "Email or password is incorrect."],
+  ["invalid_credentials", "Email or password is incorrect. Check both and try again."],
   ["unauthenticated", "Your session has ended. Sign in again."],
   ["action_not_pending", "This action was already handled. Refresh the page."],
-  ["paypal_unavailable", "PayPal is not configured on this server."],
-  ["file_storage_unavailable", "File storage is not configured on this server."],
+  ["paypal_unavailable", "PayPal is unavailable. Ask the app owner to check the setup."],
+  [
+    "file_storage_unavailable",
+    "Document storage is unavailable. Ask the app owner to check the setup.",
+  ],
   ["not_found", "Not found. Refresh the page."],
   ["refund_pending", "A refund for this payment is already waiting for your approval."],
-  ["refund_exceeds_payment", "The refund is more than what is left to refund on this payment."],
+  [
+    "refund_exceeds_payment",
+    "The refund is more than what is left to refund on this payment. Enter a smaller amount.",
+  ],
   ["other", "Something went wrong. Try again."],
 ])("maps the %s error", async (error, message) => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error }, { status: 400 })));
@@ -993,13 +1003,13 @@ it("posts the PDF unchanged with content type and consent headers", async () => 
 });
 
 it.each([
-  ["fira_duplicate", "This FIRA was already uploaded."],
+  ["fira_duplicate", "This payment proof (FIRA) was already uploaded. Check the document list."],
   [
     "fira_unreadable",
-    "Niryat could not read FIRA lines from this PDF. Upload the digital FIRA PDF from PayPal, not a scan.",
+    "Niryat could not read payment details from this PDF. Upload the digital payment proof (FIRA) PDF from PayPal, not a scan.",
   ],
-  ["consent_required", "Confirm that this is your own FIRA before uploading."],
-  ["file_too_large", "The PDF is larger than 2 MB."],
+  ["consent_required", "Confirm that this is your own payment proof (FIRA) before uploading."],
+  ["file_too_large", "The PDF is larger than 2 MB. Upload a PDF no larger than 2 MB."],
   ["no_suggestion", "This line has no suggested match to confirm or reject. Refresh the page."],
 ])("maps %s for both PDF and JSON requests", async (error, message) => {
   vi.stubGlobal(
@@ -1059,7 +1069,10 @@ it.each([true, false])("uploads a consented FIRA and handles success: %s", async
     body: file,
   });
   expect(refresh).toHaveBeenCalledTimes(success ? 1 : 0);
-  if (!success) expect(setState).toHaveBeenLastCalledWith("This FIRA was already uploaded.");
+  if (!success)
+    expect(setState).toHaveBeenLastCalledWith(
+      "This payment proof (FIRA) was already uploaded. Check the document list.",
+    );
 });
 
 it.each(["consent", "file"])("does not upload when %s is missing", async (missing) => {
@@ -1080,8 +1093,8 @@ it.each(["consent", "file"])("does not upload when %s is missing", async (missin
   expect(refresh).not.toHaveBeenCalled();
   expect(setState).toHaveBeenLastCalledWith(
     missing === "consent"
-      ? "Confirm that this is your own FIRA before uploading."
-      : "Niryat could not read FIRA lines from this PDF. Upload the digital FIRA PDF from PayPal, not a scan.",
+      ? "Confirm that this is your own payment proof (FIRA) before uploading."
+      : "Niryat could not read payment details from this PDF. Upload the digital payment proof (FIRA) PDF from PayPal, not a scan.",
   );
 });
 
@@ -1153,7 +1166,7 @@ it("shows matched, uncertain and flagged FIRA lines beside their source text", a
   const html = renderToStaticMarkup(await Fira());
   expect(apiGet).toHaveBeenCalledWith("/fira", expect.anything());
   for (const expected of [
-    "FIRA matching",
+    "Payment proof",
     "FIRA for October 2026",
     "Uploaded 30 Oct 2026",
     "$40.00",

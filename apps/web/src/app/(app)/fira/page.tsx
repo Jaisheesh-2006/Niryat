@@ -4,6 +4,7 @@ import { FiraLineButtons } from "../../../components/FiraLineButtons";
 import { FiraUpload } from "../../../components/FiraUpload";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate, formatMoney, formatMonth } from "../../../lib/format";
 
@@ -15,9 +16,15 @@ export default async function Fira() {
   return (
     <>
       <PageHeader
-        title="FIRA matching"
-        description="Upload the digital FIRA PDF from PayPal. Niryat reads each line and matches it to your PayPal payments. Uncertain matches wait for your confirmation."
+        title="Payment proof"
+        description="Upload your payment proof and match each line to your PayPal payments; confirm any uncertain matches."
       />
+      <p>
+        <Term term="fira" />
+      </p>
+      <p>
+        <Term term="purpose_code" />
+      </p>
       <FiraUpload />
       {documents.map((document) => (
         <section className="card" key={document.id}>

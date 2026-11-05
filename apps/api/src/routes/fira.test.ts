@@ -204,7 +204,7 @@ describe.skipIf(!testDatabaseUrl)("FIRA routes", () => {
     ).toEqual([["1.00", "matched"], ["1.00", "matched"], ["0.70", "needs_confirmation"], null]);
     expect(doc.lines.map(({ id, match, note, ...line }) => line)).toEqual(lines);
     expect(doc.lines[3]?.note).toBe(
-      "No PayPal payment in your ledger matches this amount and currency within 7 days of 2026-10-26.",
+      "No recorded PayPal payment matches this amount and currency within 7 days of 2026-10-26. Check the date, amount and currency against PayPal and your PDF.",
     );
     const key = `fira/${user.id}/${doc.id}.pdf`;
     expect(objects.get(key)).toEqual(bytes);

@@ -8,7 +8,45 @@ import { disputeAlert, LOST_DISPUTE_OUTCOMES, realisationFor, refundTask } from 
 const rules = parseRules(readFileSync(RULES_FILE_URL, "utf8"));
 const invoice = { number: "2026-27/0001", currency: "USD", amount: "100" };
 const tail =
-  " This reduces the export value only when your bank (AD bank) accepts it; for invoices up to Rs 10 lakh your declaration may be enough. Until then, treat it as unrealised.";
+  " Ask your bank (AD bank) to accept the reduced export value; only its acceptance reduces the export value. For invoices up to Rs 10 lakh your declaration may be enough. Until then, treat the export money as not fully received (unrealised).";
+
+it("gives refund and unresolved/lost dispute warnings an action and a responsible person", () => {
+  const adjustments = [
+    { refundedTotal: "40", disputeLost: false },
+    { refundedTotal: "0", disputeLost: true },
+  ].map((changes) => realisationFor({ invoice, paidTotal: "100", ...changes }, rules).message);
+  const disputes = [null, "RESOLVED_BUYER_FAVOUR", "ACCEPTED"].flatMap((outcome) =>
+    [null, "2026-11-10"].map(
+      (responseDueDate) =>
+        disputeAlert(
+          {
+            invoiceNumber: invoice.number,
+            paypalDisputeId: "DISPUTE-1",
+            amount: "50",
+            currency: "USD",
+            responseDueDate,
+            outcome,
+          },
+          rules,
+        ).message,
+    ),
+  );
+  const tasks = [true, false, null].map(
+    (gstRegistered) =>
+      refundTask(
+        {
+          gstRegistered,
+          invoice: { ...invoice, date: "2026-10-26" },
+          refund: { date: "2026-10-27", amount: "40" },
+        },
+        rules,
+      ).message,
+  );
+  for (const message of [...adjustments, ...disputes, ...tasks]) {
+    expect(message).toMatch(/\b(?:ask|check|respond|declare)\b/i);
+    expect(message).toMatch(/your bank|in PayPal/);
+  }
+});
 
 describe("realisation adjustment", () => {
   it.each([
@@ -98,14 +136,14 @@ describe("dispute alerts", () => {
       responseDueDate: "2026-11-10",
       lost: false,
       message:
-        "Client disputed USD 50.00 on invoice 2026-27/0001. This export may no longer count as realised. Respond in PayPal by 2026-11-10.",
+        "Client disputed USD 50.00 on invoice 2026-27/0001. This export may no longer count as fully received (realised). Check the dispute in PayPal. Respond in PayPal by 2026-11-10.",
     },
     {
       outcome: null,
       responseDueDate: null,
       lost: false,
       message:
-        "Client disputed USD 50.00 on invoice 2026-27/0001. This export may no longer count as realised.",
+        "Client disputed USD 50.00 on invoice 2026-27/0001. This export may no longer count as fully received (realised). Check the dispute in PayPal.",
     },
     {
       outcome: "RESOLVED_BUYER_FAVOUR",
@@ -169,7 +207,7 @@ describe("refund task messages", () => {
       ),
     ).toEqual({
       message: creditNote
-        ? "Refund of USD 40.00 recorded on invoice 2026-27/0001. Consider issuing a GST credit note (declare it by 2027-11-30), and ask your bank (AD bank) to accept the reduced export value."
+        ? "Refund of USD 40.00 recorded on invoice 2026-27/0001. Consider issuing a document to adjust your GST invoice (credit note); declare it by 2027-11-30, and ask your bank (AD bank) to accept the reduced export value."
         : "Refund of USD 40.00 recorded on invoice 2026-27/0001. Ask your bank (AD bank) to accept the reduced export value.",
       dueDate: creditNote ? "2027-11-30" : null,
       sourceRuleId: creditNote ? "CREDIT_NOTE" : "REALISATION_ADJUSTMENT",

@@ -53,11 +53,13 @@ export function prepareExportInvoice(
   );
   if (gstRegistered && profile.lutNumber !== null && !PDF_TEXT_PATTERN.test(profile.lutNumber)) {
     reasons.push(
-      "The LUT reference has characters the invoice PDF cannot print. Edit the LUT reference in your profile.",
+      "Your yearly export form (LUT) reference has characters the invoice PDF cannot print. Edit the reference in your profile.",
     );
   }
   if (gstRegistered && gstin === null) {
-    reasons.push("GSTIN missing. Export invoices must show your GSTIN.");
+    reasons.push(
+      "Your GST identification number (GSTIN) is missing. Add it to your profile; export invoices must show it.",
+    );
   }
   if (legalName === null) {
     reasons.push("Add your legal name to your profile. Invoices must show the supplier's name.");

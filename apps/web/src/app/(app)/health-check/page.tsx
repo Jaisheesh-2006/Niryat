@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate } from "../../../lib/format";
 import { healthSeverity } from "../../../lib/status";
@@ -18,12 +19,25 @@ export default async function HealthCheck() {
     <>
       <PageHeader
         title="Compliance health check"
+        description="See what needs attention before you bill foreign clients, and what to do next."
         actions={
           <Link className="btn" data-variant="secondary" href="/profile">
             Edit profile
           </Link>
         }
       />
+      <details>
+        <summary>What these terms mean</summary>
+        <p>
+          <Term term="lut" />
+        </p>
+        <p>
+          <Term term="gstin" />
+        </p>
+        <p>
+          <Term term="purpose_code" />
+        </p>
+      </details>
       <section className="card">
         <p className="display">{score} / 100</p>
         <div className="health-bar" role="img" aria-label={`Health score ${score} out of 100`}>
@@ -31,9 +45,9 @@ export default async function HealthCheck() {
         </div>
         <p className="caption">Checked on {formatDate(checkedOn)}</p>
       </section>
-      <h2>Red flags</h2>
+      <h2>Checks needing attention</h2>
       {flags.length === 0 ? (
-        <p>No red flags found.</p>
+        <p>No issues found in these checks.</p>
       ) : (
         <div>
           {[...flags]

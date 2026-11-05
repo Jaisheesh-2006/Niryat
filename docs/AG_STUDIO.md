@@ -1,6 +1,12 @@
 # AG Studio change record
 
-Recorded 2026-11-04. Scope: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0) only.
+Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0). Later tasks are dated separately below.
+
+## D1/D2: plain wording around both dashboards
+
+Recorded 2026-11-05. The user approved D2's 36 rules-message changes in the [review log](IMPROVEMENTS.md#d2-review-log) before UI/API wording work began. The freelancer `/dashboard` and CA `/ca` pages now explain payment proof (FIRA) and the RBI export-payment deadline using the shared, no-JavaScript [glossary](../apps/web/src/lib/glossary.ts) and [Term](../apps/web/src/components/Term.tsx). [Freelancer sources/state](../apps/web/src/lib/dashboard.ts) uses “Amount before fees”, “Amount after fees”, “Exchange rate” and “Payment proof status”. [CA sources/state](../apps/web/src/lib/ca-dashboard.ts) uses “Missing payment proof” and the prompt “Which clients are missing payment proof?”. Existing field IDs, projections, aggregations, widgets, chart mappings, access checks and model boundaries are retained. [Calendar labels](../apps/api/src/calendar.ts) inherited by portfolio deadlines now put plain words before legal abbreviations. These changes help users understand the same figures; no Studio package, configuration or licence behavior changed.
+
+Step 2 web tests passed 540/540; step 3 passed 541/541, including a new static home-page wording/glossary test. The final checks and exact manual steps are recorded in [D2 verification](IMPROVEMENTS.md#d2-verification-and-manual-checks). No live model/PayPal call, deployment or browser/helper connection was used. Browser layout, the revised CA prompt and licence/trial coverage remain **awaiting user verification**. Open `/dashboard` as a freelancer and `/ca` as a CA with an accepted share, after following those prerequisites; confirm the explanations and renamed labels while figures and client scope match the existing records.
 
 ## A1: shared security headers
 

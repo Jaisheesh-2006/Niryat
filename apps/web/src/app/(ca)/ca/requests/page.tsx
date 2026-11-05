@@ -15,7 +15,10 @@ export default async function CaRequests() {
   if (requests === null || me === null) throw new Error("CA requests unavailable");
   return (
     <>
-      <PageHeader title="Client requests" />
+      <PageHeader
+        title="Client requests"
+        description="Enter a client's private invitation code, then choose whether to view their records."
+      />
       <CaInvitationForm />
       {requests.length === 0 ? (
         <p>

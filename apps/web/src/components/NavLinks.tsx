@@ -38,7 +38,7 @@ const groups = [
     items: [
       { href: "/close", label: "Monthly close", icon: CalendarCheck },
       { href: "/tasks", label: "Tasks", icon: ListChecks },
-      { href: "/fira", label: "FIRA", icon: FileCheck },
+      { href: "/fira", label: "Payment proof", icon: FileCheck },
     ],
   },
   {
@@ -46,7 +46,7 @@ const groups = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: ChartColumn },
       { href: "/calendar", label: "Calendar", icon: CalendarDays },
-      { href: "/gstr1", label: "GSTR-1", icon: FileSpreadsheet },
+      { href: "/gstr1", label: "GST sales return", icon: FileSpreadsheet },
       { href: "/advance-tax", label: "Advance tax", icon: Calculator },
     ],
   },

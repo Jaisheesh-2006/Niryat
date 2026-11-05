@@ -39,7 +39,7 @@ it.each([
   ["get_client_history", "Read a client's history"],
   ["list_open_disputes", "Read open disputes"],
   ["get_month_overview", "Read the month's overview"],
-  ["list_fira_issues", "Read FIRA issues"],
+  ["list_fira_issues", "Read payment proof issues"],
   ["propose_reminder", "Drafted a reminder for your approval"],
   ["suggest_task", "Suggested a task"],
   ["write_summary", "Wrote the summary"],
@@ -69,7 +69,7 @@ function action(paypalAction: Action["paypalAction"], payload: Action["payload"]
 it("covers every invoice and FIRA status with the existing labels and specified tones", () => {
   expect(Object.keys(invoiceStatus)).toEqual(invoiceStatuses);
   expect(invoiceStatus).toEqual({
-    issued: { label: "Issued", tone: "neutral" },
+    issued: { label: "Prepared", tone: "neutral" },
     sent: { label: "Sent through PayPal", tone: "neutral" },
     partially_paid: { label: "Partly paid", tone: "attention" },
     paid: { label: "Paid", tone: "success" },
@@ -78,9 +78,9 @@ it("covers every invoice and FIRA status with the existing labels and specified 
   });
   expect(Object.keys(invoiceFira)).toEqual(firaStatuses);
   expect(invoiceFira).toEqual({
-    matched: { label: "Matched to FIRA", tone: "success" },
-    pending: { label: "Pending", tone: "neutral" },
-    missing: { label: "Missing from FIRA", tone: "danger" },
+    matched: { label: "Payment proof matched", tone: "success" },
+    pending: { label: "Payment proof not yet matched", tone: "neutral" },
+    missing: { label: "Payment proof missing", tone: "danger" },
   });
 });
 

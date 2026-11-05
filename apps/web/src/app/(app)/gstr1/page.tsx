@@ -2,6 +2,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { Gstr1Report, gstr1Messages, gstr1PreviewFor } from "../../../components/Gstr1Report";
 import { PageHeader } from "../../../components/PageHeader";
+import { Term } from "../../../components/Term";
 
 export const metadata = { title: "GSTR-1" };
 
@@ -17,7 +18,7 @@ export default async function Gstr1({
   if (!selected.ok)
     return (
       <>
-        <PageHeader title="GSTR-1" />
+        <PageHeader title="GST sales return" description={<Term term="gstr1" />} />
         <p>{selected.message}</p>
         <Link href="/profile">Edit profile</Link>
         <p>
@@ -28,7 +29,13 @@ export default async function Gstr1({
   const { preview } = selected;
   return (
     <>
-      <PageHeader title="GSTR-1" />
+      <PageHeader title="GST sales return" description={<Term term="gstr1" />} />
+      <p>
+        <Term term="lut" />
+      </p>
+      <p>
+        <Term term="credit_note" />
+      </p>
       <Gstr1Report preview={preview} />
     </>
   );

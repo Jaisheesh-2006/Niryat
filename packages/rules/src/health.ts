@@ -25,7 +25,7 @@ export function checkLut(
         "LUT_REQUIRED",
         "lut_missing",
         "high",
-        "No LUT on file. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund.",
+        "No yearly export form (LUT) is saved. Without a valid LUT, export invoices must charge IGST, which you then claim back as a refund. Ask your CA to file form RFD-11, then update your profile.",
       ),
     ];
   }
@@ -36,7 +36,7 @@ export function checkLut(
         "LUT_REQUIRED",
         "lut_not_started",
         "high",
-        `Your LUT is valid only from ${lutValidFrom}. Exports before then are not covered.`,
+        `Your yearly export form (LUT) is valid only from ${lutValidFrom}. Exports before then are not covered. Ask your CA how to handle any earlier invoices.`,
       ),
     ];
   }
@@ -47,7 +47,7 @@ export function checkLut(
         "LUT_REQUIRED",
         "lut_expired",
         "high",
-        `Your LUT expired on ${lutValidTo}. File a new LUT (FORM GST RFD-11) before your next export invoice.`,
+        `Your yearly export form (LUT) expired on ${lutValidTo}. Ask your CA to file a new form RFD-11 before your next export invoice, then update your profile.`,
       ),
     ];
   }
@@ -58,7 +58,7 @@ export function checkLut(
         "LUT_REQUIRED",
         "lut_expiring",
         "low",
-        `Your LUT expires on ${lutValidTo}. File a new LUT for the next financial year.`,
+        `Your yearly export form (LUT) expires on ${lutValidTo}. Ask your CA to file a new form RFD-11 for the next financial year, then update your profile.`,
       ),
     ];
   }
@@ -79,7 +79,7 @@ export function checkGstThreshold(
         "GST_THRESHOLD",
         "turnover_missing",
         "low",
-        "Add your expected turnover for this financial year so we can check the ₹20 lakh GST registration threshold.",
+        "Add your expected turnover for this financial year to your profile so we can check the ₹20 lakh GST registration threshold.",
       ),
     ];
   }
@@ -91,7 +91,7 @@ export function checkGstThreshold(
         "GST_THRESHOLD",
         "gst_threshold_exceeded",
         "high",
-        `Expected turnover of ₹${inr} is above ₹20 lakh, so GST registration is required (₹10 lakh in some special-category States).`,
+        `Expected turnover of ₹${inr} is above ₹20 lakh, so GST registration is required (₹10 lakh in some special-category States). Ask your CA to help you register.`,
       ),
     ];
   }
@@ -102,7 +102,7 @@ export function checkGstThreshold(
         "GST_THRESHOLD",
         "gst_threshold_near",
         "medium",
-        `Expected turnover of ₹${inr} is close to the ₹20 lakh GST registration threshold (₹10 lakh in some special-category States).`,
+        `Expected turnover of ₹${inr} is close to the ₹20 lakh GST registration threshold (₹10 lakh in some special-category States). Ask your CA when you need to register.`,
       ),
     ];
   }
@@ -122,7 +122,7 @@ export function evaluateHealth(
         "EXPORT_INVOICE_FIELDS",
         "gstin_missing",
         "medium",
-        "GSTIN missing. Export invoices must show your GSTIN.",
+        "Your GST identification number (GSTIN) is missing. Add it to your profile; export invoices must show it.",
       ),
     );
   }

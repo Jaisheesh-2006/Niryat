@@ -7,7 +7,7 @@ import { fromMinor, toMinor } from "./money";
 export const LOST_DISPUTE_OUTCOMES: readonly string[] = ["RESOLVED_BUYER_FAVOUR", "ACCEPTED"];
 
 const TAIL =
-  " This reduces the export value only when your bank (AD bank) accepts it; for invoices up to Rs 10 lakh your declaration may be enough. Until then, treat it as unrealised.";
+  " Ask your bank (AD bank) to accept the reduced export value; only its acceptance reduces the export value. For invoices up to Rs 10 lakh your declaration may be enough. Until then, treat the export money as not fully received (unrealised).";
 
 export function realisationFor(
   input: {
@@ -58,7 +58,7 @@ export function disputeAlert(
       ? `PayPal resolved the dispute on invoice ${input.invoiceNumber} in the buyer's favour. The export value is reduced only when your bank (AD bank) accepts it. Ask your bank to record the reduction.`
       : input.outcome !== null
         ? `PayPal resolved the dispute on invoice ${input.invoiceNumber} in your favour. The export value does not change.`
-        : `Client disputed ${money} on invoice ${input.invoiceNumber}. This export may no longer count as realised.${input.responseDueDate === null ? "" : ` Respond in PayPal by ${input.responseDueDate}.`}`,
+        : `Client disputed ${money} on invoice ${input.invoiceNumber}. This export may no longer count as fully received (realised). Check the dispute in PayPal.${input.responseDueDate === null ? "" : ` Respond in PayPal by ${input.responseDueDate}.`}`,
     citation: cite(rules, "REALISATION_ADJUSTMENT"),
   };
 }
@@ -83,7 +83,7 @@ export function refundTask(
   const value = `${invoice.currency} ${fromMinor(toMinor(refund.amount))}`;
   return {
     message: creditNote
-      ? `Refund of ${value} recorded on invoice ${invoice.number}. Consider issuing a GST credit note (declare it by ${declareBy}), and ask your bank (AD bank) to accept the reduced export value.`
+      ? `Refund of ${value} recorded on invoice ${invoice.number}. Consider issuing a document to adjust your GST invoice (credit note); declare it by ${declareBy}, and ask your bank (AD bank) to accept the reduced export value.`
       : `Refund of ${value} recorded on invoice ${invoice.number}. Ask your bank (AD bank) to accept the reduced export value.`,
     dueDate: creditNote ? declareBy : null,
     sourceRuleId,

@@ -85,12 +85,12 @@ export function presumptiveEligibility(
     state = "uncertain";
     reason = "profession_unknown";
     message =
-      "Answer the specified-profession question on your profile to check presumptive taxation.";
+      "Answer the profession question on your profile to check the simpler income calculation scheme (presumptive taxation).";
   } else if (!input.specifiedProfession) {
     state = "not_eligible";
     reason = "not_specified_profession";
     message =
-      "Presumptive taxation does not apply because you said your work is not a specified profession.";
+      "The simpler income calculation scheme (presumptive taxation) does not apply because you said your work is not a specified profession. Ask your CA how to calculate your income.";
   } else if (input.grossReceiptsInr === null) {
     state = "uncertain";
     reason = "rate_missing";
@@ -100,15 +100,15 @@ export function presumptiveEligibility(
     if (receipts <= BigInt(p.limit_inr) * 100n) {
       state = "eligible";
       deemedIncomeInr = fromMinor((receipts * BigInt(p.deemed_percent) + 50n) / 100n);
-      message = `Presumptive taxation may apply: your PayPal receipts for tax year ${input.taxYear} are within ${p.limit_inr} and you said your work is a specified profession. Deemed income is ${p.deemed_percent}% of gross receipts. This assumes you are a resident individual.`;
+      message = `The simpler income calculation scheme (presumptive taxation) may apply: your PayPal receipts for tax year ${input.taxYear} are within ${p.limit_inr} and you said your work is a specified profession. Income under this scheme (deemed income) is ${p.deemed_percent}% of gross receipts. This assumes you are a resident individual. Confirm eligibility with your CA.`;
     } else if (receipts <= BigInt(p.limit_low_cash_inr) * 100n) {
       state = "uncertain";
       reason = "cash_share_unknown";
-      message = `Your PayPal receipts are between ${p.limit_inr} and ${p.limit_low_cash_inr}. Presumptive taxation applies only if cash receipts are at most ${p.cash_percent_max}% of all receipts, and Niryat sees only PayPal.`;
+      message = `Your PayPal receipts are between ${p.limit_inr} and ${p.limit_low_cash_inr}. The simpler income calculation scheme (presumptive taxation) applies only if cash receipts are at most ${p.cash_percent_max}% of all receipts, and Niryat sees only PayPal. Ask your CA to check receipts from all sources.`;
     } else {
       state = "not_eligible";
       reason = "over_limit";
-      message = `Your PayPal receipts for tax year ${input.taxYear} are above ${p.limit_low_cash_inr}, so presumptive taxation does not apply.`;
+      message = `Your PayPal receipts for tax year ${input.taxYear} are above ${p.limit_low_cash_inr}, so the simpler income calculation scheme (presumptive taxation) does not apply. Ask your CA how to calculate your income.`;
     }
   }
   return { state, reason, message, deemedIncomeInr, citation: cite(rules, "PRESUMPTIVE_TAX") };
