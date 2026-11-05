@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DashboardLlm } from "@niryat/agent";
 import { createUser, type Db, findUserByEmail, findUserById, signInWithPayPal } from "@niryat/db";
 import type { PayPalLedger, PayPalLogin, PayPalRestClient } from "@niryat/paypal";
-import { credentialsSchema, type UserRole } from "@niryat/shared";
+import { credentialsSchema, type ManualCloseInput, type UserRole } from "@niryat/shared";
 import { Hono } from "hono";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { z } from "zod";
@@ -25,6 +25,7 @@ export interface AppDeps {
   publicAppUrl?: string;
   ai?: NonNullable<CloseDeps["ai"]> & { dashboard: DashboardLlm };
   runInBackground?: (work: () => Promise<void>) => void | Promise<void>;
+  dispatchMonthlyClose?: (input: ManualCloseInput) => Promise<void>;
 }
 
 const dummyHash = `scrypt$16384$8$1$${Buffer.alloc(16).toString("base64")}$${Buffer.alloc(64).toString("base64")}`;

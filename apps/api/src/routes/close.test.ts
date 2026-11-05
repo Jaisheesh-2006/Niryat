@@ -26,21 +26,26 @@ describe("close route boundaries without services", () => {
     expect((await app.request("/close", { method })).status).toBe(401);
   });
 
-  it.each(['{"asOf":"2027-01-01"}', '{"month":"2026-09"}', "null", "[]", "{"])(
-    "rejects invalid input %s before starting a run",
-    async (body) => {
-      vi.spyOn(session, "readSession").mockResolvedValue(randomUUID());
-      const start = vi.spyOn(storage, "startAgentRun");
-      const response = await app.request("/close", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-      });
-      expect(response.status).toBe(400);
-      expect(await response.json()).toMatchObject({ error: "invalid_request" });
-      expect(start).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    '{"asOf":"2027-01-01"}',
+    '{"month":"2026-09"}',
+    '{"userId":"40000000-0000-4000-8000-000000000001"}',
+    '{"runId":"40000000-0000-4000-8000-000000000002"}',
+    "null",
+    "[]",
+    "{",
+  ])("rejects invalid input %s before starting a run", async (body) => {
+    vi.spyOn(session, "readSession").mockResolvedValue(randomUUID());
+    const start = vi.spyOn(storage, "startAgentRun");
+    const response = await app.request("/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "invalid_request" });
+    expect(start).not.toHaveBeenCalled();
+  });
 
   it("requires JSON", async () => {
     vi.spyOn(session, "readSession").mockResolvedValue(randomUUID());
@@ -82,6 +87,76 @@ describe("close route boundaries without services", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("dispatches exactly the reserved manual run and never queues in-process work", async () => {
+    const userId = randomUUID();
+    const runId = randomUUID();
+    vi.spyOn(session, "readSession").mockResolvedValue(userId);
+    vi.spyOn(storage, "startAgentRun").mockResolvedValue({ ok: true, runId });
+    const execute = vi.spyOn(close, "executeAgentRun").mockResolvedValue();
+    const dispatchMonthlyClose = vi
+      .fn<NonNullable<AppDeps["dispatchMonthlyClose"]>>()
+      .mockResolvedValue();
+    const runInBackground = vi.fn<NonNullable<AppDeps["runInBackground"]>>();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-31T19:00:00Z"));
+    try {
+      const response = await createApp({ ...deps, dispatchMonthlyClose, runInBackground }).request(
+        "/close",
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+      );
+      expect(response.status).toBe(202);
+      expect(agentRunSchema.parse(await response.json())).toMatchObject({
+        id: runId,
+        trigger: "manual",
+        status: "running",
+      });
+      expect(dispatchMonthlyClose).toHaveBeenCalledExactlyOnceWith({
+        userId,
+        runId,
+        month: "2026-11",
+        asOf: "2026-11-01",
+        trigger: "manual",
+      });
+      expect(runInBackground).not.toHaveBeenCalled();
+      expect(execute).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not dispatch when a close is already running", async () => {
+    vi.spyOn(session, "readSession").mockResolvedValue(randomUUID());
+    vi.spyOn(storage, "startAgentRun").mockResolvedValue({ ok: false, reason: "running" });
+    const dispatchMonthlyClose = vi.fn();
+    const response = await createApp({ ...deps, dispatchMonthlyClose }).request("/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(response.status).toBe(409);
+    expect(dispatchMonthlyClose).not.toHaveBeenCalled();
+  });
+
+  it("reports dispatch uncertainty safely and preserves the reservation without local fallback", async () => {
+    vi.spyOn(session, "readSession").mockResolvedValue(randomUUID());
+    vi.spyOn(storage, "startAgentRun").mockResolvedValue({ ok: true, runId: randomUUID() });
+    const finish = vi.spyOn(storage, "finishAgentRun");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const dispatchMonthlyClose = vi.fn(async () => {
+      throw new Error("private token/service output");
+    });
+    const runInBackground = vi.fn();
+    const response = await createApp({ ...deps, dispatchMonthlyClose, runInBackground }).request(
+      "/close",
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "close_dispatch_failed" });
+    expect(log).toHaveBeenCalledExactlyOnceWith("close_dispatch_failed");
+    expect(finish).not.toHaveBeenCalled();
+    expect(runInBackground).not.toHaveBeenCalled();
   });
 
   it("logs only an error key when default background work fails", async () => {
@@ -186,6 +261,36 @@ describe.skipIf(!testDatabaseUrl)("close routes with stored runs", () => {
     expect(await response.json()).toEqual({ error: "close_running" });
     expect(runInBackground).toHaveBeenCalledTimes(1);
     expect((await page()).runs[0]?.status).toBe("running");
+  });
+
+  it("finishes a dispatched reservation after the API is replaced and ignores duplicate delivery", async () => {
+    const dispatchMonthlyClose = vi
+      .fn<NonNullable<AppDeps["dispatchMonthlyClose"]>>()
+      .mockResolvedValue();
+    const runInBackground = vi.fn();
+    app = createApp({ ...deps, dispatchMonthlyClose, runInBackground });
+    const response = await post();
+    expect(response.status).toBe(202);
+    expect((await post()).status).toBe(409);
+    const input = dispatchMonthlyClose.mock.calls[0]?.[0];
+    if (!input) throw new Error("Expected dispatched input");
+    expect(dispatchMonthlyClose).toHaveBeenCalledOnce();
+    app = createApp(deps);
+    expect(
+      await close.closeAllUsers({ db: t.db, encryptionKey: deps.encryptionKey }, input, new Date()),
+    ).toMatchObject({ users: 1, completed: 1, failed: 0 });
+    const completed = await page();
+    expect(completed.runs[0]).toMatchObject({
+      id: input.runId,
+      trigger: "manual",
+      status: "completed",
+    });
+    expect(completed.runs[0]?.toolCalls[0]?.tool).toBe("workflow_claim");
+    expect(
+      await close.closeAllUsers({ db: t.db, encryptionKey: deps.encryptionKey }, input, new Date()),
+    ).toMatchObject({ skipped: 1, completed: 0 });
+    expect(await page()).toEqual(completed);
+    expect(runInBackground).not.toHaveBeenCalled();
   });
 
   it("returns only the latest twelve close/reminder runs and fifty reminder actions for the user", async () => {

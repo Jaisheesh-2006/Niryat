@@ -4,6 +4,13 @@ import { z } from "zod";
 export const identifierSchema = z.string().trim().min(1);
 export type Identifier = z.infer<typeof identifierSchema>;
 
+export const syncStatusSchema = z.object({
+  lastSuccessAt: z.iso.datetime().nullable(),
+  lastStatus: z.enum(["running", "ok", "failed"]).nullable(),
+  stale: z.boolean(),
+});
+export type SyncStatus = z.infer<typeof syncStatusSchema>;
+
 export const credentialsSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
   password: z.string().min(12).max(128),
@@ -779,9 +786,30 @@ export const agentRunKinds = ["monthly_close", "reminders", "extraction", "dashb
 export type AgentRunKind = (typeof agentRunKinds)[number];
 export const agentRunTriggers = ["manual", "scheduled", "nightly"] as const;
 export type AgentRunTrigger = (typeof agentRunTriggers)[number];
+
+const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+export const manualCloseInputSchema = z.strictObject({
+  userId: z.uuid(),
+  runId: z.uuid(),
+  month: monthSchema,
+  asOf: z.iso.date(),
+  trigger: z.literal("manual"),
+});
+export type ManualCloseInput = z.infer<typeof manualCloseInputSchema>;
+export const monthlyCloseInputSchema = z.union([
+  manualCloseInputSchema,
+  z
+    .strictObject({
+      month: manualCloseInputSchema.shape.month.optional(),
+      asOf: z.iso.date().optional(),
+      userId: z.uuid().optional(),
+      trigger: z.enum(["manual", "scheduled"]).optional(),
+    })
+    .refine((input) => input.trigger !== "manual" || Boolean(input.userId), { path: ["userId"] }),
+]);
+export type MonthlyCloseInput = z.infer<typeof monthlyCloseInputSchema>;
 export const aiStatuses = ["used", "unavailable", "budget_exhausted", "failed"] as const;
 export type AiStatus = (typeof aiStatuses)[number];
-const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 export const agentAdviceSchema = z.object({
   advice: z.enum(["send", "hold"]),
   reason: z.string(),

@@ -13,20 +13,37 @@ const context = {
 
 beforeEach(() => vi.resetAllMocks());
 
-it.each([{}, { month: "2026-10" }, { month: "2026-10", asOf: "2027-06-01" }])(
-  "accepts scheduled input %j",
-  (input) => expect(monthlyCloseInputSchema.parse(input)).toEqual(input),
+const userId = "40000000-0000-4000-8000-000000000001";
+const runId = "40000000-0000-4000-8000-000000000002";
+const manual = { userId, runId, month: "2026-11", asOf: "2026-11-05", trigger: "manual" } as const;
+
+it.each([
+  {},
+  { month: "2026-10" },
+  { month: "2026-10", asOf: "2027-06-01" },
+  { userId },
+  { userId, trigger: "manual" },
+  manual,
+])("accepts scheduled input %j", (input) =>
+  expect(monthlyCloseInputSchema.parse(input)).toEqual(input),
 );
 
-it.each([{ userId: "example" }, { month: "2026-99" }, { asOf: "2027-02-29" }])(
-  "rejects invalid task input %j before running a close",
-  (input) => {
-    expect(() => monthlyClose.func(context, input)).toThrow();
-    expect(runScheduledCloseFromEnv).not.toHaveBeenCalled();
-  },
-);
+it.each([
+  { userId: "example" },
+  { month: "2026-99" },
+  { asOf: "2027-02-29" },
+  { trigger: "manual" },
+  { ...manual, runId: "bad" },
+  { runId },
+  { ...manual, userId: undefined },
+  { ...manual, trigger: "scheduled" },
+  { ...manual, extra: true },
+])("rejects invalid task input %j before running a close", (input) => {
+  expect(() => monthlyClose.func(context, input)).toThrow();
+  expect(runScheduledCloseFromEnv).not.toHaveBeenCalled();
+});
 
-it.each([{}, { month: "2026-10", asOf: "2027-06-01" }])(
+it.each([{}, { month: "2026-10", asOf: "2027-06-01" }, manual])(
   "runs the scheduled close for %j",
   async (input) => {
     const result = { users: 2, completed: 2, failed: 0, running: 0 };

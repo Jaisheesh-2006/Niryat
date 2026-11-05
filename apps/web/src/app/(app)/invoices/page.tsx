@@ -1,12 +1,15 @@
 import { clientSchema, closePageSchema, invoiceViewSchema } from "@niryat/shared";
+import { Suspense } from "react";
 import { z } from "zod";
 import { ApprovalCard } from "../../../components/ApprovalCard";
+import { CardBoundary } from "../../../components/CardBoundary";
 import { EmptyState } from "../../../components/EmptyState";
 import { ExtractPanel } from "../../../components/ExtractPanel";
 import { FileText } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
 import { RefundForm } from "../../../components/RefundForm";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { SyncFreshness } from "../../../components/SyncFreshness";
 import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate, formatDateTime, formatMoney } from "../../../lib/format";
@@ -34,6 +37,11 @@ export default async function Invoices() {
           </details>
         }
       />
+      <CardBoundary title="PayPal data freshness">
+        <Suspense fallback={<p>Loading PayPal data freshness…</p>}>
+          <SyncFreshness />
+        </Suspense>
+      </CardBoundary>
       <details>
         <summary>What these payment terms mean</summary>
         <p>

@@ -814,6 +814,66 @@ describe.skipIf(!testDatabaseUrl)("monthly close orchestration", () => {
     ).toBe("completed");
   });
 
+  it("single-user workflow mode excludes other freelancers and rejects a CA", async () => {
+    const other = await seedUser();
+    expect(
+      await closeAllUsers(
+        deps,
+        { userId, month: "2026-10", asOf: "2027-06-11", trigger: "manual" },
+        now,
+      ),
+    ).toEqual({ users: 1, completed: 1, failed: 0, running: 0 });
+    expect((await latest()).trigger).toBe("manual");
+    expect(await storage.listAgentRuns(t.db, other.userId, ["monthly_close"], 10)).toEqual([]);
+    expect(await storage.listTasks(t.db, other.userId)).toEqual([]);
+    const ca = await storage.createUser(t.db, { email: "worker-ca@example.test", role: "ca" });
+    if (!ca) throw new Error("Expected CA");
+    await expect(closeAllUsers(deps, { userId: ca.id }, now)).rejects.toThrow("invalid_close_user");
+  });
+
+  it("reserved workflow delivery survives a date rollover and never resets a claimed reminder", async () => {
+    const dates = { ...input(), month: "2026-10", asOf: "2027-06-11" };
+    const reservedAt = new Date("2027-06-11T18:29:59Z");
+    const started = await storage.startAgentRun(t.db, dates, reservedAt);
+    if (!started.ok) throw new Error("Expected reservation");
+    await storage.proposeReminder(t.db, userId, {
+      invoiceId,
+      dedupeKey: `reminder:${invoiceId}:30`,
+      payload: { stage: 30, agent: null },
+    });
+    const [proposal] = await storage.listReminderActions(t.db, userId, 10);
+    if (!proposal) throw new Error("Expected reminder");
+    await storage.actionStore(t.db).claim(proposal.id, userId);
+    const before = (await t.db.select().from(storage.agentActions)).find(
+      (row) => row.id === proposal.id,
+    );
+    const task = {
+      userId,
+      runId: started.runId,
+      month: dates.month,
+      asOf: dates.asOf,
+      trigger: "manual",
+    } as const;
+    const afterMidnight = new Date("2027-06-11T18:30:01Z");
+    expect(await closeAllUsers(deps, task, afterMidnight)).toMatchObject({
+      completed: 1,
+      failed: 0,
+    });
+    expect(await closeAllUsers(deps, task, afterMidnight)).toMatchObject({
+      skipped: 1,
+      completed: 0,
+    });
+    expect((await latest()).asOf).toBe("2027-06-11");
+    expect(
+      (await t.db.select().from(storage.agentActions)).find((row) => row.id === proposal.id),
+    ).toEqual(before);
+    expect(
+      (await storage.listReminderActions(t.db, userId, 10)).filter(
+        (action) => action.payload.stage === 30,
+      ),
+    ).toHaveLength(1);
+  });
+
   it("nightly skips empty candidates, runs only reminder steps when due, and ensures overdue tasks", async () => {
     expect(await nightlyReminders(deps, now)).toEqual({
       users: 1,

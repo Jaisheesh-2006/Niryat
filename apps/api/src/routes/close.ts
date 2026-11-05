@@ -49,7 +49,23 @@ export function closeRoutes(deps: AppDeps): Hono {
       summary: null,
       toolCalls: [],
     });
-    await runInBackground(() => executeAgentRun(deps, { ...input, runId: started.runId }, now));
+    if (deps.dispatchMonthlyClose) {
+      try {
+        await deps.dispatchMonthlyClose({
+          userId,
+          month: input.month,
+          asOf,
+          trigger: "manual",
+          runId: started.runId,
+        });
+      } catch {
+        // Dispatch may have succeeded before its response was lost; keep the reservation until stale recovery.
+        console.error("close_dispatch_failed");
+        return c.json({ error: "close_dispatch_failed" }, 503);
+      }
+    } else {
+      await runInBackground(() => executeAgentRun(deps, { ...input, runId: started.runId }, now));
+    }
     return c.json(run, 202);
   });
   return routes;

@@ -71,6 +71,13 @@
       "when": 1793857442583,
       "tag": "0009_quick_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793893377080,
+      "tag": "0010_hard_pestilence",
+      "breakpoints": true
     }
   ]
 }

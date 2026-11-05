@@ -14,6 +14,7 @@ import { gstr1Routes } from "./routes/gstr1";
 import { healthCheckRoutes } from "./routes/health-check";
 import { invoiceRoutes } from "./routes/invoices";
 import { profileRoutes } from "./routes/profile";
+import { syncStatusRoutes } from "./routes/sync-status";
 import { taskRoutes } from "./routes/tasks";
 import { webhookRoutes } from "./routes/webhooks";
 import { rules } from "./rules";
@@ -38,6 +39,7 @@ export function createApp(deps?: AppDeps): Hono {
     app.route("/", extractRoutes(deps));
     app.route("/", invoiceRoutes(deps));
     app.route("/", taskRoutes(deps));
+    app.route("/", syncStatusRoutes(deps));
     app.route("/", authRoutes(deps));
     app.route("/", profileRoutes(deps));
     app.route("/", healthCheckRoutes(deps));

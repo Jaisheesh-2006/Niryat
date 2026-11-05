@@ -1,5 +1,21 @@
 import { expect, it } from "vitest";
-import { loadAiEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
+import { loadAiEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv, loadWorkflowEnv } from "./env";
+
+it("enables workflow dispatch only with a key or explicit local-dev mode", () => {
+  expect(loadWorkflowEnv({})).toBeUndefined();
+  expect(loadWorkflowEnv({ RENDER_API_KEY: "", RENDER_USE_LOCAL_DEV: "" })).toBeUndefined();
+  expect(loadWorkflowEnv({ RENDER_USE_LOCAL_DEV: "false" })).toBeUndefined();
+  expect(loadWorkflowEnv({ RENDER_API_KEY: "test-key" })).toEqual({ RENDER_API_KEY: "test-key" });
+  expect(loadWorkflowEnv({ RENDER_USE_LOCAL_DEV: "true" })).toEqual({
+    RENDER_USE_LOCAL_DEV: "true",
+  });
+  expect(() => loadWorkflowEnv({ RENDER_API_KEY: "   " })).toThrow(
+    "Invalid environment: RENDER_API_KEY. See .env.example.",
+  );
+  expect(() => loadWorkflowEnv({ RENDER_USE_LOCAL_DEV: "private-invalid" })).toThrow(
+    "Invalid environment: RENDER_USE_LOCAL_DEV. See .env.example.",
+  );
+});
 
 it("enables Render proxy trust only for the validated platform marker", () => {
   expect(loadEnv({}).RENDER).toBeUndefined();

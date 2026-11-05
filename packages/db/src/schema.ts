@@ -18,6 +18,21 @@ import {
 
 // Remaining structural stubs follow PLAN section 13.
 // gstin, pan_last4 and addresses hold AES-GCM ciphertext (see encryption.ts).
+export const syncRuns = pgTable(
+  "sync_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    status: text("status", { enum: ["running", "ok", "failed"] }).notNull(),
+    summary: jsonb("summary").notNull().default({}),
+  },
+  (table) => [
+    check("sync_runs_status_check", sql`${table.status} IN ('running', 'ok', 'failed')`),
+    uniqueIndex("sync_runs_one_running").on(table.status).where(sql`${table.status} = 'running'`),
+  ],
+);
+
 export const users = pgTable(
   "users",
   {

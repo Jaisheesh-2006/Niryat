@@ -1,21 +1,11 @@
 import { runScheduledCloseFromEnv } from "@niryat/api/close";
+import { monthlyCloseInputSchema } from "@niryat/shared";
 import { type TaskContext, task } from "@renderinc/sdk/workflows";
-import { z } from "zod";
 
-export const monthlyCloseInputSchema = z.strictObject({
-  month: z
-    .string()
-    .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
-    .optional(),
-  asOf: z.iso.date().optional(),
-});
+export { monthlyCloseInputSchema } from "@niryat/shared";
 export const monthlyClose = task(
   { name: "monthlyClose", timeoutSeconds: 900 },
   (_context: TaskContext, input: unknown) => {
-    const { month, asOf } = monthlyCloseInputSchema.parse(input);
-    return runScheduledCloseFromEnv({
-      ...(month !== undefined ? { month } : {}),
-      ...(asOf !== undefined ? { asOf } : {}),
-    });
+    return runScheduledCloseFromEnv(monthlyCloseInputSchema.parse(input));
   },
 );

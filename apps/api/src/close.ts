@@ -11,9 +11,11 @@ import {
 } from "@niryat/agent";
 import {
   aiSpendSince,
+  claimWorkflowClose,
   createDb,
   type Db,
   ensureTask,
+  findUserById,
   finishAgentRun,
   listFiraDocuments,
   listInvoices,
@@ -37,6 +39,8 @@ import {
   agentRunSchema,
   type CloseSummary,
   closeSummarySchema,
+  type MonthlyCloseInput,
+  monthlyCloseInputSchema,
   reminderStageSchema,
 } from "@niryat/shared";
 import { z } from "zod";
@@ -553,20 +557,38 @@ function scheduledInput(input: { month?: string; asOf?: string }, now: Date) {
   return { month: parsed.month ?? previous.toISOString().slice(0, 7), asOf };
 }
 
-export async function closeAllUsers(
-  deps: CloseDeps,
-  input: { month?: string; asOf?: string },
-  now: Date,
-) {
-  const dates = scheduledInput(input, now);
-  const users = await listUserIds(deps.db);
+export async function closeAllUsers(deps: CloseDeps, input: MonthlyCloseInput, now: Date) {
+  const parsed = monthlyCloseInputSchema.parse(input);
+  const dates =
+    "runId" in parsed
+      ? { month: parsed.month, asOf: parsed.asOf }
+      : scheduledInput(
+          {
+            ...(parsed.month !== undefined ? { month: parsed.month } : {}),
+            ...(parsed.asOf !== undefined ? { asOf: parsed.asOf } : {}),
+          },
+          now,
+        );
+  const user = parsed.userId ? await findUserById(deps.db, parsed.userId) : undefined;
+  if (parsed.userId && user?.role !== "freelancer") throw new Error("invalid_close_user");
+  const users = parsed.userId ? [parsed.userId] : await listUserIds(deps.db);
   const result = { users: users.length, completed: 0, failed: 0, running: 0 };
+  if ("runId" in parsed) {
+    if (!(await claimWorkflowClose(deps.db, parsed, now))) return { ...result, skipped: 1 };
+    try {
+      await executeAgentRun(deps, { ...parsed, kind: "monthly_close" }, now);
+      result.completed++;
+    } catch {
+      result.failed++;
+    }
+    return result;
+  }
   for (const userId of users) {
     try {
       result[
         await startAndExecute(
           deps,
-          { ...dates, userId, kind: "monthly_close", trigger: "scheduled" },
+          { ...dates, userId, kind: "monthly_close", trigger: parsed.trigger ?? "scheduled" },
           now,
         )
       ]++;
@@ -603,9 +625,17 @@ export async function nightlyReminders(deps: CloseDeps, now: Date) {
   return result;
 }
 
-export async function runScheduledCloseFromEnv(input: { month?: string; asOf?: string }) {
+export async function runScheduledCloseFromEnv(input: MonthlyCloseInput) {
   const now = new Date();
-  scheduledInput(input, now);
+  const parsed = monthlyCloseInputSchema.parse(input);
+  if (!("runId" in parsed))
+    scheduledInput(
+      {
+        ...(parsed.month !== undefined ? { month: parsed.month } : {}),
+        ...(parsed.asOf !== undefined ? { asOf: parsed.asOf } : {}),
+      },
+      now,
+    );
   try {
     process.loadEnvFile(resolve("../../.env"));
   } catch (error) {
@@ -648,7 +678,7 @@ export async function runScheduledCloseFromEnv(input: { month?: string; asOf?: s
             }
           : {}),
       },
-      input,
+      parsed,
       now,
     );
   } finally {

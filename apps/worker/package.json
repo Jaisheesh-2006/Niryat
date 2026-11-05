@@ -17,6 +17,7 @@
   "dependencies": {
     "@niryat/api": "workspace:*",
     "@niryat/config": "workspace:*",
+    "@niryat/shared": "workspace:*",
     "@renderinc/sdk": "1.4.0",
     "zod": "4.6.7"
   },

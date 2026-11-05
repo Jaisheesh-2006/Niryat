@@ -3,10 +3,19 @@ import { serve } from "@hono/node-server";
 import { createClaudeRunner, createDashboardLlm, createToolkitReader } from "@niryat/agent";
 import { createDb, parseEncryptionKey } from "@niryat/db";
 import { createPayPalLedger, createPayPalLogin, createPayPalRestClient } from "@niryat/paypal";
-import { loadAiEnv, loadAuthEnv, loadEnv, loadFileStorageEnv, loadPayPalEnv } from "./env";
+import { Render } from "@renderinc/sdk";
+import {
+  loadAiEnv,
+  loadAuthEnv,
+  loadEnv,
+  loadFileStorageEnv,
+  loadPayPalEnv,
+  loadWorkflowEnv,
+} from "./env";
 import { createS3FileStore } from "./files";
 import { createApp } from "./index";
 import { createRateLimiter, RATE_LIMITS } from "./rate-limit";
+import { createCloseDispatcher } from "./workflows";
 
 try {
   process.loadEnvFile(resolve("../../.env"));
@@ -18,6 +27,7 @@ const authEnv = loadAuthEnv(process.env);
 const paypalEnv = loadPayPalEnv(process.env);
 const fileStorageEnv = loadFileStorageEnv(process.env);
 const aiEnv = loadAiEnv(process.env);
+const workflowEnv = loadWorkflowEnv(process.env);
 const paypalCredentials = paypalEnv
   ? { clientId: paypalEnv.PAYPAL_CLIENT_ID, clientSecret: paypalEnv.PAYPAL_CLIENT_SECRET }
   : undefined;
@@ -37,6 +47,16 @@ const app =
           share: createRateLimiter(RATE_LIMITS.share),
         },
         publicAppUrl: env.PUBLIC_APP_URL,
+        ...(workflowEnv
+          ? {
+              dispatchMonthlyClose: createCloseDispatcher(
+                new Render({
+                  ...(workflowEnv.RENDER_API_KEY ? { token: workflowEnv.RENDER_API_KEY } : {}),
+                  useLocalDev: workflowEnv.RENDER_USE_LOCAL_DEV === "true",
+                }).workflows,
+              ),
+            }
+          : {}),
         ...(aiEnv
           ? {
               ai: {

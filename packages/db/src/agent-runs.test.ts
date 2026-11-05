@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { listReminderActions, proposeReminder, rejectAction, reminderKeys } from "./actions";
 import {
   aiSpendSince,
+  claimWorkflowClose,
   finishAgentRun,
   listAgentRuns,
   logToolCall,
@@ -106,6 +107,48 @@ describe.skipIf(!testDatabaseUrl)("agent-run storage", () => {
     ]);
     expect(results.filter((result) => result.ok)).toHaveLength(1);
     expect(results).toContainEqual({ ok: false, reason: "running" });
+  });
+
+  it("claims a reserved workflow once, with exact owner/dates and stale/completed checks", async () => {
+    const a = await user();
+    const b = await user();
+    const runId = await start(a);
+    const input = {
+      userId: a,
+      runId,
+      month: "2026-10",
+      asOf: "2026-10-30",
+      trigger: "manual",
+    } as const;
+    for (const wrong of [
+      { ...input, userId: b },
+      { ...input, month: "2026-09" },
+      { ...input, asOf: "2026-10-29" },
+    ]) {
+      expect(await claimWorkflowClose(t.db, wrong, now)).toBe(false);
+    }
+    expect(await claimWorkflowClose(t.db, input, new Date(now.getTime() + 15 * 60_000 + 1))).toBe(
+      false,
+    );
+    const claims = await Promise.all([
+      claimWorkflowClose(t.db, input, now),
+      claimWorkflowClose(t.db, input, now),
+    ]);
+    expect(claims.sort()).toEqual([false, true]);
+    expect((await listAgentRuns(t.db, a, ["monthly_close"], 1))[0]?.toolCalls).toMatchObject([
+      { seq: 1, tool: "workflow_claim" },
+    ]);
+    await finishAgentRun(t.db, runId, {
+      status: "failed",
+      error: "stale",
+      summary: null,
+      aiStatus: null,
+      aiCostUsd: "0",
+    });
+    expect(await claimWorkflowClose(t.db, input, now)).toBe(false);
+    const fresh = await start(a);
+    expect(await claimWorkflowClose(t.db, input, now)).toBe(false);
+    expect(await claimWorkflowClose(t.db, { ...input, runId: fresh }, now)).toBe(true);
   });
 
   it("logs tool calls in sequence and scopes runs to the user and kind", async () => {

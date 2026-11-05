@@ -199,6 +199,12 @@ async function responseResult(response: Response, reminderApproval = false): Pro
       return { ok: false, message: "You already have a CA request. Cancel it first." };
     case "close_running":
       return { ok: false, message: "A close is already running. Wait for it to finish." };
+    case "close_dispatch_failed":
+      return {
+        ok: false,
+        message:
+          "The monthly close could not be confirmed. Refresh Monthly close to check its status. If it stays running, wait 15 minutes before trying again.",
+      };
     case "ai_unavailable":
       return {
         ok: false,

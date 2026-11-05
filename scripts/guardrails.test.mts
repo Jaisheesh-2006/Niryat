@@ -16,13 +16,29 @@ test("Render services explicitly use production mode", () => {
     "niryat-api",
     "niryat-web",
     "niryat-sync",
+    "niryat-sync-light",
     "niryat-monthly-close",
     "niryat-worker",
   ]) {
-    const service = services.find((block) => block.includes(`    name: ${name}\n`));
+    const service = services.find((block) => block.includes(`\n    name: ${name}\n`));
     assert.ok(service, name);
     assert.match(service, /^ {6}- key: NODE_ENV\n {8}value: production$/m, name);
   }
+});
+
+test("light sync polls each half hour without AI while nightly reminders keep their schedule", () => {
+  const services = readFileSync(resolve(root, "render.yaml"), "utf8")
+    .replaceAll("\r\n", "\n")
+    .split(/^ {2}- type: /m);
+  const light = services.find((block) => block.includes("    name: niryat-sync-light\n"));
+  const nightly = services.find((block) => block.includes("    name: niryat-sync\n"));
+  assert.ok(light);
+  assert.ok(nightly);
+  assert.match(light, /schedule: "\*\/30 \* \* \* \*"/);
+  assert.match(light, /startCommand: corepack pnpm --filter @niryat\/api sync:payments --no-agent/);
+  assert.doesNotMatch(light, /ANTHROPIC_API_KEY|CLAUDE_MODEL|AI_MONTHLY_BUDGET_USD/);
+  assert.match(nightly, /schedule: "30 20 \* \* \*"/);
+  assert.match(nightly, /startCommand: corepack pnpm --filter @niryat\/api sync:payments\n/);
 });
 
 test("Render web reaches the API privately and Turbo includes the address at build time", () => {
@@ -37,6 +53,20 @@ test("Render web reaches the API privately and Turbo includes the address at bui
   );
   const turbo = readFileSync(resolve(root, "turbo.json"), "utf8");
   assert.match(turbo, /"@niryat\/web#build":\s*\{[^}]*"env":\s*\["API_INTERNAL_HOSTPORT"\]/);
+});
+
+test("manual and scheduled close dispatch keep the Render key on server services", () => {
+  const services = readFileSync(resolve(root, "render.yaml"), "utf8")
+    .replaceAll("\r\n", "\n")
+    .split(/^ {2}- type: /m);
+  for (const name of ["niryat-api", "niryat-monthly-close"]) {
+    const service = services.find((block) => block.includes(`\n    name: ${name}\n`));
+    assert.ok(service, name);
+    assert.match(service, /^ {6}- key: RENDER_API_KEY\n {8}sync: false$/m);
+  }
+  const web = services.find((block) => block.includes("    name: niryat-web\n"));
+  assert.ok(web);
+  assert.doesNotMatch(web, /RENDER_API_KEY/);
 });
 
 function runHook(mode: string, input: unknown) {

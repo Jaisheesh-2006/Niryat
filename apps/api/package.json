@@ -27,6 +27,7 @@
     "@niryat/paypal": "workspace:*",
     "@niryat/rules": "workspace:*",
     "@niryat/shared": "workspace:*",
+    "@renderinc/sdk": "1.4.0",
     "aws4fetch": "1.0.20",
     "hono": "4.13.13",
     "pdf-lib": "1.17.1",

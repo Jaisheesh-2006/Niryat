@@ -11,5 +11,6 @@ export * from "./invoices";
 export * from "./payments";
 export * from "./profiles";
 export * from "./schema";
+export * from "./sync-runs";
 export * from "./tasks";
 export * from "./users";

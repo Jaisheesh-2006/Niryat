@@ -31,6 +31,7 @@ beforeEach(() => {
   responses.set("/health-check", null);
   responses.set("/tasks", []);
   responses.set("/invoices", []);
+  responses.set("/sync-status", { lastSuccessAt: null, lastStatus: null, stale: true });
   vi.mocked(apiGet).mockImplementation(async (path, schema) => {
     expect(responses.has(path)).toBe(true);
     const response = responses.get(path);

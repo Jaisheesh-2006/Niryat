@@ -219,6 +219,10 @@ it.each([undefined, "admin", "https://evil.example"])(
 
 it.each([
   ["close_running", "A close is already running. Wait for it to finish."],
+  [
+    "close_dispatch_failed",
+    "The monthly close could not be confirmed. Refresh Monthly close to check its status. If it stays running, wait 15 minutes before trying again.",
+  ],
   ["ai_unavailable", "AI is not configured, so extraction is unavailable. Fill in the form below."],
   ["ai_budget_exhausted", "The monthly AI budget is used up. Fill in the form below."],
   ["extraction_running", "Claude is already reading your text. Wait for it to finish."],

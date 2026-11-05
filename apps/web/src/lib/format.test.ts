@@ -1,8 +1,18 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { formatDate, formatDateTime, formatMoney, formatMonth } from "./format";
+import { formatDate, formatDateTime, formatMoney, formatMonth, formatRelativeTime } from "./format";
 
 beforeEach(() => vi.stubEnv("TZ", "UTC"));
 afterEach(() => vi.unstubAllEnvs());
+
+it.each([
+  ["2026-11-05T12:00:01Z", "this minute"],
+  ["2026-11-05T11:59:01Z", "this minute"],
+  ["2026-11-05T11:59:00Z", "1 minute ago"],
+  ["2026-11-05T11:01:00Z", "59 minutes ago"],
+  ["2026-11-05T11:00:00Z", "1 hour ago"],
+])("formats sync freshness for %s", (value, expected) => {
+  expect(formatRelativeTime(value, new Date("2026-11-05T12:00:00Z"))).toBe(expected);
+});
 
 it("formats a date-only value", () => {
   expect(formatDate("2026-08-12")).toBe("12 Aug 2026");

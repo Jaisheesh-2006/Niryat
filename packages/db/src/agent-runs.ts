@@ -8,6 +8,8 @@ import {
   type CloseSummary,
   closeSummarySchema,
   currencyTotalSchema,
+  type ManualCloseInput,
+  manualCloseInputSchema,
   toolCallSchema,
 } from "@niryat/shared";
 import { and, asc, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
@@ -25,6 +27,55 @@ import {
 } from "./schema";
 
 const STALE_RUN_MINUTES = 15;
+
+export async function claimWorkflowClose(
+  db: Db,
+  input: ManualCloseInput,
+  now: Date,
+): Promise<boolean> {
+  const parsed = manualCloseInputSchema.safeParse(input);
+  if (!parsed.success) throw new Error("Workflow close input is invalid");
+  const run = parsed.data;
+  return db
+    .transaction(async (tx) => {
+      const [row] = await tx
+        .select({ id: agentRuns.id })
+        .from(agentRuns)
+        .where(
+          and(
+            eq(agentRuns.id, run.runId),
+            eq(agentRuns.userId, run.userId),
+            eq(agentRuns.kind, "monthly_close"),
+            eq(agentRuns.trigger, "manual"),
+            eq(agentRuns.month, run.month),
+            eq(agentRuns.asOf, run.asOf),
+            eq(agentRuns.status, "running"),
+            gte(agentRuns.startedAt, new Date(now.getTime() - STALE_RUN_MINUTES * 60_000)),
+          ),
+        )
+        .for("update");
+      if (!row) return false;
+      // The first audit slot is an atomic, permanent execution claim, including after a worker crash.
+      const [claim] = await tx
+        .insert(agentToolCalls)
+        .values({
+          runId: run.runId,
+          seq: 1,
+          actor: "system",
+          tool: "workflow_claim",
+          input: {},
+          output: { claimed: true },
+          ok: true,
+          createdAt: now,
+        })
+        .onConflictDoNothing()
+        .returning({ id: agentToolCalls.id });
+      return Boolean(claim);
+    })
+    .catch(() => {
+      throw new Error("Workflow close claim failed");
+    });
+}
 
 export async function startAgentRun(
   db: Db,

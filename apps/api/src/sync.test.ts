@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import * as dbModule from "@niryat/db";
 import {
   clients,
@@ -14,7 +15,12 @@ import * as paypalModule from "@niryat/paypal";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as closeModule from "./close";
 import * as paymentModule from "./payments";
-import { main, syncDisputes, syncPayments } from "./sync";
+import { main, syncDisputes, syncPayments, syncPayPal } from "./sync";
+
+vi.mock("node:timers/promises", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:timers/promises")>()),
+  setTimeout: vi.fn(async () => {}),
+}));
 
 const now = new Date("2026-10-26T20:30:00.000Z");
 const capture: CaptureRecord = {
@@ -39,6 +45,7 @@ describe("payment sync CLI", () => {
     parse({ items: [], links: [] });
 
   beforeEach(() => {
+    vi.mocked(delay).mockReset().mockResolvedValue(undefined);
     exitCode = process.exitCode;
     process.exitCode = 0;
     vi.spyOn(process, "loadEnvFile").mockImplementation(() => {});
@@ -65,6 +72,8 @@ describe("payment sync CLI", () => {
     searchTransactions.mockReset().mockResolvedValue([]);
     vi.spyOn(dbModule, "createDb").mockReturnValue({ db: database.db, close });
     vi.spyOn(dbModule, "knownTransactionIds").mockResolvedValue(new Set());
+    vi.spyOn(dbModule, "startSyncRun").mockResolvedValue("40000000-0000-4000-8000-000000000001");
+    vi.spyOn(dbModule, "finishSyncRun").mockResolvedValue();
     vi.spyOn(closeModule, "nightlyReminders").mockResolvedValue({
       users: 0,
       runs: 0,
@@ -120,8 +129,106 @@ describe("payment sync CLI", () => {
       expect(console.error).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(failed ? 1 : 0);
       expect(close).toHaveBeenCalledExactlyOnceWith();
+      expect(dbModule.finishSyncRun).toHaveBeenCalledWith(
+        database.db,
+        expect.any(String),
+        failed ? "failed" : "ok",
+        expect.any(Object),
+        expect.any(Date),
+      );
     },
   );
+
+  it("light sync skips an overlapping poll immediately without PayPal reads or reminders", async () => {
+    vi.mocked(dbModule.startSyncRun).mockResolvedValue(undefined);
+    await main(["--no-agent"]);
+    expect(console.log).toHaveBeenCalledExactlyOnceWith('{"status":"skipped"}');
+    expect(searchTransactions).not.toHaveBeenCalled();
+    expect(closeModule.nightlyReminders).not.toHaveBeenCalled();
+    expect(dbModule.finishSyncRun).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(0);
+    expect(delay).not.toHaveBeenCalled();
+    expect(dbModule.startSyncRun).toHaveBeenCalledOnce();
+  });
+
+  it("nightly waits for a competing light poll, then reconciles before running reminders once", async () => {
+    const start = vi.mocked(dbModule.startSyncRun);
+    start.mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
+    vi.mocked(delay).mockImplementation(async () => {
+      expect(searchTransactions).not.toHaveBeenCalled();
+      expect(closeModule.nightlyReminders).not.toHaveBeenCalled();
+    });
+    await main();
+    expect(start).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(delay).mock.calls.map(([ms]) => ms)).toEqual([5000, 10000]);
+    expect(searchTransactions).toHaveBeenCalledOnce();
+    expect(dbModule.finishSyncRun).toHaveBeenCalledOnce();
+    expect(closeModule.nightlyReminders).toHaveBeenCalledOnce();
+    expect(console.error).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(0);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("nightly fails explicitly if the poll stays busy after bounded retries", async () => {
+    vi.mocked(dbModule.startSyncRun).mockResolvedValue(undefined);
+    await main();
+    expect(dbModule.startSyncRun).toHaveBeenCalledTimes(11);
+    expect(vi.mocked(delay).mock.calls.map(([ms]) => ms)).toEqual([
+      5000, 10000, 20000, 30000, 30000, 30000, 30000, 30000, 30000, 30000,
+    ]);
+    expect(searchTransactions).not.toHaveBeenCalled();
+    expect(closeModule.nightlyReminders).not.toHaveBeenCalled();
+    expect(dbModule.finishSyncRun).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledExactlyOnceWith('{"status":"skipped"}');
+    expect(console.error).toHaveBeenCalledExactlyOnceWith(
+      "Payment sync is still busy; nightly reminders were not run. Retry after the active poll finishes.",
+    );
+    expect(process.exitCode).toBe(1);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("uses the current time for reconciliation and reminders after waiting across IST midnight", async () => {
+    vi.useFakeTimers();
+    const afterMidnight = new Date("2026-10-31T18:30:04Z");
+    vi.setSystemTime(new Date("2026-10-31T18:29:59Z"));
+    vi.mocked(dbModule.startSyncRun).mockResolvedValueOnce(undefined);
+    vi.mocked(delay).mockImplementation(async () => {
+      vi.setSystemTime(afterMidnight);
+    });
+    try {
+      await main();
+      expect(searchTransactions).toHaveBeenCalledExactlyOnceWith({
+        start: "2026-10-24T18:30:04.000Z",
+        end: afterMidnight.toISOString(),
+      });
+      expect(closeModule.nightlyReminders).toHaveBeenCalledWith(expect.any(Object), afterMidnight);
+      expect(dbModule.startSyncRun).toHaveBeenLastCalledWith(database.db, afterMidnight);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("light sync ignores AI settings and never invokes the reminder runner", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "fake");
+    vi.stubEnv("CLAUDE_MODEL", "");
+    vi.stubEnv("AI_MONTHLY_BUDGET_USD", "");
+    const runner = vi.spyOn(await import("@niryat/agent"), "createClaudeRunner");
+    await main(["--no-agent"]);
+    expect(searchTransactions).toHaveBeenCalledOnce();
+    expect(closeModule.nightlyReminders).not.toHaveBeenCalled();
+    expect(runner).not.toHaveBeenCalled();
+    expect(dbModule.finishSyncRun).toHaveBeenCalledWith(
+      database.db,
+      expect.any(String),
+      "ok",
+      {
+        payments: expect.objectContaining({ failed: 0 }),
+        disputes: expect.objectContaining({ failed: 0 }),
+      },
+      expect.any(Date),
+    );
+    expect(process.exitCode).toBe(0);
+  });
 
   it("reports a search failure safely, exits unsuccessfully and closes the database", async () => {
     searchTransactions.mockRejectedValue(new Error("private search detail"));
@@ -130,6 +237,13 @@ describe("payment sync CLI", () => {
     expect(console.error).toHaveBeenCalledExactlyOnceWith("Payment sync failed");
     expect(process.exitCode).toBe(1);
     expect(close).toHaveBeenCalledExactlyOnceWith();
+    expect(dbModule.finishSyncRun).toHaveBeenCalledWith(
+      database.db,
+      expect.any(String),
+      "failed",
+      {},
+      expect.any(Date),
+    );
   });
 
   it("runs reminders after sync and exits unsuccessfully when a reminder run fails", async () => {
@@ -378,6 +492,30 @@ describe.skipIf(!testDatabaseUrl)("payment reconciliation", () => {
   });
   afterAll(async () => t?.close());
   afterEach(() => vi.restoreAllMocks());
+
+  it("records reconciliation history and skips a concurrent poll before ledger access", async () => {
+    searchTransactions.mockResolvedValue([]);
+    const rest: Pick<PayPalRestClient, "get"> = {
+      async get(_path, parse) {
+        return parse({ items: [], links: [] });
+      },
+    };
+    const deps = { db: t.db, ledger, rest };
+    expect(await syncPayPal(deps, new Date())).toMatchObject({ status: "ok" });
+    const success = await dbModule.readSyncStatus(t.db, new Date());
+    expect(success).toMatchObject({ lastStatus: "ok", stale: false });
+    expect(success.lastSuccessAt).not.toBeNull();
+    searchTransactions.mockRejectedValue(new Error("private search failure"));
+    await expect(syncPayPal(deps, new Date())).rejects.toThrow("private search failure");
+    expect(await dbModule.readSyncStatus(t.db, new Date())).toEqual({
+      ...success,
+      lastStatus: "failed",
+    });
+    await dbModule.startSyncRun(t.db, new Date());
+    searchTransactions.mockClear();
+    expect(await syncPayPal(deps, new Date())).toEqual({ status: "skipped" });
+    expect(searchTransactions).not.toHaveBeenCalled();
+  });
 
   it("searches seven days, filters events, skips known payments and dedupes the next run", async () => {
     await recordPayment(t.db, { ...capture, captureId: "CAPTURE-KNOWN" });

@@ -11,6 +11,7 @@ import { CardBoundary } from "../../../components/CardBoundary";
 import { OverviewApprovals } from "../../../components/OverviewApprovals";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { SyncFreshness } from "../../../components/SyncFreshness";
 import { apiGet } from "../../../lib/api";
 import { deadlineList } from "../../../lib/calendar";
 import { formatDate, formatMoney } from "../../../lib/format";
@@ -204,6 +205,11 @@ export default function Overview() {
           </>
         }
       />
+      <CardBoundary title="PayPal data freshness">
+        <Suspense fallback={<p>Loading PayPal data freshness…</p>}>
+          <SyncFreshness />
+        </Suspense>
+      </CardBoundary>
       <div className="stat-grid">
         <CardBoundary title="Approvals waiting">
           <Suspense fallback={<Skeleton />}>

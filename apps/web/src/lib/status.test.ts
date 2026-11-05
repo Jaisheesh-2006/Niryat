@@ -25,6 +25,7 @@ it("names the agent and system actors", () => {
 });
 
 it.each([
+  ["workflow_claim", "Started the background monthly close"],
   ["get_invoice", "Read a PayPal invoice"],
   ["paypal_get_invoice", "Read a PayPal invoice"],
   ["list_invoices", "Read PayPal invoices"],

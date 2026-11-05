@@ -16,6 +16,21 @@ const schema = z.object({
 });
 export const loadEnv = (input: unknown) => parseEnv(schema, input);
 
+const workflowSchema = z.object({
+  RENDER_API_KEY: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : value),
+    z.string().trim().min(1).optional(),
+  ),
+  RENDER_USE_LOCAL_DEV: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["true", "false"]).optional(),
+  ),
+});
+export function loadWorkflowEnv(input: Record<string, string | undefined>) {
+  const env = parseEnv(workflowSchema, input);
+  return env.RENDER_API_KEY || env.RENDER_USE_LOCAL_DEV === "true" ? env : undefined;
+}
+
 const authSchema = z.object({
   DATABASE_URL: z.url(),
   ENCRYPTION_KEY: z.string().min(1),

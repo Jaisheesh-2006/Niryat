@@ -252,6 +252,9 @@ importers:
       "@niryat/shared":
         specifier: workspace:*
         version: link:../../packages/shared
+      "@renderinc/sdk":
+        specifier: 1.4.0
+        version: 1.4.0
       aws4fetch:
         specifier: 1.0.20
         version: 1.0.20
@@ -320,6 +323,9 @@ importers:
       "@niryat/config":
         specifier: workspace:*
         version: link:../../packages/config
+      "@niryat/shared":
+        specifier: workspace:*
+        version: link:../../packages/shared
       "@renderinc/sdk":
         specifier: 1.4.0
         version: 1.4.0

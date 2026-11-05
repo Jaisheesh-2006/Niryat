@@ -16,6 +16,7 @@ export const agentActor: Record<AgentRun["toolCalls"][number]["actor"], string> 
 };
 
 const agentToolLabels: ReadonlyMap<string, string> = new Map([
+  ["workflow_claim", "Started the background monthly close"],
   ["get_invoice", "Read a PayPal invoice"],
   ["paypal_get_invoice", "Read a PayPal invoice"],
   ["list_invoices", "Read PayPal invoices"],
