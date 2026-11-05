@@ -1,6 +1,8 @@
+import { userRoles } from "@niryat/shared";
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   integer,
   jsonb,
@@ -16,13 +18,18 @@ import {
 
 // Remaining structural stubs follow PLAN section 13.
 // gstin, pan_last4 and addresses hold AES-GCM ciphertext (see encryption.ts).
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash"),
-  paypalPayerId: text("paypal_payer_id").unique(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull().unique(),
+    role: text("role", { enum: userRoles }).notNull().default("freelancer"),
+    passwordHash: text("password_hash"),
+    paypalPayerId: text("paypal_payer_id").unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [check("users_role_check", sql`${table.role} IN ('freelancer', 'ca')`)],
+);
 export const profiles = pgTable("profiles", {
   userId: uuid("user_id")
     .primaryKey()

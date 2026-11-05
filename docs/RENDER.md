@@ -1,4 +1,4 @@
-# Render: A1/A2 change record
+# Render change record
 
 Recorded 2026-11-04. Scope: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. The Blueprint and application changes are implemented; hosted deployment and browser results remain awaiting user verification.
 
@@ -78,3 +78,9 @@ for (let i = 1; i <= 11; i++) {
 
 4. Expect requests 1–10 to return 400 and request 11 to return 429 with `Retry-After: 60`. After at least 60 seconds, one more invalid request should return 400. `/api/health` must remain HTTP 200 while login is limited.
 5. When you deploy, apply the Blueprint's `API_INTERNAL_HOSTPORT` binding to web at build and runtime, with web/API in the same Render workspace and region. Rebuild web. Repeat the header, PDF and spoofing checks on the HTTPS web origin after its bucket is clear. From another real network/IP, one invalid login request should return 400 even while the first network is limited. After the minute, sign in normally and expect `/overview`; inspect the session cookie for `Secure` and `HttpOnly`. Hosted results stay pending until confirmed.
+
+## B1: background jobs select freelancers only
+
+Recorded 2026-11-05. [B1](IMPROVEMENTS.md#b1-roles-and-role-aware-sessions-p0) adds `users.role` and migration [0007](../packages/db/drizzle/0007_windy_johnny_storm.sql). [listUserIds](../packages/db/src/users.ts) now selects only freelancers, because CA accounts do not own compliance records. Both all-user close and sync in [close.ts](../apps/api/src/close.ts), including the existing Render Workflows close, use that selection. No Blueprint, schedule, dispatch or SDK change was needed.
+
+The full DB and API suites passed 156/156 and 656/656 tests respectively, zero skips, on a disposable PostgreSQL 17 `niryat_test` database, including a CA-exclusion regression in [storage.test.ts](../packages/db/src/storage.test.ts). Direct Vitest equivalents of `test:db` used only a task-specific `TEST_DATABASE_URL`, avoiding the wrappers' private environment loading. `pnpm verify` passed 27/27 tasks; `pnpm build` passed 9/9. The ordinary verification's DB/API integration skips are separate from those full runs. Hosted execution remains awaiting user verification; no deployment or PayPal operation was performed. The user must apply migration `0007` before starting the updated services. Existing sessions require sign-in again; [B1's manual session check](IMPROVEMENTS.md#b1-roles-and-role-aware-sessions-p0) remains awaiting user verification.

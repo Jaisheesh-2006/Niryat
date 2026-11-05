@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { createDb, createUser, findUserByEmail } from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
 import type { PayPalLogin } from "@niryat/paypal";
+import { sessionUserSchema } from "@niryat/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as passwords from "../auth/password";
 import { createApp } from "../index";
@@ -189,7 +190,11 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
     if (!session) throw new Error("Expected session");
     expect(cookies).toContainEqual(expect.stringContaining("niryat_paypal_state=;"));
     const me = await app.request("/auth/me", { headers: { Cookie: session } });
-    expect(await me.json()).toEqual({ id: expect.any(String), email: credentials.email });
+    expect(await me.json()).toEqual({
+      id: expect.any(String),
+      email: credentials.email,
+      role: "freelancer",
+    });
     const first = await findUserByEmail(t.db, credentials.email);
     identify.mockResolvedValue({ ok: true, paypalId: "PAYER-1", email: undefined });
     expect((await paypalCallback()).headers.get("location")).toBe("http://localhost:3000/overview");
@@ -268,15 +273,43 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
 
   it("returns the signed-in user and rejects a missing session", async () => {
     const signup = await post("/auth/signup");
-    const user: unknown = await signup.json();
+    const user = sessionUserSchema.omit({ role: true }).parse(await signup.json());
     const cookie = signup.headers.get("set-cookie")?.split(";")[0];
     if (!cookie) throw new Error("Expected a session cookie");
     const response = await app.request("/auth/me", { headers: { Cookie: cookie } });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(user);
+    expect(await response.json()).toEqual({ ...user, role: "freelancer" });
     const anonymous = await app.request("/auth/me");
     expect(anonymous.status).toBe(401);
     expect(await anonymous.json()).toEqual({ error: "unauthenticated" });
+  });
+
+  it("logs in a CA with its stored role while denying freelancer routes", async () => {
+    const user = await createUser(t.db, {
+      email: "ca@example.com",
+      role: "ca",
+      passwordHash: await passwords.hashPassword(credentials.password),
+    });
+    if (!user) throw new Error("Expected CA user");
+    const login = await post("/auth/login", { email: user.email, password: credentials.password });
+    expect(login.status).toBe(200);
+    expect(await login.json()).toEqual(user);
+    const cookie = login.headers.get("set-cookie")?.split(";")[0];
+    if (!cookie) throw new Error("Expected a session cookie");
+    const headers = { Cookie: cookie };
+    const response = await app.request("/auth/me", { headers });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ...user, role: "ca" });
+    const health = await app.request("/health-check", { headers });
+    expect(health.status).toBe(401);
+    expect(await health.json()).toEqual({ error: "unauthenticated" });
+    const logout = await app.request("/auth/logout", {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(logout.status).toBe(204);
+    expect(logout.headers.get("set-cookie")).toContain("niryat_session=;");
   });
 
   it("logs out and clears the cookie", async () => {

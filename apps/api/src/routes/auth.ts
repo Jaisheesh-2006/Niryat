@@ -7,7 +7,7 @@ import { Hono } from "hono";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { z } from "zod";
 import { hashPassword, verifyPassword } from "../auth/password";
-import { endSession, readSession, startSession } from "../auth/session";
+import { endSession, readAnySession, startSession } from "../auth/session";
 import type { CloseDeps } from "../close";
 import type { FileStore } from "../files";
 import type { createRateLimiter, RATE_LIMITS } from "../rate-limit";
@@ -70,7 +70,7 @@ export function authRoutes(deps: AppDeps): Hono {
       if (!identity.ok) return c.redirect(`${appUrl}/login?error=paypal_failed`, 302);
       const result = await signInWithPayPal(deps.db, identity);
       if (!result.ok) return c.redirect(`${appUrl}/login?error=${result.reason}`, 302);
-      await startSession(c, result.user.id, deps.sessionSecret, deps.secureCookies);
+      await startSession(c, result.user.id, "freelancer", deps.sessionSecret, deps.secureCookies);
       return c.redirect(`${appUrl}/overview`, 302);
     } catch {
       console.error("PayPal sign-in unavailable");
@@ -102,13 +102,13 @@ export function authRoutes(deps: AppDeps): Hono {
           passwordHash: await hashPassword(password),
         });
         if (!user) return c.json({ error: "email_taken" }, 409);
-        await startSession(c, user.id, deps.sessionSecret, deps.secureCookies);
+        await startSession(c, user.id, "freelancer", deps.sessionSecret, deps.secureCookies);
         return c.json(user, 201);
       }
       const user = await findUserByEmail(deps.db, email);
       const valid = await verifyPassword(password, user?.passwordHash ?? dummyHash);
       if (!user || !valid) return c.json({ error: "invalid_credentials" }, 401);
-      await startSession(c, user.id, deps.sessionSecret, deps.secureCookies);
+      await startSession(c, user.id, user.role, deps.sessionSecret, deps.secureCookies);
       return c.json({ id: user.id, email: user.email });
     });
   }
@@ -118,8 +118,8 @@ export function authRoutes(deps: AppDeps): Hono {
     return c.body(null, 204);
   });
   routes.get("/auth/me", async (c) => {
-    const userId = await readSession(c, deps.sessionSecret);
-    const user = userId ? await findUserById(deps.db, userId) : undefined;
+    const session = await readAnySession(c, deps.sessionSecret);
+    const user = session ? await findUserById(deps.db, session.userId) : undefined;
     return user ? c.json(user) : c.json({ error: "unauthenticated" }, 401);
   });
   return routes;

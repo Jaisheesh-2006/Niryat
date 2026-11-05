@@ -17,7 +17,11 @@ vi.mock("../../components/SignOutButton", () => ({ SignOutButton: () => null }))
 afterEach(() => vi.clearAllMocks());
 
 it("checks the session once and renders the account email and protected content", async () => {
-  const user = { id: "40000000-0000-4000-8000-000000000001", email: "seller@example.com" };
+  const user = {
+    id: "40000000-0000-4000-8000-000000000001",
+    email: "seller@example.com",
+    role: "freelancer",
+  };
   vi.mocked(apiGet).mockResolvedValue(user);
   const html = renderToStaticMarkup(await AppLayout({ children: <p>Protected content</p> }));
   expect(apiGet).toHaveBeenCalledExactlyOnceWith("/auth/me", sessionUserSchema);

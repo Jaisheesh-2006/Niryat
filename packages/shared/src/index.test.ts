@@ -33,14 +33,21 @@ import {
   sessionUserSchema,
   taskSchema,
   toolCallSchema,
+  userRoles,
 } from "./index";
 
-it("requires a valid session user id and email", () => {
+it("requires a valid session user id, email and role", () => {
   const user = { id: "40000000-0000-4000-8000-000000000001", email: "seller@example.com" };
-  expect(sessionUserSchema.parse(user)).toEqual(user);
+  for (const role of userRoles) {
+    expect(sessionUserSchema.parse({ ...user, role })).toEqual({ ...user, role });
+  }
+  expect(sessionUserSchema.safeParse(user).success).toBe(false);
   expect(sessionUserSchema.safeParse({ id: user.id }).success).toBe(false);
-  expect(sessionUserSchema.safeParse({ ...user, email: "invalid" }).success).toBe(false);
-  expect(sessionUserSchema.safeParse({ ...user, id: "invalid" }).success).toBe(false);
+  expect(sessionUserSchema.safeParse({ ...user, role: "admin" }).success).toBe(false);
+  expect(sessionUserSchema.safeParse({ ...user, role: "ca", email: "invalid" }).success).toBe(
+    false,
+  );
+  expect(sessionUserSchema.safeParse({ ...user, role: "ca", id: "invalid" }).success).toBe(false);
 });
 
 it("requires separate INR and applicable GST rates without defaults", () => {

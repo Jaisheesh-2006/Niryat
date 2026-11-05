@@ -10,9 +10,6 @@ export const credentialsSchema = z.object({
 });
 export type Credentials = z.infer<typeof credentialsSchema>;
 
-export const sessionUserSchema = z.object({ id: z.uuid(), email: z.email() });
-export type SessionUser = z.infer<typeof sessionUserSchema>;
-
 export const PDF_TEXT_PATTERN = /^[\x20-\x7E\u00A0-\u00FF\n]*$/;
 
 export const profileInputSchema = z
@@ -698,6 +695,15 @@ export const taskSchema = z.object({
   doneAt: z.iso.datetime().nullable(),
 });
 export type Task = z.infer<typeof taskSchema>;
+
+export const userRoles = ["freelancer", "ca"] as const;
+export type UserRole = (typeof userRoles)[number];
+export const sessionUserSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
+  role: z.enum(userRoles),
+});
+export type SessionUser = z.infer<typeof sessionUserSchema>;
 
 export const agentRunKinds = ["monthly_close", "reminders", "extraction", "dashboard"] as const;
 export type AgentRunKind = (typeof agentRunKinds)[number];

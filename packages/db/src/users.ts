@@ -1,3 +1,4 @@
+import { type SessionUser, sessionUserSchema, type UserRole } from "@niryat/shared";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "./client";
@@ -7,6 +8,7 @@ export async function listUserIds(db: Db): Promise<string[]> {
   const rows = await db
     .select({ id: users.id })
     .from(users)
+    .where(eq(users.role, "freelancer"))
     .catch(() => {
       throw new Error("User lookup failed");
     });
@@ -17,11 +19,16 @@ export async function listUserIds(db: Db): Promise<string[]> {
 
 export async function createUser(
   db: Db,
-  input: { email: string; passwordHash?: string; paypalId?: string },
+  input: { email: string; passwordHash?: string; paypalId?: string; role?: UserRole },
 ): Promise<{ id: string; email: string } | null> {
   const [user] = await db
     .insert(users)
-    .values({ email: input.email, passwordHash: input.passwordHash, paypalPayerId: input.paypalId })
+    .values({
+      email: input.email,
+      passwordHash: input.passwordHash,
+      paypalPayerId: input.paypalId,
+      role: input.role,
+    })
     .onConflictDoNothing()
     .returning({ id: users.id, email: users.email })
     .catch(() => {
@@ -33,29 +40,37 @@ export async function createUser(
 export async function findUserByEmail(
   db: Db,
   email: string,
-): Promise<{ id: string; email: string; passwordHash: string | null } | undefined> {
+): Promise<(SessionUser & { passwordHash: string | null }) | undefined> {
   const [user] = await db
-    .select({ id: users.id, email: users.email, passwordHash: users.passwordHash })
+    .select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      passwordHash: users.passwordHash,
+    })
     .from(users)
     .where(eq(users.email, email))
     .catch(() => {
       throw new Error("User lookup failed");
     });
-  return user;
+  if (!user) return undefined;
+  const parsed = sessionUserSchema.extend({ passwordHash: z.string().nullable() }).safeParse(user);
+  if (!parsed.success) throw new Error("Stored user is invalid");
+  return parsed.data;
 }
 
-export async function findUserById(
-  db: Db,
-  id: string,
-): Promise<{ id: string; email: string } | undefined> {
+export async function findUserById(db: Db, id: string): Promise<SessionUser | undefined> {
   const [user] = await db
-    .select({ id: users.id, email: users.email })
+    .select({ id: users.id, email: users.email, role: users.role })
     .from(users)
     .where(eq(users.id, id))
     .catch(() => {
       throw new Error("User lookup failed");
     });
-  return user;
+  if (!user) return undefined;
+  const parsed = sessionUserSchema.safeParse(user);
+  if (!parsed.success) throw new Error("Stored user is invalid");
+  return parsed.data;
 }
 
 export async function signInWithPayPal(

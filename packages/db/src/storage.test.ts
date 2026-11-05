@@ -6,7 +6,7 @@ import {
   profileInputSchema,
   type StoredExportCheck,
 } from "@niryat/shared";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -491,6 +491,7 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
     expect(await findUserByEmail(t.db, "paypal@example.com")).toEqual({
       id: expect.any(String),
       email: "paypal@example.com",
+      role: "freelancer",
       passwordHash: null,
     });
     expect(await signInWithPayPal(t.db, { paypalId: "PAYER-1", email: undefined })).toEqual(result);
@@ -553,6 +554,7 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
     const user = await addUser();
     expect(await findUserByEmail(t.db, user.email)).toEqual({
       ...user,
+      role: "freelancer",
       passwordHash: "test-password-hash",
     });
     expect(await findUserByEmail(t.db, "unknown@example.com")).toBeUndefined();
@@ -560,8 +562,28 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
 
   it("finds a user by ID without exposing the password hash", async () => {
     const user = await addUser();
-    expect(await findUserById(t.db, user.id)).toEqual(user);
+    expect(await findUserById(t.db, user.id)).toEqual({ ...user, role: "freelancer" });
     expect(await findUserById(t.db, randomUUID())).toBeUndefined();
+  });
+
+  it("defaults stored roles to freelancer and permits CA creation and lookups", async () => {
+    const freelancer = await addUser();
+    const ca = await createUser(t.db, { email: "ca@example.com", role: "ca" });
+    if (!ca) throw new Error("Expected CA user");
+    expect(await findUserById(t.db, freelancer.id)).toEqual({ ...freelancer, role: "freelancer" });
+    expect(await findUserById(t.db, ca.id)).toEqual({ ...ca, role: "ca" });
+    expect(await findUserByEmail(t.db, ca.email)).toEqual({
+      ...ca,
+      role: "ca",
+      passwordHash: null,
+    });
+    expect(await listUserIds(t.db)).toEqual([freelancer.id]);
+  });
+
+  it("rejects an invalid role at the database boundary", async () => {
+    await expect(
+      t.db.execute(sql`INSERT INTO users (email, role) VALUES ('invalid@example.com', 'admin')`),
+    ).rejects.toMatchObject({ cause: { code: "23514", constraint: "users_role_check" } });
   });
 
   it("round trips a profile and overwrites it on a second upsert", async () => {
