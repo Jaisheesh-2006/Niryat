@@ -487,7 +487,7 @@ The rules engine must have unit tests for every rule in [section 9](#9-rules-eng
 - **Hosted demo on Render** with a **"Try as judge"** button that logs into a pre-seeded profile, kept running until judging ends on **Dec 15**.
 - **Sandbox test credentials only** (India seller, US buyer) are listed here so judges can pay a real sandbox invoice, issue a refund and open a dispute end to end. No real keys are published.
 - **AI usage is capped** (`AI_MONTHLY_BUDGET_USD`) and rate-limited so the demo can't run out of budget during judging.
-- **Real FIRA sample:** a team member's **own** PayPal India FIRA, used with their consent and with all personal details redacted.
+- **Synthetic FIRA sample:** the demo uses a synthetic sample, labelled on screen. Real-FIRA parser verification remains open.
 - This README documents setup, the AI tools used and how, and APIMatic usage. The repository includes an open-source **LICENSE** file visible in the repo's About section, as the hackathon rules require.
 
 ---
@@ -496,14 +496,16 @@ The rules engine must have unit tests for every rule in [section 9](#9-rules-eng
 
 PayPal stays on screen for most of the video: _"Every action here happens in PayPal. Niryat's agent decides what to do and when."_
 
+For A5's judge seed, set `lutValidTo` to **seed date + 15 days** (within the 10–20 day demo range). This produces the low-severity `lut_expiring` warning without blocking invoice issuing. Show the current countdown as **"LUT expires in N days"**; an expired LUT would block issuing.
+
 | Time      | Scene                                                                                                                                                                                                            |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0:00–0:20 | **Hook:** _"Ananya, a developer in Pune, earned $4,000 on PayPal this quarter. Her LUT expired, so about 18% of it — roughly ₹60,000 — gets locked up as GST. Nobody told her."_                                 |
-| 0:20–0:40 | **Log in with PayPal** → health score flags **LUT expired** and **purpose code mismatch (P1006 used for software work → suggest P0802)**                                                                         |
+| 0:00–0:20 | **Hook:** _"Ananya, a developer in Pune, earned $4,000 on PayPal this quarter. Her LUT expires in N days. She needs to renew it before it expires to keep billing foreign clients without GST under her LUT."_   |
+| 0:20–0:40 | **Log in with PayPal** → health score flags **LUT expires in N days** and **purpose code mismatch (P1006 used for software work → suggest P0802)**                                                               |
 | 0:40–1:15 | Paste a client email → AI fills the invoice → five export checks pass → **PayPal invoice** sent with GSTIN + LUT text; a retainer client gets a **PayPal recurring series** → switch to US sandbox buyer and pay |
 | 1:15–1:35 | **PayPal webhook** records the payment; fee and net appear in the AG Studio dashboard; ask _"PayPal fees by client this year"_ → widget appears                                                                  |
 | 1:35–1:55 | Buyer opens a **PayPal dispute** → alert: _"this export may no longer count as realised"_; a **PayPal refund** updates GST credit-note data                                                                      |
-| 1:55–2:20 | Upload the FIRA → AI matches it to PayPal payments, flags 1 line with a reason → generate GSTR-1 export file                                                                                                     |
+| 1:55–2:20 | Show and say **"This FIRA is a synthetic sample."** Upload the FIRA → Niryat matches each line to a PayPal payment (no AI, by design) and flags one line with a reason → generate GSTR-1 export file             |
 | 2:20–2:40 | Monthly close agent proposes **PayPal reminders** before the RBI deadline → approve → reminder sent; Bryntum calendar shows upcoming deadlines                                                                   |
 | 2:40–2:55 | Safety and business: rules with primary-source citations, user approves every PayPal action, no auto-filing; next: CA dashboard                                                                                  |
 | 2:55–3:00 | _"Run your export business on PayPal. Niryat keeps it legal in India."_                                                                                                                                          |

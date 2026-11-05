@@ -12,6 +12,8 @@ Niryat uses the PayPal Developer Platform for approved Invoicing v2 invoice send
 
 The Claude Agent SDK powers source-quoted invoice extraction and a monthly-close agent that investigates the ledger and PayPal, prioritises work, advises send/hold and drafts tasks. Code validates every draft and computes every figure. Claude has no PayPal write or approval tools; the user confirms forms and approves actions. A shared AI budget bounds spend, and deterministic proposals remain available when AI is unavailable. See [ADR 0005](docs/decisions/0005-agent-boundary.md).
 
+The demo FIRA is a **synthetic sample**, labelled on screen. Niryat parses and matches it to PayPal payments without AI; real-FIRA parser verification remains open.
+
 ## Setup
 
 Use Node.js **24 LTS** and the pinned pnpm version through Corepack:
