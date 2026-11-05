@@ -72,7 +72,7 @@ Browser verification is performed by the user. Do not run browser verification o
 ## Gotchas
 
 The Server SDK lacks Invoicing and Disputes. India sandbox results are in docs/paypal-sandbox-findings.md: recurring invoices work; partial payments, domestic recipients and attachment upload do not.
-AG Studio/React 3.0.0 and Bryntum Calendar/React 7.3.8 are installed (Bryntum uses the trial alias). AG_STUDIO_LICENSE_KEY is read by the web server and deliberately passed to the browser; absent keys use trial behavior. BRYNTUM_LICENSE_KEY is only a hosting declaration, not consumed by the trial wrapper. Actual trial dates and judging coverage remain unverified; see V15.
+AG Studio/React 3.0.0 and Bryntum Calendar/React 7.3.8 are installed (Bryntum uses the trial alias). AG_STUDIO_LICENSE_KEY is read by the web server and deliberately passed to the browser; absent keys use trial behavior. Bryntum needs no key: the hackathon's Bryntum page prescribes the trial package, and the user confirmed it lasts past Dec 15. AG Studio trial dates remain unverified; see V15.
 Rules carry review: source_checked (matches primary law, docs/rules-sources.md) or unchecked; no CA review is planned for the hackathon, which is a stated limitation. Do not treat plan estimates as law.
 Shared packages export source; their build step typechecks. Next alone produces production assets.
 Node/pnpm version pins are intentional; pnpm records exact release-age exceptions for the verified stable Next release.

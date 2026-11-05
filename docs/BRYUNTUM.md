@@ -2,6 +2,10 @@
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0). Later tasks are dated separately below. This file retains the existing `BRYUNTUM.md` filename.
 
+## Licence: trial package confirmed, unused key removed
+
+Recorded 2026-11-05. The hackathon's [Bryntum prize page](https://paypalaihackathon.devpost.com/details/bryntum) asks entrants to build with the 45-day trial package and mentions no licence key. Bryntum's docs describe the licensed build as a different package from its private npm registry, not a runtime key. Niryat keeps `@bryntum/calendar@npm:@bryntum/calendar-trial@7.3.8` ([apps/web/package.json](../apps/web/package.json)). The user confirmed the trial expires after December 15, 2026 (not inspected by the assistant). The never-read `BRYNTUM_LICENSE_KEY` declaration was removed from [render.yaml](../render.yaml). The user can delete the matching local `.env` entry; the assistant did not read or edit it. No code, package or calendar behavior changed. [V15](verification.md#v15-sponsor-licences) records Bryntum as closed; AG Studio stays open. Statements below that call licence/trial coverage unverified predate this entry.
+
 ## D1/D2: plain calendar wording
 
 Recorded 2026-11-05. The [calendar API builder](../apps/api/src/calendar.ts) now labels the yearly export form, GST sales return, income-tax payments, export-payment deadline and invoice adjustments in plain words before LUT/GSTR-1/RBI/credit-note terms. Actions identify the CA, bank, user or PayPal as before. The owner and CA calendar pages add one-line descriptions and native disclosures containing the shared glossary explanations; the CA client-record page also explains terms before its records. IDs, dates, state/window rules, citations, percentages, links, categories/resources, filters, tooltip safety and read-only behavior are retained. This is wording work under [D1/D2](IMPROVEMENTS.md#d1-plain-language-glossary-and-term-helper-p0); the user approved the rules-message review gate before UI/API wording work began.

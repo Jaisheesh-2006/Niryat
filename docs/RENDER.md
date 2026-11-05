@@ -2,6 +2,10 @@
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. Hosted deployment and browser results remain awaiting user verification.
 
+## Unused Bryntum key removed
+
+Recorded 2026-11-05. [render.yaml](../render.yaml) no longer declares `BRYNTUM_LICENSE_KEY` on `niryat-web`; nothing read it, and Bryntum's hackathon trial needs no key ([Bryntum record](BRYUNTUM.md#licence-trial-package-confirmed-unused-key-removed)). `AG_STUDIO_LICENSE_KEY` stays `sync: false`, so its value must be set in the Render dashboard. If the Blueprint was already synced, the old dashboard variable may remain until the user deletes it; it is harmless. No deployment was performed.
+
 ## D2: monthly-close task wording
 
 Recorded 2026-11-05. [apps/api/src/close.ts](../apps/api/src/close.ts), shared by local and Workflows closes, now says “payment proof (FIRA)” and points to the renamed “Payment proof” navigation page in newly generated task messages and focus labels. It prepares the same records; workflow inputs, dispatch, persistence, deduplication, approval boundaries and retry behavior are retained. [API calendar](../apps/api/src/calendar.ts) and [FIRA matching](../apps/api/src/fira.ts) changes are also string-only. No Blueprint, environment key, schedule, worker code, dependency or deployment changed. E1/E2 reliability work remains outside D1/D2.

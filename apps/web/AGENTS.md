@@ -14,6 +14,6 @@ Use src/lib/format.ts for all displayed dates, months, date-times and money (en-
 Root src/app/error.tsx covers app-layout failures with retry and no error details; src/app/not-found.tsx handles missing pages. App loading.tsx and overview cards retain Loading text when reduced motion stops skeletons. Overview cards and the badge use CardBoundary plus Suspense for independent failures.
 Invoices and clients are cards; preserve visible invoice-<id> anchor targets, approvals and dispute alerts. Browser acceptance (including dark mode, mobile and keyboard behavior) belongs to the user; hand off docs/frontend-refactor-plan.md section 8 and leave its phase exit gate open until confirmed.
 AG Studio/React 3.0.0 powers the dashboard; edit mode exposes its AI Assistant through the server-only Claude proxy. The web server passes AG_STUDIO_LICENSE_KEY to the browser by design; absent keys use trial behavior.
-Bryntum Calendar/React 7.3.8 uses the trial alias and a client-only read-only wrapper. BRYNTUM_LICENSE_KEY is a hosting placeholder, not consumed by this wrapper. Trial dates and judging coverage remain unverified (docs/verification.md V15).
+Bryntum Calendar/React 7.3.8 uses the trial alias and a client-only read-only wrapper. It needs no licence key; the trial covers judging (docs/verification.md V15).
 Never send private credentials or unencrypted profile data to the browser.
 Run pnpm --filter @niryat/web test and pnpm build after web changes.

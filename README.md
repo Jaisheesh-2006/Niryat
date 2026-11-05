@@ -61,7 +61,7 @@ Judge mode and hosted demo remain TODOs; no judge credentials or button are ship
 
 AG Studio/React 3.0.0 powers the dashboard's seven widget groups and Agent Framework. Claude builds widgets through Niryat's authenticated `/api/dashboard/turn` proxy, with a shared monthly budget and no browser-visible AI key or PayPal tools. The current adapter supports text/tool calls, not thinking blocks; P6-11 model-compatibility guidance recommended Sonnet 4.6 after Sonnet 5.5 response validation failures. `AG_STUDIO_LICENSE_KEY` is a deliberately browser-visible sponsor licence key.
 
-Bryntum Calendar/React 7.3.8 displays read-only compliance events, state labels and links, with an accessible server-rendered fallback list. It currently uses the trial package alias; the hosting `BRYNTUM_LICENSE_KEY` declaration is not wired to that wrapper. Both sponsor packages are installed, but actual trial dates/expiry and permission through December 15 judging remain unverified in [V15](docs/verification.md#v15-sponsor-licences).
+Bryntum Calendar/React 7.3.8 displays read-only compliance events, state labels and links, with an accessible server-rendered fallback list. It uses the trial package alias, as the hackathon's Bryntum page prescribes, with no licence key; the user confirmed the trial lasts past December 15. AG Studio trial dates remain unverified in [V15](docs/verification.md#v15-sponsor-licences).
 
 ## Read next
 

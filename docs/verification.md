@@ -233,6 +233,8 @@ TODO(verify): Observe the first GitHub Actions run on both Windows and Linux. Lo
 
 P6-11 user response (2026-11-01): these dates and permissions are **not yet available**. No key was inspected. `AG_STUDIO_LICENSE_KEY` is passed from the web server to the browser by design; absent keys use trial behavior. `BRYNTUM_LICENSE_KEY` is declared in hosting configuration but is not consumed by the current trial wrapper. The early-install override is not proof of a compliant trial start or coverage.
 
+**Bryntum closed (2026-11-05).** The hackathon's [Bryntum prize page](https://paypalaihackathon.devpost.com/details/bryntum) prescribes the 45-day trial package (`@bryntum/<product>@npm:@bryntum/<product>-trial`) and mentions no licence key; Niryat already uses that alias. The user confirmed the Bryntum trial expires after December 15, 2026; no date was inspected by the assistant. Bryntum's licensed build is a separate private-registry package, not a runtime key, so the unused `BRYNTUM_LICENSE_KEY` declaration was removed from `render.yaml`. AG Studio trial start/expiry and judging coverage remain open.
+
 ## V16 Phase 6 acceptance
 
 **P6-11, 2026-11-01: user-confirmed local acceptance with one blocked import; sponsor coverage unverified.** The user operated the browser and GST application. API/web ran in separate terminals, with a Cloudflare tunnel to web port 3000; the web proxy used the local API. A fresh Niryat account held three new sandbox invoices, two payments, a refund, a dispute and an unpaid invoice. No previous user's records were moved to it. Actual account/password/keys are not acceptance evidence and are omitted here.
