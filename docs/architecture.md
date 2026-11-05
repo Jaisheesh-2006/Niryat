@@ -28,6 +28,8 @@ Verified PayPal events and transaction backfill populate the ledger. Issuing an 
 
 Sign-in uses the existing sandbox app's authorization-code flow and server-side userinfo. A unique payer ID identifies returning users; an email collision does not link accounts, and no login token is retained. PayPal-only users have a nullable password hash (migration `0004_closed_mantis`). Both sign-in methods use the existing signed session cookie. The app owner uses email sign-in; seller operations still use that app owner's credentials. In local development the web proxy targets `API_URL=http://localhost:3001`, while browser links and the callback use `PUBLIC_APP_URL`.
 
+Freelancers use `/login` and `/signup`; chartered accountants use `/ca/login` and `/ca/signup`, without PayPal login. Each signup endpoint fixes its account role. Password login checks credentials before returning a wrong-portal response; PayPal sign-in excludes CA accounts. Signed role-aware sessions enforce API access: CAs cannot use freelancer routes. The web layouts verify `/auth/me`; `src/proxy.ts` uses the unsigned cookie role only to route people between `/overview` and `/ca`. B2's CA area is a shell and landing page; client sharing and records belong to later improvement tasks.
+
 ## Three-layer PayPal integration
 
 | Layer                 | Owner                    | Responsibility                                       |

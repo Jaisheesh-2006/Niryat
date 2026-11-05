@@ -1,12 +1,21 @@
 "use client";
 
+import type { UserRole } from "@niryat/shared";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { sendJson } from "../lib/forms";
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({
+  mode,
+  audience = "freelancer",
+}: {
+  mode: "login" | "signup";
+  audience?: UserRole;
+}) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
+  const [loginPath, setLoginPath] = useState<"/ca/login" | "/login" | undefined>();
   useEffect(() => setReady(true), []);
 
   return (
@@ -19,14 +28,20 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         const form = new FormData(event.currentTarget);
         setSubmitting(true);
         setMessage("");
-        const result = await sendJson(`/api/auth/${mode}`, "POST", {
-          email: form.get("email"),
-          password: form.get("password"),
-        });
+        setLoginPath(undefined);
+        const result = await sendJson(
+          `/api/auth/${audience === "ca" ? "ca/" : ""}${mode}`,
+          "POST",
+          {
+            email: form.get("email"),
+            password: form.get("password"),
+          },
+        );
         // A fresh request must see the new session, not a cached logged-out redirect.
-        if (result.ok) window.location.replace("/overview");
+        if (result.ok) window.location.replace(audience === "ca" ? "/ca" : "/overview");
         else {
           setSubmitting(false);
+          setLoginPath(result.loginPath);
           setMessage(result.message);
         }
       }}
@@ -57,6 +72,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       {message && (
         <p id="auth-error" role="alert" className="banner" data-tone="danger">
           {message}
+          {loginPath && (
+            <>
+              {" "}
+              <Link href={loginPath}>
+                Open {loginPath === "/ca/login" ? "CA" : "freelancer"} sign-in
+              </Link>
+            </>
+          )}
         </p>
       )}
     </form>

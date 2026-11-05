@@ -163,6 +163,59 @@ it("keeps a failed email login on the form and enables another attempt", async (
 });
 
 it.each([
+  ["ca", "/ca/login", "This is a CA account. Sign in on the CA sign-in page."],
+  ["freelancer", "/login", "This is a freelancer account. Sign in on the freelancer sign-in page."],
+] as const)(
+  "shows the validated %s portal message and link",
+  async (portal, loginPath, message) => {
+    const fetch = vi
+      .fn()
+      .mockImplementation(async () =>
+        Response.json({ error: "wrong_portal", portal }, { status: 403 }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    expect(await sendJson("/api/auth/login", "POST", {})).toEqual({
+      ok: false,
+      message,
+      loginPath,
+    });
+    panelState.hooks = [];
+    vi.stubGlobal(
+      "FormData",
+      class extends FormData {
+        constructor() {
+          super();
+          this.set("email", "seller@example.com");
+        }
+      },
+    );
+    await AuthForm({ mode: "login" }).props.onSubmit({
+      preventDefault: vi.fn(),
+      currentTarget: {},
+    });
+    panelState.cursor = 0;
+    const html = renderToStaticMarkup(AuthForm({ mode: "login" }));
+    expect(html).toContain(message);
+    expect(html).toContain(`href="${loginPath}"`);
+    expect(html).toContain('id="auth-error" role="alert"');
+  },
+);
+
+it.each([undefined, "admin", "https://evil.example"])(
+  "does not trust wrong_portal with portal=%s",
+  async (portal) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ error: "wrong_portal", portal }, { status: 403 })),
+    );
+    expect(await sendJson("/api/auth/login", "POST", {})).toEqual({
+      ok: false,
+      message: "Something went wrong. Try again.",
+    });
+  },
+);
+
+it.each([
   ["close_running", "A close is already running. Wait for it to finish."],
   ["ai_unavailable", "AI is not configured, so extraction is unavailable. Fill in the form below."],
   ["ai_budget_exhausted", "The monthly AI budget is used up. Fill in the form below."],

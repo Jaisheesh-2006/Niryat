@@ -1,5 +1,6 @@
 "use client";
 
+import type { UserRole } from "@niryat/shared";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
@@ -51,7 +52,24 @@ const groups = [
   },
 ];
 
-export function NavLinks({ badge }: { badge: ReactNode }) {
+const caGroups = [
+  {
+    label: "",
+    items: [
+      { href: "/ca", label: "Clients", icon: Users },
+      { href: "/ca/calendar", label: "Calendar", icon: CalendarDays },
+      { href: "/ca/requests", label: "Requests", icon: ListChecks },
+    ],
+  },
+];
+
+export function NavLinks({
+  badge,
+  audience = "freelancer",
+}: {
+  badge?: ReactNode;
+  audience?: UserRole;
+}) {
   const pathname = usePathname();
   useEffect(() => {
     if (pathname) document.getElementById("nav-menu")?.hidePopover?.();
@@ -59,7 +77,7 @@ export function NavLinks({ badge }: { badge: ReactNode }) {
 
   return (
     <nav aria-label="Main">
-      {groups.map((group) => (
+      {(audience === "ca" ? caGroups : groups).map((group) => (
         <div key={group.label}>
           {group.label && <p className="nav-group">{group.label}</p>}
           {group.items.map(({ href, label, icon: Icon }) => (
@@ -69,7 +87,9 @@ export function NavLinks({ badge }: { badge: ReactNode }) {
               className="nav-item"
               onNavigate={() => document.getElementById("nav-menu")?.hidePopover?.()}
               aria-current={
-                pathname === href || pathname.startsWith(`${href}/`) ? "page" : undefined
+                pathname === href || (href !== "/ca" && pathname.startsWith(`${href}/`))
+                  ? "page"
+                  : undefined
               }
             >
               <Icon size={18} />

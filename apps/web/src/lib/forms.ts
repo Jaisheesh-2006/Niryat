@@ -112,7 +112,9 @@ const labels: Record<string, string> = {
   "answers.sameEstablishment": "Own establishment",
 };
 
-type FormResult = { ok: true; data?: never } | { ok: false; message: string; reasons?: string[] };
+type FormResult =
+  | { ok: true; data?: never }
+  | { ok: false; message: string; reasons?: string[]; loginPath?: "/ca/login" | "/login" };
 const fallback = { ok: false, message: "Something went wrong. Try again." } as const;
 const reminderFallback = {
   ok: false,
@@ -172,6 +174,7 @@ async function responseResult(response: Response, reminderApproval = false): Pro
   const parsed = z
     .object({
       error: z.string(),
+      portal: z.enum(["ca", "freelancer"]).optional(),
       fields: z.array(z.string()).optional(),
       reasons: z.array(z.string()).optional(),
       code: z
@@ -272,6 +275,19 @@ async function responseResult(response: Response, reminderApproval = false): Pro
       };
     case "email_taken":
       return { ok: false, message: "That email is already registered. Sign in instead." };
+    case "wrong_portal":
+      if (!parsed.data.portal) return fallback;
+      return parsed.data.portal === "ca"
+        ? {
+            ok: false,
+            message: "This is a CA account. Sign in on the CA sign-in page.",
+            loginPath: "/ca/login",
+          }
+        : {
+            ok: false,
+            message: "This is a freelancer account. Sign in on the freelancer sign-in page.",
+            loginPath: "/login",
+          };
     case "invalid_credentials":
       return { ok: false, message: "Email or password is incorrect." };
     case "unauthenticated":

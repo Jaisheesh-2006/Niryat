@@ -39,6 +39,16 @@ it("redirects a missing session to login instead of returning the shell", async 
   expect(redirect).toHaveBeenCalledExactlyOnceWith("/login");
 });
 
+it("redirects a verified CA to its own area", async () => {
+  vi.mocked(apiGet).mockResolvedValue({
+    id: "40000000-0000-4000-8000-000000000001",
+    email: "ca@example.com",
+    role: "ca",
+  });
+  await expect(AppLayout({ children: <p>Protected content</p> })).rejects.toThrow("redirect:/ca");
+  expect(redirect).toHaveBeenCalledExactlyOnceWith("/ca");
+});
+
 it("propagates server failures to the page error boundary", async () => {
   const error = new Error("Session endpoint unavailable");
   vi.mocked(apiGet).mockRejectedValue(error);

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DashboardLlm } from "@niryat/agent";
 import { createUser, type Db, findUserByEmail, findUserById, signInWithPayPal } from "@niryat/db";
 import type { PayPalLedger, PayPalLogin, PayPalRestClient } from "@niryat/paypal";
-import { credentialsSchema } from "@niryat/shared";
+import { credentialsSchema, type UserRole } from "@niryat/shared";
 import { Hono } from "hono";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { z } from "zod";
@@ -87,31 +87,38 @@ export function authRoutes(deps: AppDeps): Hono {
     await next();
   });
 
-  for (const action of ["signup", "login"] as const) {
-    routes.post(`/auth/${action}`, async (c) => {
-      const body = await c.req.json<unknown>().catch(() => undefined);
-      const parsed = credentialsSchema.safeParse(body);
-      if (!parsed.success) {
-        const fields = [...new Set(parsed.error.issues.map((issue) => issue.path.join(".")))];
-        return c.json({ error: "invalid_request", fields }, 400);
-      }
-      const { email, password } = parsed.data;
-      if (action === "signup") {
-        const user = await createUser(deps.db, {
-          email,
-          passwordHash: await hashPassword(password),
-        });
-        if (!user) return c.json({ error: "email_taken" }, 409);
-        await startSession(c, user.id, "freelancer", deps.sessionSecret, deps.secureCookies);
-        return c.json(user, 201);
-      }
-      const user = await findUserByEmail(deps.db, email);
-      const valid = await verifyPassword(password, user?.passwordHash ?? dummyHash);
-      if (!user || !valid) return c.json({ error: "invalid_credentials" }, 401);
-      await startSession(c, user.id, user.role, deps.sessionSecret, deps.secureCookies);
-      return c.json({ id: user.id, email: user.email });
-    });
+  function registerPortal(role: UserRole) {
+    const prefix = role === "ca" ? "/auth/ca" : "/auth";
+    for (const action of ["signup", "login"] as const) {
+      routes.post(`${prefix}/${action}`, async (c) => {
+        const body = await c.req.json<unknown>().catch(() => undefined);
+        const parsed = credentialsSchema.safeParse(body);
+        if (!parsed.success) {
+          const fields = [...new Set(parsed.error.issues.map((issue) => issue.path.join(".")))];
+          return c.json({ error: "invalid_request", fields }, 400);
+        }
+        const { email, password } = parsed.data;
+        if (action === "signup") {
+          const user = await createUser(deps.db, {
+            email,
+            passwordHash: await hashPassword(password),
+            role,
+          });
+          if (!user) return c.json({ error: "email_taken" }, 409);
+          await startSession(c, user.id, role, deps.sessionSecret, deps.secureCookies);
+          return c.json(user, 201);
+        }
+        const user = await findUserByEmail(deps.db, email);
+        const valid = await verifyPassword(password, user?.passwordHash ?? dummyHash);
+        if (!user || !valid) return c.json({ error: "invalid_credentials" }, 401);
+        if (user.role !== role) return c.json({ error: "wrong_portal", portal: user.role }, 403);
+        await startSession(c, user.id, user.role, deps.sessionSecret, deps.secureCookies);
+        return c.json({ id: user.id, email: user.email });
+      });
+    }
   }
+  registerPortal("freelancer");
+  registerPortal("ca");
 
   routes.post("/auth/logout", (c) => {
     endSession(c);

@@ -15,6 +15,7 @@ export default async function Login({
     <div className="card auth-card">
       <BrandMark />
       <h1>Sign in</h1>
+      <p>For freelancers</p>
       <PayPalLoginError error={error} />
       <AuthForm mode="login" />
       <div className="auth-divider">or</div>
@@ -23,6 +24,9 @@ export default async function Login({
       </a>
       <p className="auth-switch">
         <Link href="/signup">New here? Create an account</Link>
+      </p>
+      <p className="auth-switch">
+        <Link href="/ca/login">Are you a CA? Sign in here</Link>
       </p>
     </div>
   );

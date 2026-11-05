@@ -243,32 +243,40 @@ it("shows the first five invoices in API order with formatted amounts and anchor
   expect(html).toContain("All invoices");
 });
 
-it.each(["login", "signup"] as const)("replaces email %s with Today in history", async (mode) => {
-  const replace = vi.fn();
-  vi.stubGlobal("window", { location: { replace } });
-  const form = AuthForm({ mode });
-  const preventDefault = vi.fn();
-  vi.stubGlobal(
-    "FormData",
-    class extends FormData {
-      constructor() {
-        super();
-        this.set("email", "ananya@example.com");
-        this.set("password", "long-test-password");
-      }
-    },
-  );
-  try {
-    await form.props.onSubmit({ preventDefault, currentTarget: {} });
-    expect(preventDefault).toHaveBeenCalledOnce();
-    expect(sendJson).toHaveBeenCalledExactlyOnceWith(`/api/auth/${mode}`, "POST", {
-      email: "ananya@example.com",
-      password: "long-test-password",
-    });
-    expect(replace).toHaveBeenCalledExactlyOnceWith("/overview");
-    expect(setState).toHaveBeenCalledWith(true);
-    expect(setState).not.toHaveBeenCalledWith(false);
-  } finally {
-    vi.unstubAllGlobals();
-  }
-});
+it.each([
+  ["login", "freelancer", "/api/auth/login", "/overview"],
+  ["signup", "freelancer", "/api/auth/signup", "/overview"],
+  ["login", "ca", "/api/auth/ca/login", "/ca"],
+  ["signup", "ca", "/api/auth/ca/signup", "/ca"],
+] as const)(
+  "submits %s for %s to %s then navigates to %s",
+  async (mode, audience, endpoint, destination) => {
+    const replace = vi.fn();
+    vi.stubGlobal("window", { location: { replace } });
+    const form = AuthForm({ mode, audience });
+    const preventDefault = vi.fn();
+    vi.stubGlobal(
+      "FormData",
+      class extends FormData {
+        constructor() {
+          super();
+          this.set("email", "ananya@example.com");
+          this.set("password", "long-test-password");
+        }
+      },
+    );
+    try {
+      await form.props.onSubmit({ preventDefault, currentTarget: {} });
+      expect(preventDefault).toHaveBeenCalledOnce();
+      expect(sendJson).toHaveBeenCalledExactlyOnceWith(endpoint, "POST", {
+        email: "ananya@example.com",
+        password: "long-test-password",
+      });
+      expect(replace).toHaveBeenCalledExactlyOnceWith(destination);
+      expect(setState).toHaveBeenCalledWith(true);
+      expect(setState).not.toHaveBeenCalledWith(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  },
+);

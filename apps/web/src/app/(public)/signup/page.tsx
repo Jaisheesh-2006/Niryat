@@ -15,6 +15,7 @@ export default async function Signup({
     <div className="card auth-card">
       <BrandMark />
       <h1>Create account</h1>
+      <p>For freelancers</p>
       <PayPalLoginError error={error} />
       <AuthForm mode="signup" />
       <div className="auth-divider">or</div>
@@ -23,6 +24,9 @@ export default async function Signup({
       </a>
       <p className="auth-switch">
         <Link href="/login">Already registered? Sign in</Link>
+      </p>
+      <p className="auth-switch">
+        <Link href="/ca/login">Are you a CA? Sign in here</Link>
       </p>
     </div>
   );

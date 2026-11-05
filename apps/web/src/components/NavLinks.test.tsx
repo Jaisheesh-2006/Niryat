@@ -35,6 +35,22 @@ it("does not match a partial segment", () => {
   expect(renderToStaticMarkup(<NavLinks badge={null} />)).not.toContain("aria-current");
 });
 
+it.each([
+  ["/ca", "Clients"],
+  ["/ca/calendar", "Calendar"],
+  ["/ca/requests", "Requests"],
+])("shows only CA links and one active item at %s", (pathname, label) => {
+  route.pathname = pathname;
+  const html = renderToStaticMarkup(<NavLinks audience="ca" />);
+  expect([...html.matchAll(/<a[^>]*href="([^"]+)"/g)].map((match) => match[1])).toEqual([
+    "/ca",
+    "/ca/calendar",
+    "/ca/requests",
+  ]);
+  expect(html.match(/aria-current="page"/g)).toHaveLength(1);
+  expect(html).toMatch(new RegExp(`<a[^>]*aria-current="page"[^>]*>.*?</svg>${label}</a>`));
+});
+
 it("keeps the groups and links in demo order with the badge beside Monthly close", () => {
   const html = renderToStaticMarkup(<NavLinks badge={<span>Badge slot</span>} />);
   expect([...html.matchAll(/class="nav-group">(.*?)<\/p>/g)].map((match) => match[1])).toEqual([

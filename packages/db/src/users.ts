@@ -1,5 +1,5 @@
 import { type SessionUser, sessionUserSchema, type UserRole } from "@niryat/shared";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "./client";
 import { users } from "./schema";
@@ -85,7 +85,7 @@ export async function signInWithPayPal(
       const [user] = await db
         .select({ id: users.id, email: users.email })
         .from(users)
-        .where(eq(users.paypalPayerId, input.paypalId));
+        .where(and(eq(users.paypalPayerId, input.paypalId), eq(users.role, "freelancer")));
       return user;
     };
     const existing = await lookup();

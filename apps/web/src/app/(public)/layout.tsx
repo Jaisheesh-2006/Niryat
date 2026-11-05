@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandMark } from "../../components/icons";
+import { PublicAuthLinks } from "../../components/PublicAuthLinks";
 import { SiteFooter } from "../../components/SiteFooter";
 
 export default function PublicLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -14,14 +15,7 @@ export default function PublicLayout({ children }: Readonly<{ children: ReactNod
           <BrandMark />
           Niryat
         </Link>
-        <div>
-          <Link href="/login" className="btn" data-variant="ghost">
-            Sign in
-          </Link>{" "}
-          <Link href="/signup" className="btn" data-variant="primary">
-            Create account
-          </Link>
-        </div>
+        <PublicAuthLinks />
       </header>
       <main id="main" tabIndex={-1}>
         {children}

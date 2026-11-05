@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { createDb, createUser, findUserByEmail } from "@niryat/db";
 import { openTestDb, testDatabaseUrl } from "@niryat/db/testing";
 import type { PayPalLogin } from "@niryat/paypal";
-import { sessionUserSchema } from "@niryat/shared";
+import { sessionUserSchema, userRoles } from "@niryat/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as passwords from "../auth/password";
 import { createApp } from "../index";
@@ -216,6 +216,89 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
     expect(response.headers.get("set-cookie")).not.toContain("niryat_session=");
   });
 
+  it("does not sign a CA in through PayPal", async () => {
+    await post("/auth/ca/signup");
+    const response = await paypalCallback();
+    expect(response.headers.get("location")).toBe("http://localhost:3000/login?error=email_taken");
+    expect(response.headers.get("set-cookie")).not.toContain("niryat_session=");
+    expect((await findUserByEmail(t.db, credentials.email))?.role).toBe("ca");
+  });
+
+  it.each(userRoles)("signup fixes the role to the %s portal", async (role) => {
+    const prefix = role === "ca" ? "/auth/ca" : "/auth";
+    const response = await post(`${prefix}/signup`, {
+      ...credentials,
+      role: role === "ca" ? "freelancer" : "ca",
+    });
+    expect(response.status).toBe(201);
+    const user = sessionUserSchema.omit({ role: true }).parse(await response.json());
+    const cookie = response.headers.get("set-cookie")?.split(";")[0];
+    if (!cookie) throw new Error("Expected a session cookie");
+    const me = await app.request("/auth/me", { headers: { Cookie: cookie } });
+    expect(await me.json()).toEqual({ ...user, role });
+    expect((await findUserByEmail(t.db, credentials.email))?.role).toBe(role);
+    const health = await app.request("/health-check", { headers: { Cookie: cookie } });
+    expect(health.status).toBe(role === "ca" ? 401 : 404);
+    expect(await health.json()).toEqual({
+      error: role === "ca" ? "unauthenticated" : "not_found",
+    });
+  });
+
+  it.each(userRoles)(
+    "rejects %s signup when the other portal already owns the email",
+    async (role) => {
+      const prefix = role === "ca" ? "/auth/ca" : "/auth";
+      await post(`${role === "ca" ? "/auth" : "/auth/ca"}/signup`);
+      const response = await post(`${prefix}/signup`);
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: "email_taken" });
+      expect(response.headers.get("set-cookie")).toBeNull();
+    },
+  );
+
+  for (const role of userRoles) {
+    for (const portal of userRoles) {
+      it.each([true, false])(
+        `${role} account at ${portal} login with valid password=%s`,
+        async (validPassword) => {
+          const user = await createUser(t.db, {
+            email: credentials.email,
+            role,
+            passwordHash: await passwords.hashPassword(credentials.password),
+          });
+          const response = await post(`${portal === "ca" ? "/auth/ca" : "/auth"}/login`, {
+            ...credentials,
+            password: validPassword ? credentials.password : "wrong-horse-battery",
+          });
+          if (!validPassword) {
+            expect(response.status).toBe(401);
+            expect(await response.json()).toEqual({ error: "invalid_credentials" });
+            expect(response.headers.get("set-cookie")).toBeNull();
+          } else if (role !== portal) {
+            expect(response.status).toBe(403);
+            expect(await response.json()).toEqual({ error: "wrong_portal", portal: role });
+            expect(response.headers.get("set-cookie")).toBeNull();
+          } else {
+            expect(response.status).toBe(200);
+            expect(await response.json()).toEqual(user);
+            const cookie = response.headers.get("set-cookie")?.split(";")[0];
+            if (!cookie) throw new Error("Expected a session cookie");
+            const headers = { Cookie: cookie };
+            expect(await (await app.request("/auth/me", { headers })).json()).toEqual({
+              ...user,
+              role,
+            });
+            const health = await app.request("/health-check", { headers });
+            expect(health.status).toBe(role === "ca" ? 401 : 404);
+            expect(await health.json()).toEqual({
+              error: role === "ca" ? "unauthenticated" : "not_found",
+            });
+          }
+        },
+      );
+    }
+  }
+
   it("reports a missing PayPal email without creating a session", async () => {
     identify.mockResolvedValue({ ok: true, paypalId: "PAYER-1", email: undefined });
     const response = await paypalCallback();
@@ -255,21 +338,24 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 
-  it("checks the dummy hash for an unknown email and returns the same error", async () => {
-    const verify = vi.spyOn(passwords, "verifyPassword");
-    try {
-      const response = await post("/auth/login");
-      expect(response.status).toBe(401);
-      expect(await response.json()).toEqual({ error: "invalid_credentials" });
-      expect(verify).toHaveBeenCalledExactlyOnceWith(
-        credentials.password,
-        expect.stringMatching(/^scrypt\$16384\$8\$1\$/),
-      );
-      expect(response.headers.get("set-cookie")).toBeNull();
-    } finally {
-      verify.mockRestore();
-    }
-  });
+  it.each(["/auth/login", "/auth/ca/login"])(
+    "checks the dummy hash for unknown email at %s",
+    async (path) => {
+      const verify = vi.spyOn(passwords, "verifyPassword");
+      try {
+        const response = await post(path);
+        expect(response.status).toBe(401);
+        expect(await response.json()).toEqual({ error: "invalid_credentials" });
+        expect(verify).toHaveBeenCalledExactlyOnceWith(
+          credentials.password,
+          expect.stringMatching(/^scrypt\$16384\$8\$1\$/),
+        );
+        expect(response.headers.get("set-cookie")).toBeNull();
+      } finally {
+        verify.mockRestore();
+      }
+    },
+  );
 
   it("returns the signed-in user and rejects a missing session", async () => {
     const signup = await post("/auth/signup");
@@ -291,7 +377,10 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
       passwordHash: await passwords.hashPassword(credentials.password),
     });
     if (!user) throw new Error("Expected CA user");
-    const login = await post("/auth/login", { email: user.email, password: credentials.password });
+    const login = await post("/auth/ca/login", {
+      email: user.email,
+      password: credentials.password,
+    });
     expect(login.status).toBe(200);
     expect(await login.json()).toEqual(user);
     const cookie = login.headers.get("set-cookie")?.split(";")[0];
@@ -320,20 +409,26 @@ describe.skipIf(!testDatabaseUrl)("auth routes", () => {
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
   });
 
-  it.each(["signup", "login", "logout"])("rejects non-JSON POST /auth/%s", async (action) => {
-    const response = await app.request(`/auth/${action}`, { method: "POST", body: "payload" });
-    expect(response.status).toBe(415);
-    expect(await response.json()).toEqual({ error: "unsupported_media_type" });
-  });
+  it.each(["signup", "login", "ca/signup", "ca/login", "logout"])(
+    "rejects non-JSON POST /auth/%s",
+    async (action) => {
+      const response = await app.request(`/auth/${action}`, { method: "POST", body: "payload" });
+      expect(response.status).toBe(415);
+      expect(await response.json()).toEqual({ error: "unsupported_media_type" });
+    },
+  );
 
-  it("rejects a short password with field names only", async () => {
-    const response = await post("/auth/signup", { ...credentials, password: "short" });
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "invalid_request", fields: ["password"] });
-  });
+  it.each(["/auth/signup", "/auth/ca/signup"])(
+    "rejects a short password at %s with field names only",
+    async (path) => {
+      const response = await post(path, { ...credentials, password: "short" });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "invalid_request", fields: ["password"] });
+    },
+  );
 
-  it("rejects malformed JSON", async () => {
-    const response = await app.request("/auth/login", {
+  it.each(["/auth/login", "/auth/ca/login"])("rejects malformed JSON at %s", async (path) => {
+    const response = await app.request(path, {
       method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8" },
       body: "{",

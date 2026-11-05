@@ -518,6 +518,26 @@ describe.skipIf(!testDatabaseUrl)("user and profile storage", () => {
     expect(user?.passwordHash).toBe("test-password-hash");
   });
 
+  it.each([undefined, "PAYER-1"])(
+    "never signs in a CA through PayPal (payer id %s)",
+    async (paypalId) => {
+      const user = await createUser(t.db, {
+        email: "ca@example.com",
+        role: "ca",
+        ...(paypalId ? { paypalId } : {}),
+      });
+      expect(
+        await signInWithPayPal(t.db, { paypalId: "PAYER-1", email: "CA@example.com" }),
+      ).toEqual({
+        ok: false,
+        reason: "email_taken",
+      });
+      expect(
+        await t.db.select({ id: schema.users.id, role: schema.users.role }).from(schema.users),
+      ).toEqual([{ id: user?.id, role: "ca" }]);
+    },
+  );
+
   it("concurrent callbacks for the same payer ID resolve to one user", async () => {
     const results = await Promise.all(
       Array.from({ length: 4 }, () =>

@@ -14,6 +14,7 @@ import { apiGet } from "../../lib/api";
 export default async function AppLayout({ children }: Readonly<{ children: ReactNode }>) {
   const me = await apiGet("/auth/me", sessionUserSchema);
   if (!me) redirect("/login");
+  if (me.role === "ca") redirect("/ca");
 
   return (
     <div className="app-shell">

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { sendJson } from "../lib/forms";
 import { LogOut } from "./icons";
 
-export function SignOutButton() {
+export function SignOutButton({ loginPath = "/login" }: { loginPath?: string }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
 
@@ -21,7 +21,7 @@ export function SignOutButton() {
             setMessage(result.message);
             return;
           }
-          router.push("/login");
+          router.push(loginPath);
           router.refresh();
         }}
       >

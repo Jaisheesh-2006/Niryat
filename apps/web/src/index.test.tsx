@@ -1,6 +1,8 @@
 import type { ProfileInput, PurposeCodeEntry } from "@niryat/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
+import CaLogin from "./app/(public)/ca/login/page";
+import CaSignup from "./app/(public)/ca/signup/page";
 import Disclaimer, { metadata as disclaimerMetadata } from "./app/(public)/disclaimer/page";
 import PublicLayout from "./app/(public)/layout";
 import Login, { metadata as loginMetadata } from "./app/(public)/login/page";
@@ -10,19 +12,55 @@ import { AuthForm } from "./components/AuthForm";
 import { ProfileForm } from "./components/ProfileForm";
 import { profileBody } from "./lib/forms";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const route = vi.hoisted(() => ({ pathname: "/" }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => route.pathname,
+}));
 
-it("lets public-page keyboard users skip the header", () => {
+it.each(["/", "/login", "/signup", "/disclaimer"])(
+  "keeps freelancer header links and the skip link at %s",
+  (pathname) => {
+    route.pathname = pathname;
+    const html = renderToStaticMarkup(
+      <PublicLayout>
+        <h1>Public page</h1>
+      </PublicLayout>,
+    );
+    expect(html).toContain('<a class="skip-link" href="#main">Skip to content</a>');
+    expect(html).toContain('<main id="main" tabindex="-1"><h1>Public page</h1></main>');
+    const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
+    expect([...header.matchAll(/href="([^"]+)"/g)].map((match) => match[1])).toEqual([
+      "/",
+      "/login",
+      "/signup",
+    ]);
+  },
+);
+
+it.each([
+  { pathname: "/ca/login", Page: CaLogin },
+  { pathname: "/ca/signup", Page: CaSignup },
+])("keeps the whole $pathname page header in the CA portal", ({ pathname, Page }) => {
+  route.pathname = pathname;
   const html = renderToStaticMarkup(
     <PublicLayout>
-      <h1>Public page</h1>
+      <Page />
     </PublicLayout>,
   );
-  expect(html).toContain('<a class="skip-link" href="#main">Skip to content</a>');
-  expect(html).toContain('<main id="main" tabindex="-1"><h1>Public page</h1></main>');
+  const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
+  expect([...header.matchAll(/href="([^"]+)"/g)].map((match) => match[1])).toEqual([
+    "/",
+    "/ca/login",
+    "/ca/signup",
+  ]);
+  expect(html).toContain("For chartered accountants");
+  expect(html).toContain('href="/login">Are you a freelancer? Sign in here</a>');
+  expect(html).not.toContain('href="/api/auth/paypal/start"');
 });
 
 afterEach(() => {
+  route.pathname = "/";
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
