@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "../../../../components/AuthForm";
 import { BrandMark } from "../../../../components/icons";
+import { JudgeEntry } from "../../../../components/JudgeEntry";
 import { PageHeader } from "../../../../components/PageHeader";
 
 export const metadata = { title: "CA sign in" };
@@ -11,6 +12,7 @@ export default function CaLogin() {
       <BrandMark />
       <PageHeader title="CA sign in" description="For chartered accountants" />
       <AuthForm mode="login" audience="ca" />
+      <JudgeEntry />
       <p className="auth-switch">
         <Link href="/ca/signup">New here? Create a CA account</Link>
       </p>

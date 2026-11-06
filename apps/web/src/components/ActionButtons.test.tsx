@@ -892,7 +892,7 @@ it("opens the new invoice form only when there are no invoices", async () => {
   expect(html).toContain("Paste a client email and Claude fills in the invoice for you.");
 });
 
-it("renders credit notes and distinguishes the invoice total from a partial refund", async () => {
+it("renders credit notes and offers refunds only for ordinary payments", async () => {
   const invoice = invoiceViewSchema.parse({
     id: action.invoiceId,
     clientId: action.invoiceId,
@@ -911,7 +911,17 @@ it("renders credit notes and distinguishes the invoice total from a partial refu
     paypalInvoiceId: "INV2-TEST",
     paypalRecurringSeriesId: null,
     paidTotal: "100.00",
-    payments: [],
+    payments: ["JUDGE-SYNTHETIC-0-0", "CAPTURE-REAL"].map((paypalTxnId, index) => ({
+      id: `30000000-0000-4000-8000-00000000000${index + 1}`,
+      paypalTxnId,
+      gross: "50.00",
+      fee: "1.50",
+      net: "48.50",
+      currency: "USD",
+      fxRate: null,
+      receivedAt: "2026-01-30T12:00:00Z",
+      fira: null,
+    })),
     firaStatus: "pending",
     refundedTotal: "40.00",
     refunds: [],
@@ -968,4 +978,6 @@ it("renders credit notes and distinguishes the invoice total from a partial refu
   expect(html).not.toContain("<dt>Amount</dt>");
   expect(html).toContain("&quot;value&quot;: &quot;40.00&quot;");
   expect(html).toContain("Approve and refund through PayPal");
+  expect(html).toContain("JUDGE-SYNTHETIC-0-0");
+  expect(html.match(/>Propose refund</g) ?? []).toHaveLength(1);
 });

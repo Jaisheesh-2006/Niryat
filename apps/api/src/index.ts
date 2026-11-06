@@ -22,6 +22,10 @@ import { rules } from "./rules";
 export function createApp(deps?: AppDeps): Hono {
   const app = new Hono();
   app.get("/health", (context) => context.json({ status: "ok" }));
+  app.get("/judge-mode", (c) => {
+    c.header("Cache-Control", "no-store");
+    return c.json({ enabled: deps?.judgeMode === true });
+  });
   app.get("/purpose-codes", (c) =>
     c.json({ citation: cite(rules, "PURPOSE_CODES"), codes: PAYPAL_INDIA_PURPOSE_CODES }),
   );

@@ -260,6 +260,20 @@ it.each([
   });
 });
 
+it.each([
+  { body: { error: "synthetic_payment" }, message: "Synthetic demo payments cannot be refunded." },
+  {
+    body: { error: "paypal_failed", code: "synthetic_payment" },
+    message: "Synthetic demo payments cannot be refunded. Reject this proposal.",
+  },
+])(
+  "explains a synthetic refund rejection without offering retry: $body.error",
+  async ({ body, message }) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(body, { status: 422 })));
+    expect(await sendJson("/api/actions/test/approve", "POST", {})).toEqual({ ok: false, message });
+  },
+);
+
 it.each(["INVALID_REQUEST", "HTTP_401", "invalid_payload"])(
   "does not offer a retry for reminder rejection %s",
   async (code) => {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "../../../components/AuthForm";
 import { BrandMark } from "../../../components/icons";
+import { JudgeEntry } from "../../../components/JudgeEntry";
 import { PageHeader } from "../../../components/PageHeader";
 import { PayPalLoginError } from "../../../components/PayPalLoginError";
 
@@ -18,6 +19,7 @@ export default async function Login({
       <PageHeader title="Sign in" description="For freelancers" />
       <PayPalLoginError error={error} />
       <AuthForm mode="login" />
+      <JudgeEntry />
       <div className="auth-divider">or</div>
       <a href="/api/auth/paypal/start" className="btn" data-variant="secondary">
         Log in with PayPal

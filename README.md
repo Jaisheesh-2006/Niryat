@@ -4,7 +4,7 @@ An AI agent for Indian freelancers paid from abroad through PayPal.
 It turns invoices, payments, refunds and disputes into export-compliance records for CA review. Every PayPal write requires user approval; legal/numeric logic belongs to sourced rules.
 
 Built for the PayPal AI Hackathon, due November 12, 2026.
-**Current status:** Phase 6 reports, calendar and dashboard are implemented; P6-11 local acceptance is recorded (2026-11-01). Table 6A import is blocked before CSV validation, and sponsor trial/judging coverage is unverified. Phase 4 real-FIRA/refund evidence and Phase 7 judge mode/hosting/reliability remain open in [build flow](docs/build-flow.md) and [verification](docs/verification.md#v16-phase-6-acceptance).
+**Current status:** Phase 6 reports, calendar and dashboard and A5 judge mode are implemented. Table 6A import is blocked before CSV validation, and sponsor trial/judging coverage is unverified. Phase 4 real-FIRA/refund evidence and Phase 7 browser/hosting/reliability checks remain open in [build flow](docs/build-flow.md) and [verification](docs/verification.md#v16-phase-6-acceptance).
 
 ## PayPal and AI
 
@@ -45,7 +45,7 @@ pnpm db:migrate
 pnpm seed:judge
 ```
 
-verify runs strict typechecks, Biome, scaffold/guardrail checks and workspace tests. build validates source packages and produces the Next app. db:generate is offline; db:migrate requires DATABASE_URL. seed:judge intentionally does nothing until judge mode lands. Root dev starts only web and API.
+verify runs strict typechecks, Biome, scaffold/guardrail checks and workspace tests. build validates source packages and produces the Next app. db:generate is offline; db:migrate requires DATABASE_URL. seed:judge creates shared synthetic demo accounts (see below). Root dev starts only web and API.
 
 ## Environment
 
@@ -57,7 +57,13 @@ The optional earlier command remains supported: node --env-file=.env scripts/sta
 
 ## Judge mode and hosting
 
-Judge mode and hosted demo remain TODOs; no judge credentials or button are shipped. render.yaml defines web, API, a monthly-close Workflow, monthly trigger cron, nightly reconciliation and **paid** Postgres. The local scheduled path was verified using `corepack pnpm --filter @niryat/api close:run --as-of 2027-07-01`; Workflows dev and hosted scheduling are unverified. Deployment needs an authorized Render account and the [Phase 7 reliability checks](docs/build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58).
+For a dedicated sandbox demo, supply inherited `DATABASE_URL`, `ENCRYPTION_KEY`, `JUDGE_MODE=true` and `JUDGE_BUYER_EMAIL`, apply migrations, then run `corepack pnpm seed:judge`. The seed reads inherited environment variables; it does not load an environment file. Start the API with `JUDGE_MODE=true`. Home, `/login` and `/ca/login` then offer **Try as freelancer (demo)** and **Try as CA (demo)** after hydration. Mode defaults off. Exact checks: [A5](docs/IMPROVEMENTS.md#a5-judge-mode-seed-and-try-as-judge-p0).
+
+Judges share Ananya's freelancer account and a CA account linked to three freelancers. Historical invoices/payments/refund/dispute/FIRA are synthetic; unpaid fixtures have no PayPal invoice IDs and generate no reminder proposals. Only newly created, separately approved sandbox invoices can be sent to the US client. Buyer login is the privately supplied `JUDGE_BUYER_EMAIL`; obtain its password privately from the app owner. The user chose to keep the email private too. Never enter personal data in these shared accounts.
+
+Reruns preserve judge edits and original seed dates, including ended sharing; they do not reset the demo or extend LUT validity. Ananya's LUT expires 15 days after the first seed, so prepare a fresh disposable demo database before a later demonstration. Reserved-email collisions fail without replacing accounts. No credentials are committed. Hosted/browser acceptance remains pending.
+
+render.yaml defines web, API, monthly-close Workflows, monthly trigger, half-hour light reconciliation, nightly reconciliation and **paid** Postgres. Hosting, real dispatch and scheduling remain user checks in [Phase 7](docs/build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58); nothing is deployed by the seed.
 
 AG Studio/React 3.0.0 powers the dashboard's seven widget groups and Agent Framework. Claude builds widgets through Niryat's authenticated `/api/dashboard/turn` proxy, with a shared monthly budget and no browser-visible AI key or PayPal tools. The current adapter supports text/tool calls, not thinking blocks; P6-11 model-compatibility guidance recommended Sonnet 4.6 after Sonnet 5.5 response validation failures. `AG_STUDIO_LICENSE_KEY` is a deliberately browser-visible sponsor licence key.
 

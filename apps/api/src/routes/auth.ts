@@ -1,8 +1,20 @@
 import { randomUUID } from "node:crypto";
 import type { DashboardLlm } from "@niryat/agent";
-import { createUser, type Db, findUserByEmail, findUserById, signInWithPayPal } from "@niryat/db";
+import {
+  createUser,
+  type Db,
+  findJudgeUser,
+  findUserByEmail,
+  findUserById,
+  signInWithPayPal,
+} from "@niryat/db";
 import type { PayPalLedger, PayPalLogin, PayPalRestClient } from "@niryat/paypal";
-import { credentialsSchema, type ManualCloseInput, type UserRole } from "@niryat/shared";
+import {
+  credentialsSchema,
+  judgeLoginSchema,
+  type ManualCloseInput,
+  type UserRole,
+} from "@niryat/shared";
 import { Hono } from "hono";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { z } from "zod";
@@ -17,6 +29,7 @@ export interface AppDeps {
   encryptionKey: Buffer;
   sessionSecret: string;
   secureCookies: boolean;
+  judgeMode?: boolean;
   rateLimits?: Record<keyof typeof RATE_LIMITS, ReturnType<typeof createRateLimiter>>;
   trustRenderProxy?: boolean;
   paypal?: { rest: PayPalRestClient; ledger: PayPalLedger; webhookId: string };
@@ -77,6 +90,18 @@ export function authRoutes(deps: AppDeps): Hono {
       console.error("PayPal sign-in unavailable");
       return c.redirect(`${appUrl}/login?error=paypal_unavailable`, 302);
     }
+  });
+  routes.post("/auth/judge", async (c) => {
+    if (!deps.judgeMode) return c.json({ error: "not_found" }, 404);
+    if (c.req.header("Content-Type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") {
+      return c.json({ error: "unsupported_media_type" }, 415);
+    }
+    const parsed = judgeLoginSchema.safeParse(await c.req.json<unknown>().catch(() => undefined));
+    if (!parsed.success) return c.json({ error: "invalid_request" }, 400);
+    const user = await findJudgeUser(deps.db, parsed.data.as);
+    if (!user) return c.json({ error: "judge_unavailable" }, 503);
+    await startSession(c, user.id, user.role, deps.sessionSecret, deps.secureCookies);
+    return c.json(user);
   });
   routes.use("*", async (c, next) => {
     if (

@@ -40,6 +40,7 @@ const app =
         encryptionKey,
         sessionSecret: authEnv.SESSION_SECRET,
         secureCookies: env.NODE_ENV === "production",
+        judgeMode: env.JUDGE_MODE,
         trustRenderProxy: env.RENDER === "true",
         rateLimits: {
           auth: createRateLimiter(RATE_LIMITS.auth),

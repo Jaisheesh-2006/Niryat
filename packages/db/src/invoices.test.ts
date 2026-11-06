@@ -114,6 +114,7 @@ describe.skipIf(!testDatabaseUrl)("invoice, action and payment storage", () => {
   it("serializes concurrent refund proposals and blocks each open action status", async () => {
     const { userId, invoice } = await sentInvoice();
     await recordPayment(t.db, capture);
+    expect((await t.db.select().from(payments))[0]?.captureId).toBeNull();
     const payment = (await getInvoice(t.db, userId, invoice.id))?.payments[0];
     if (!payment) throw new Error("Expected a payment");
     const payloadFor = vi.fn(

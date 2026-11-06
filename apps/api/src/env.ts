@@ -6,6 +6,13 @@ const schema = z.object({
   RENDER: z.literal("true").optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   PAYPAL_ENVIRONMENT: z.literal("SANDBOX").default("SANDBOX"),
+  JUDGE_MODE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+  ),
   PUBLIC_APP_URL: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z

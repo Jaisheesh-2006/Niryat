@@ -17,7 +17,7 @@
     "verify": "tsc -p scripts/tsconfig.json && biome check . && node scripts/check-scaffold.mts && node --test scripts/*.test.mts && turbo run typecheck lint test",
     "db:generate": "pnpm --filter @niryat/db db:generate",
     "db:migrate": "pnpm --filter @niryat/db db:migrate",
-    "seed:judge": "pnpm --filter @niryat/db seed:judge",
+    "seed:judge": "pnpm --filter @niryat/api seed:judge",
     "prepare": "lefthook install"
   },
   "devDependencies": {

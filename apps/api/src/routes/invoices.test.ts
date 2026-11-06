@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
   actionStore,
+  agentActions,
   getInvoiceForAction,
   listReminderActions,
   listTasks,
@@ -1397,6 +1398,38 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     ).toBe(400);
     expect((await list(cookie))[0]?.refundActions).toEqual([]);
     expect(refundCapture).not.toHaveBeenCalled();
+  });
+
+  it("blocks an already queued synthetic refund before any PayPal refund call", async () => {
+    const { cookie, id: userId, invoice, payment } = await paidInvoice();
+    const captureId = "JUDGE-SYNTHETIC-0-0";
+    await t.db.update(payments).set({ paypalTxnId: captureId });
+    const [queued] = await t.db
+      .insert(agentActions)
+      .values({
+        userId,
+        invoiceId: invoice.id,
+        paymentId: payment.id,
+        paypalAction: "refund_payment",
+        status: "proposed",
+        payload: {
+          invoiceId: invoice.id,
+          paymentId: payment.id,
+          captureId,
+          refund: {
+            amount: { currency_code: "USD", value: "1.00" },
+            note_to_payer: `Refund for invoice ${invoice.number}`,
+          },
+        },
+      })
+      .returning({ id: agentActions.id });
+    if (!queued) throw new Error("Expected queued refund");
+    const response = await post(cookie, `/actions/${queued.id}/approve`);
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "paypal_failed", code: "synthetic_payment" });
+    expect(refundCapture).not.toHaveBeenCalled();
+    expect(getRefund).not.toHaveBeenCalled();
+    expect((await post(cookie, `/actions/${queued.id}/reject`)).status).toBe(200);
   });
 
   it("rejects malformed and mismatched refund payloads before calling PayPal", async () => {

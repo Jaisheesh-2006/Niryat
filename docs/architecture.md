@@ -36,6 +36,10 @@ Accept/decline requires that claimed CA and email; ending sharing requires its o
 
 ## Three-layer PayPal integration
 
+A5 judge mode (2026-11-05) is explicitly enabled by `JUDGE_MODE=true`; otherwise `/auth/judge` is unavailable and `/judge-mode` reports false. The auth-rate-limited JSON endpoint starts the existing signed role session only for the fixed demo account with the matching role, no password and no PayPal payer ID. The public flag contains only a boolean, disables caching and is false without database/auth configuration. A shared client component checks the flag after hydration on home and both login pages, then uses fresh role navigation after login.
+
+`pnpm seed:judge` composes rules in `apps/api/src/seed-judge.ts` and persists through `packages/db/src/seed-judge.ts`. It validates inherited configuration without loading private environment files. One transaction/advisory lock makes initial/repeated/concurrent seeding atomic; a reserved-account collision rolls it back. Three freelancer ledgers and one CA are created with null credentials, encrypted profiles/client addresses, synthetic history/FIRA lines and hash-proven accepted invitations through the existing claim/accept helpers. No PayPal call or approval action is created. Unpaid fixtures have null PayPal invoice IDs; synthetic judge payments are blocked by their reserved transaction prefix in refund proposals and execution. Reruns preserve records/edits and original seed dates, including ended sharing. Use a fresh disposable demo database for a later fresh countdown. Shared-account/privacy, operator setup and pending browser checks are in [A5](IMPROVEMENTS.md#a5-judge-mode-seed-and-try-as-judge-p0).
+
 | Layer                 | Owner                    | Responsibility                                       |
 | --------------------- | ------------------------ | ---------------------------------------------------- |
 | TypeScript Server SDK | packages/paypal/src/sdk  | Transaction search and refunds                       |

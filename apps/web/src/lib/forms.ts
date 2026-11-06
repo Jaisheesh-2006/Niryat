@@ -187,6 +187,13 @@ async function responseResult(response: Response, reminderApproval = false): Pro
     .safeParse(await response.json().catch(() => undefined));
   if (!parsed.success) return reminderApproval ? reminderFallback : fallback;
   switch (parsed.data.error) {
+    case "synthetic_payment":
+      return { ok: false, message: "Synthetic demo payments cannot be refunded." };
+    case "judge_unavailable":
+      return {
+        ok: false,
+        message: "Demo accounts are not ready. Ask the app owner to run the judge seed.",
+      };
     case "invalid_invitation":
       return {
         ok: false,
@@ -239,6 +246,12 @@ async function responseResult(response: Response, reminderApproval = false): Pro
           "The refund is more than what is left to refund on this payment. Enter a smaller amount.",
       };
     case "paypal_failed":
+      if (parsed.data.code === "synthetic_payment") {
+        return {
+          ok: false,
+          message: "Synthetic demo payments cannot be refunded. Reject this proposal.",
+        };
+      }
       if (!parsed.data.code) return reminderApproval ? reminderFallback : fallback;
       if (parsed.data.code === "reminder_not_needed") {
         return {

@@ -17,7 +17,8 @@
     "start": "tsx src/server.ts",
     "sync:payments": "tsx src/sync.ts",
     "close:run": "tsx src/close.ts",
-    "seed:fira-demo": "tsx src/seed-fira-demo.ts"
+    "seed:fira-demo": "tsx src/seed-fira-demo.ts",
+    "seed:judge": "tsx src/seed-judge.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",

@@ -1,4 +1,9 @@
-import { clientSchema, closePageSchema, invoiceViewSchema } from "@niryat/shared";
+import {
+  clientSchema,
+  closePageSchema,
+  invoiceViewSchema,
+  isSyntheticJudgePayment,
+} from "@niryat/shared";
 import { Suspense } from "react";
 import { z } from "zod";
 import { ApprovalCard } from "../../../components/ApprovalCard";
@@ -194,13 +199,14 @@ export default async function Invoices() {
                               : "Not matched"}
                         </td>
                         <td>
-                          {!invoice.refundActions.some(
-                            (action) =>
-                              action.paymentId === payment.id &&
-                              (action.status === "proposed" ||
-                                action.status === "approved" ||
-                                action.status === "failed"),
-                          ) && <RefundForm paymentId={payment.id} currency={payment.currency} />}
+                          {!isSyntheticJudgePayment(payment.paypalTxnId) &&
+                            !invoice.refundActions.some(
+                              (action) =>
+                                action.paymentId === payment.id &&
+                                (action.status === "proposed" ||
+                                  action.status === "approved" ||
+                                  action.status === "failed"),
+                            ) && <RefundForm paymentId={payment.id} currency={payment.currency} />}
                         </td>
                       </tr>
                     ))}

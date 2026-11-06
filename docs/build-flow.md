@@ -141,6 +141,7 @@ Specs 10 and 13 only need the Phase 3 ledger, so they can start in parallel with
 
 ## Phase 7: Judge mode, hosting and freeze (Nov 5–8)
 
+A5 implementation (2026-11-05): gated freelancer/CA demo entry and an atomic, idempotent synthetic judge seed are implemented. Three freelancers and a CA with proven accepted links use the existing role/approval boundaries. Exact automated results, inherited-environment setup, shared-record/date limits and pending user browser checks are in [IMPROVEMENTS A5](IMPROVEMENTS.md#a5-judge-mode-seed-and-try-as-judge-p0). Hosted demo acceptance and this phase's exit gate remain open.
 - Deploy on Render with paid Postgres; register `monthlyClose`; "Try as judge" with a seeded profile ([PLAN §15](PLAN.md#15-judge-mode)).
 - AI budget cap and rate limits; sandbox-only credentials for judges.
 - Disclaimer / limitations page in the web app, showing [PLAN §23](PLAN.md#23-disclaimer). It covers not tax advice, no CA review of the rules, one seller per deployment and sandbox only.

@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "../../components/icons";
+import { JudgeEntry } from "../../components/JudgeEntry";
 import { Term } from "../../components/Term";
 
 export default function Home() {
@@ -29,6 +30,7 @@ export default function Home() {
             Sign in
           </Link>
         </div>
+        <JudgeEntry />
       </section>
       <section aria-labelledby="how-it-works">
         <h2 id="how-it-works">How it works</h2>

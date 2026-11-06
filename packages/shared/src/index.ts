@@ -17,6 +17,15 @@ export const credentialsSchema = z.object({
 });
 export type Credentials = z.infer<typeof credentialsSchema>;
 
+export const JUDGE_EMAILS = {
+  freelancer: "judge-freelancer@niryat.test",
+  ca: "judge-ca@niryat.test",
+} as const;
+export const judgeLoginSchema = z.strictObject({ as: z.enum(["freelancer", "ca"]) });
+export const judgeModeSchema = z.object({ enabled: z.boolean() });
+export const isSyntheticJudgePayment = (paypalTxnId: string): boolean =>
+  paypalTxnId.startsWith("JUDGE-SYNTHETIC-");
+
 export const PDF_TEXT_PATTERN = /^[\x20-\x7E\u00A0-\u00FF\n]*$/;
 
 export const profileInputSchema = z

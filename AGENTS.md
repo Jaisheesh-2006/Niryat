@@ -26,7 +26,7 @@ On restricted PowerShell, use corepack.cmd pnpm or pnpm.cmd instead of the ps1 s
 - One package: pnpm --filter @niryat/rules test
 - Format: pnpm format (Biome check with safe fixes)
 - DB: pnpm db:generate; pnpm db:migrate (DATABASE_URL required)
-- Judge seed: pnpm seed:judge (intentional no-op until judge mode)
+- Judge seed: pnpm seed:judge (inherited JUDGE_MODE=true, buyer email, DB URL and encryption key; shared synthetic records)
 - Worker: see docs/architecture.md; not part of pnpm dev.
 
 ## Golden rules
