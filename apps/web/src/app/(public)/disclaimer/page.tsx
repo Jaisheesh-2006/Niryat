@@ -9,6 +9,7 @@ export default function Disclaimer() {
         title="Disclaimer"
         description="Understand what Niryat prepares and what you should confirm with your chartered accountant."
       />
+      <p>This demo uses PayPal sandbox accounts only. No real money moves.</p>
       <p>
         Niryat prepares information and documents for you and your chartered accountant (CA). It
         does not provide tax or legal advice or file returns for you. Every PayPal action, including

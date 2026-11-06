@@ -99,6 +99,7 @@ it("renders the PLAN section 23 disclaimer without a session", () => {
   const text = html.replace(/<[^>]*>/g, "").replaceAll("&#x27;", "'");
   expect(disclaimerMetadata.title).toBe("Disclaimer");
   expect(html).toContain("<h1>Disclaimer</h1>");
+  expect(text).toContain("This demo uses PayPal sandbox accounts only. No real money moves.");
   expect(text).toContain(
     "Niryat prepares information and documents for you and your chartered accountant (CA).",
   );

@@ -909,6 +909,10 @@ G tasks are Phase 7. H tasks are Phase 8. Tasks marked **(user)** are done by th
 
 **Acceptance:** `pnpm verify` and `pnpm build` pass.
 
+**G1 implementation (2026-11-06):** added the exact sandbox paragraph to the public disclaimer and PLAN §23, and extended the existing disclaimer assertion. Web tests pass 569/569; `corepack.cmd pnpm verify` passes 27/27 tasks (24 cached); `corepack.cmd pnpm build` passes 9/9 tasks (eight cached, fresh Next production build). Only G1 changed. Separate DB/API integration suites were not rerun for this copy-only change; normal verification retains 102 DB and 264 API integration skips. No browser check, PayPal call, deployment, commit or publication.
+
+**Manual check — awaiting user verification:** from the repository root run `corepack.cmd pnpm dev` (Linux: `corepack pnpm dev`); no credentials or sign-in are needed. Open `http://localhost:3000/disclaimer`. Expect “This demo uses PayPal sandbox accounts only. No real money moves.” and the existing tax-advice, no-CA-review and single-seller limitations.
+
 ### G2. Judge-mode keys in the Render Blueprint (P0, Phase 7)
 
 **Objective:** A5 reads `JUDGE_MODE` and `JUDGE_BUYER_EMAIL` on the API, but `niryat-api` in [render.yaml](../render.yaml) declares neither. Without them, the hosted demo hides both demo buttons and `/auth/judge` returns 404.
