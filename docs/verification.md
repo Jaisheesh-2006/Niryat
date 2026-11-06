@@ -213,6 +213,8 @@ Retry in a local working return with a valid, permitted test identity and a matc
 
 ## V11 Hosted resources
 
+**G3 user report (2026-11-06): not deployed yet.** No public web/API URLs or hosted results were supplied. Paid database retention through December 15, dashboard configuration, migrations/judge seed, sandbox webhook setup, `monthlyClose` and all three crons, health/judge-mode responses, demo entry and security headers remain **awaiting user verification**. No hosted acceptance is recorded.
+
 **Defined locally; hosted verification pending (2026-10-31).** `render.yaml` defines `niryat-worker` with task `monthlyClose`, a `niryat-monthly-close` cron (`30 1 1 * *` UTC), and nightly `niryat-sync` (`30 20 * * *` UTC). The trigger dispatches `niryat-worker/monthlyClose`; hosted task registration and cron execution have not been observed. Worker/trigger tests use fakes.
 
 P5-13 used the allowed API CLI fallback, not Workflows dev: `corepack pnpm --filter @niryat/api close:run --as-of 2027-06-16` and `--as-of 2027-07-01`. On Windows use `corepack.cmd`; do not insert an extra `--` before API CLI options. Runs showed `Monthly close (scheduled)`, the simulated date, advice and approval lists. The latter completed seven users with zero failures. This verifies local scheduled orchestration, not a deployed scheduler.

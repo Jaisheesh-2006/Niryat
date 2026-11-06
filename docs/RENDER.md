@@ -2,6 +2,10 @@
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. Hosted deployment and browser results remain awaiting user verification.
 
+## G3: user deployment status (2026-11-06)
+
+The user reported that Niryat is not deployed yet. This status is recorded here and in [V11](verification.md#v11-hosted-resources); no hosted URL or smoke result was supplied. All G3 deployment/configuration, database retention, migration/seed, sandbox webhook, workflow/cron and smoke checks remain **awaiting user verification**. No code, Blueprint or deployment setting changed, and the assistant performed no deployment or PayPal/Render service action. `corepack.cmd pnpm verify` passed 27/27 cached workspace tasks with fresh root checks; `git diff --check` passed. Log: `.tmp/g3-status-verify.log`. No build or separate database integration was run for this documentation-only status record; automated verification does not establish hosted acceptance.
+
 ## G2: judge-mode Blueprint keys (2026-11-06)
 
 [render.yaml](../render.yaml) now declares `JUDGE_MODE` and `JUDGE_BUYER_EMAIL` as `sync: false` on `niryat-api`, so the user can supply A5's existing API/seed settings in the Render dashboard. No values are committed; no other key or service changed. The [Blueprint guardrail](../scripts/guardrails.test.mts) asserts both declarations on the API service and failed before they were added. Verification passed: `node --test scripts/guardrails.test.mts` (7/7), `corepack.cmd pnpm verify` (27/27 workspace tasks cached; root checks ran fresh) and `git diff --check`. Log: `.tmp/g2-verify.log`. No web/build or DB/API code changed, so no production build or separate database integration run was needed.
