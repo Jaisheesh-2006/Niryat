@@ -141,6 +141,10 @@ Specs 10 and 13 only need the Phase 3 ledger, so they can start in parallel with
 
 ## Phase 7: Judge mode, hosting and freeze (Nov 5–8)
 
+**Status (2026-11-06): implementation and F1 submission materials ready for user rehearsal; hosted exit gate open.** A1/A2 security/rate limits, A4 close tool log, B1–B6 role-aware CA sharing/read views and portfolio, C1–C3 calendar filters/tooltips/multi-client view, D1/D2 plain wording, E1 freshness/light sync, E2 durable-close dispatch and A5 judge entry/seed are implemented. E1/E2 automated checks do not prove hosted freshness or restart recovery. A5 synthetic refund guards are implemented; their browser acceptance remains pending. F1 supplies [Devpost copy and rehearsal steps](submission.md) and the [five-scene 2:55 script](PLAN.md#16-demo-script-3-minutes). No hosting, recording or submission is claimed.
+
+**Outstanding user evidence:** AG Studio licence coverage to 2026-12-15 and December AI-budget configuration ([V15](verification.md#v15-sponsor-licences), [V17](verification.md#v17-submission-materials-and-rehearsal)); Bryntum coverage past that date was user-confirmed on 2026-11-05. New role/sharing/view-only, synthetic-refund, dashboard/calendar interactions and all five hosted scenes await user verification under IMPROVEMENTS. Paid hosting, workflow/cron registration and the four reliability checks below remain open. C4 and later G/H tasks are outside F1.
+
 A5 implementation (2026-11-05): gated freelancer/CA demo entry and an atomic, idempotent synthetic judge seed are implemented. Three freelancers and a CA with proven accepted links use the existing role/approval boundaries. Exact automated results, inherited-environment setup, shared-record/date limits and pending user browser checks are in [IMPROVEMENTS A5](IMPROVEMENTS.md#a5-judge-mode-seed-and-try-as-judge-p0). Hosted demo acceptance and this phase's exit gate remain open.
 - Deploy on Render with paid Postgres; register `monthlyClose`; "Try as judge" with a seeded profile ([PLAN §15](PLAN.md#15-judge-mode)).
 - AI budget cap and rate limits; sandbox-only credentials for judges.
@@ -154,6 +158,8 @@ Before opening the hosted demo to users, complete these reliability checks (adde
 - [ ] Make manual closes recover safely after API restarts, using the existing workflow and run records where possible. The current manual close runs inside the API process; returning HTTP 202 and refreshing the page does not make the job durable. Restart during a run and verify it completes or reports a recoverable failure, does not remain stuck, and creates no duplicate proposals or tasks. Preserve user-only approval and the one-attempt reminder rule; never replay a claimed PayPal reminder as job recovery.
 
 **Exit gate:** **feature freeze Nov 8**; the full demo script ([PLAN §16](PLAN.md#16-demo-script-3-minutes)) runs on the hosted demo.
+
+F1 scene status: problem/LUT — awaiting user verification; invoice/pay/fee/net — awaiting user verification; close/tool log/hold/reminder delivery — awaiting user verification; two dashboards/multi-client calendar — awaiting user verification; safety — awaiting user verification. Record actual hosted outcomes before changing the exit gate.
 
 ## Phase 8: Submit and keep alive (Nov 8 to Dec 15)
 

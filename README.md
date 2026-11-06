@@ -4,7 +4,7 @@ An AI agent for Indian freelancers paid from abroad through PayPal.
 It turns invoices, payments, refunds and disputes into export-compliance records for CA review. Every PayPal write requires user approval; legal/numeric logic belongs to sourced rules.
 
 Built for the PayPal AI Hackathon, due November 12, 2026.
-**Current status:** Phase 6 reports, calendar and dashboard and A5 judge mode are implemented. Table 6A import is blocked before CSV validation, and sponsor trial/judging coverage is unverified. Phase 4 real-FIRA/refund evidence and Phase 7 browser/hosting/reliability checks remain open in [build flow](docs/build-flow.md) and [verification](docs/verification.md#v16-phase-6-acceptance).
+**Current status:** freelancer/CA views, two dashboards, multi-client calendar, sync freshness, durable-close dispatch and judge mode are implemented; [submission copy and video script](docs/submission.md) are ready for rehearsal. Hosted acceptance, real-FIRA/refund evidence, Table 6A import and AG Studio licence coverage remain open in [build flow](docs/build-flow.md) and [verification](docs/verification.md). Bryntum coverage is user-confirmed.
 
 ## PayPal and AI
 
@@ -61,13 +61,18 @@ For a dedicated sandbox demo, supply inherited `DATABASE_URL`, `ENCRYPTION_KEY`,
 
 Judges share Ananya's freelancer account and a CA account linked to three freelancers. Historical invoices/payments/refund/dispute/FIRA are synthetic; unpaid fixtures have no PayPal invoice IDs and generate no reminder proposals. Only newly created, separately approved sandbox invoices can be sent to the US client. Buyer login is the privately supplied `JUDGE_BUYER_EMAIL`; obtain its password privately from the app owner. The user chose to keep the email private too. Never enter personal data in these shared accounts.
 
-Reruns preserve judge edits and original seed dates, including ended sharing; they do not reset the demo or extend LUT validity. Ananya's LUT expires 15 days after the first seed, so prepare a fresh disposable demo database before a later demonstration. Reserved-email collisions fail without replacing accounts. No credentials are committed. Hosted/browser acceptance remains pending.
+Reruns preserve judge edits and original seed dates, including ended sharing; they do not reset the demo or extend LUT validity. Ananya's LUT expires 15 days after the first seed. For later demos, refresh only its synthetic dates through the existing Profile form ([H3](docs/IMPROVEMENTS.md#h3-keep-alive-to-dec-15-and-refresh-demo-dates-p0-phase-8-user)); preserve database and invoice-number history. Reserved-email collisions fail without replacing accounts. No credentials are committed. Hosted/browser acceptance remains pending.
 
 render.yaml defines web, API, monthly-close Workflows, monthly trigger, half-hour light reconciliation, nightly reconciliation and **paid** Postgres. Hosting, real dispatch and scheduling remain user checks in [Phase 7](docs/build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58); nothing is deployed by the seed.
 
-AG Studio/React 3.0.0 powers the dashboard's seven widget groups and Agent Framework. Claude builds widgets through Niryat's authenticated `/api/dashboard/turn` proxy, with a shared monthly budget and no browser-visible AI key or PayPal tools. The current adapter supports text/tool calls, not thinking blocks; P6-11 model-compatibility guidance recommended Sonnet 4.6 after Sonnet 5.5 response validation failures. `AG_STUDIO_LICENSE_KEY` is a deliberately browser-visible sponsor licence key.
+## Sponsor tools
 
-Bryntum Calendar/React 7.3.8 displays read-only compliance events, state labels and links, with an accessible server-rendered fallback list. It uses the trial package alias, as the hackathon's Bryntum page prescribes, with no licence key; the user confirmed the trial lasts past December 15. AG Studio trial dates remain unverified in [V15](docs/verification.md#v15-sponsor-licences).
+- **AG Studio/React 3.0.0:** two dashboards: the freelancer's seven widget groups at `/dashboard` and accepted clients' CA portfolio at `/ca`. Both share Niryat's light/dark theme and an AI Assistant in edit mode. Claude configures widgets through the authenticated server proxy; no AI key or PayPal tools reach the browser. `AG_STUDIO_LICENSE_KEY` is deliberately browser-visible. [Change record](docs/AG_STUDIO.md).
+- **Bryntum Calendar/React 7.3.8:** category colours, filters, agenda/week/month/year/list views and action tooltips with rule sources where applicable. `/ca/calendar` adds client colours and filters across accepted shares; calendars are read-only with server-rendered fallback lists. The trial alias needs no key; coverage past December 15 is user-confirmed. AG Studio dates remain open in [V15](docs/verification.md#v15-sponsor-licences). [Change record](docs/BRYUNTUM.md).
+- **Render:** the Blueprint defines Workflows monthly close and durable manual-close dispatch, 30-minute light sync without AI, nightly sync with reminders, and paid Postgres. Local manual close falls back to the API process without workflow configuration. Hosted execution/restart recovery remain unverified. [Setup and evidence](docs/RENDER.md).
+- **APIMatic:** the PayPal Context Plugin guided Server SDK integration, authentication, error handling and transport-based tests. Invoicing and Disputes remain REST. See the [usage log and shipped-code evidence](docs/apimatic-usage.md).
+
+The business model is **free for freelancers; CA firms pay per client**; billing is not implemented. [Submission materials](docs/submission.md) include the five-scene script, limitations and outstanding user checks. Select AG Studio as the single sponsor-prize target.
 
 ## Read next
 

@@ -40,6 +40,14 @@ Hosting and deployment are **out of scope** (the user deploys to Render). Tasks 
 | 18    | A5 Judge mode: seed and "Try as judge"                  | P0                         | B1–B5 (CA part), A2 |
 | 19    | F1 Submission materials                                 | P0                         | all shipped tasks   |
 | 20    | C4 Plan-your-work drag on the calendar                  | P2                         | C1                  |
+| 21    | G1 Disclaimer says "sandbox only"                       | P0 (Phase 7)               | —                   |
+| 22    | G2 Judge-mode keys in the Render Blueprint              | P0 (Phase 7)               | A5                  |
+| 23    | G3 Hosted deploy and smoke check (user)                 | P0 (Phase 7)               | G2                  |
+| 24    | G4 Hosted reliability checks (user)                     | P0 (Phase 7)               | G3, E1, E2          |
+| 25    | G5 Feature freeze and hosted demo-script run            | P0 (Phase 7 exit gate)     | G3, F1 script       |
+| 26    | H1 Testing sweep of pending manual checks               | P0 (Phase 8)               | G3                  |
+| 27    | H2 Video, compliance checklist and submission (user)    | P0 (Phase 8)               | F1, G5, H1          |
+| 28    | H3 Keep alive to Dec 15 and refresh demo dates (user)   | P0 (Phase 8)               | H2                  |
 
 A1–A4, C1–C2, D1 and E1 touch separate files, so they may run in parallel with B.
 
@@ -792,7 +800,7 @@ Manual checks — awaiting user verification:
 4. In a fresh private window click Try as freelancer (demo): expect `/overview` as Ananya. At `/health-check` expect an expiring LUT/purpose-code mismatch; at `/profile`, `/invoices` and `/fira` expect populated synthetic records. At `/close`, click Run monthly close with PayPal/Claude unconfigured: expect completion with deterministic records and no reminders for seeded invoices. Separately issued real sandbox invoices may create later proposals; each still requires explicit approval.
 5. In another private window click Try as CA (demo): expect `/ca`, three clients, distinct health/overdue status, populated dashboard and `/ca/calendar`. Open each client; records must be viewable and PayPal actions absent. Direct CA `POST /api/close` remains denied. Sign out/re-enter both roles and verify the intended destination without cached logged-out redirects.
 6. Optional user-approved sandbox send: configure seller and file storage, use Ananya's US client at `/invoices`, prepare a new USD invoice, then explicitly approve its send. Expect the new invoice in the privately supplied sandbox buyer's PayPal account. Synthetic history is never a real PayPal invoice. Synthetic judge payments show no refund control; direct refund proposals for them are rejected before any approval is created. No live send/receipt is claimed verified.
-7. Sharing and records are mutable and shared by all judges; do not enter personal data. Reruns do not restore ended sharing or refresh the original countdown: Ananya's LUT expires 15 days after the initial seed. Use a new disposable demo database and seed near a later demonstration if needed. Sponsor licence coverage, browser/keyboard/mobile behavior and hosted acceptance remain unverified.
+7. Sharing and records are mutable and shared by all judges; do not enter personal data. Reruns do not restore ended sharing or refresh the original countdown: Ananya's LUT expires 15 days after the initial seed. For a later demonstration, refresh only the synthetic LUT dates through the existing Profile form using [H3](#h3-keep-alive-to-dec-15-and-refresh-demo-dates-p0-phase-8-user); preserve the database and invoice-number history. Sponsor licence coverage, browser/keyboard/mobile behavior and hosted acceptance remain unverified.
 
 #### A5 final results (2026-11-06)
 
@@ -839,9 +847,128 @@ Docs and README only.
   - record results in [verification.md](docs/verification.md).
 - Update [build-flow.md](docs/build-flow.md) Phase 7 statuses for whatever shipped. Tick nothing that wasn't verified.
 
+#### F1 implementation and verification (2026-11-06)
+
+Docs only: PLAN section 16 now has five scenes totalling 2:55; [submission materials](submission.md) supply Devpost copy and exact user rehearsal prerequisites/inputs/URLs/expected results. README now names both AG Studio dashboards/Assistant/theme, Bryntum categories/filters/source tooltips/multi-client view, Render Workflows/manual dispatch/light/nightly sync/paid Postgres and APIMatic's usage evidence. Phase 7 records shipped implementation while leaving hosted acceptance and every reliability checkbox open. V17/RENDER document user-only licence and December-budget follow-up; V15's confirmed Bryntum coverage is preserved. No budget value, key or licence evidence is invented.
+
+Real sandbox sends/payment/reminder delivery must be demonstrated separately from synthetic seed history. The script leaves disputed-client hold advice unapproved, requires actual successful Claude reads/hold evidence, labels simulated dates and does not promise AI choices or immediate webhooks. Devpost copy discloses one seller, sandbox/synthetic FIRA, no CA rule review, unsigned/no-INR-conversion PDFs, blocked CSV import, shared seed dates, advisory hold wording and pending hosted/manual/licence/budget checks. Billing is a proposed model only. Prior user edits adding G/H tasks are preserved; none is implemented here.
+
+Automated checks passed: direct `corepack.cmd pnpm --filter @niryat/db exec vitest run --no-file-parallelism` **180/180** (nine files, 30.78s) and the equivalent API command **794/794** (40 files, 452.33s), zero skips. Both inherited only the task-created PostgreSQL 17 `niryat_test` URL, avoiding the `test:db` wrappers' private environment-file loaders; the application database was untouched. `corepack.cmd pnpm verify` passes **27/27** tasks (all cached, 116ms Turbo plus fresh root checks). Its cached ordinary integration skips are covered by the separate complete runs above. The first verification stopped on formatting in the two new Markdown tables; targeted Biome fixes resolved it. No assertion or timeout changed. F1's 52 local links/anchors, README **84 lines** (<120), five contiguous scenes **175 seconds** (<180) and diff whitespace pass. Logs: `.tmp/f1-{db,api,verify,doc-check}.log`. The task-created `--rm` container `niryat-f1-tests` was stopped/removed. No production build was needed for docs-only changes.
+
+User checks: all five hosted scenes, AG Studio coverage and December budget remain **awaiting user verification** in [V17](verification.md#v17-submission-materials-and-rehearsal). No runtime/web/config/dependency/migration/env change, PayPal/APIMatic/Render/Discord service call, browser/helper, feature tick, deployment, recording, commit or publication.
+
+#### F1 review corrections: 1 then 2 then 3 (2026-11-06)
+
+Fixed in order, with a focused check passing before each next edit:
+1. H3 and the related README/A5/architecture/submission/Render guidance now refresh only synthetic LUT dates through the existing Profile form. They preserve database, invoice-number and approval history because PayPal retains sent invoices. H3 gives exact user steps and expected results; no profile or database was changed. The issue-1 check confirmed all advice copies agree while issues 2/3 were still untouched.
+2. V17 and RENDER now describe the current execution month in IST for AI spend checks, independently of the close's report month. The issue-2 check compared both copies with `apps/api/src/close.ts` before issue 3 was edited.
+3. G/H links now resolve from this document: sibling documentation names and `../` for root files. All 11 local targets/anchors passed, including the source path containing `(public)`. No later feature was implemented.
+
+Verification: all three focused checks passed in order (`.tmp/f1-review-issue{1,2,3}.log`); 76 affected local links/anchors, README 84 lines and the unchanged 175-second script pass (`.tmp/f1-review-doc-check.log`). Direct `corepack.cmd pnpm --filter @niryat/db exec vitest run --no-file-parallelism` passed 180/180 (nine files, 28.15s); the equivalent API command passed 794/794 (40 files, 256.11s), zero skips. Both used only task-created PostgreSQL 17 `niryat_test` through `TEST_DATABASE_URL`, without private environment-file loaders or application data. `corepack.cmd pnpm verify` passed 27/27 tasks (all cached, 157ms Turbo plus fresh root checks); ordinary cached integration skips are covered by the full direct runs. Logs: `.tmp/f1-review-{db,api,verify}.log`. The `--rm` container `niryat-f1-review-tests` was stopped/removed. Formatting and diff whitespace pass; no build needed for docs-only corrections.
+
+Synthetic-profile refresh, browser/hosted checks, licence coverage and budget configuration remain awaiting user verification. Docs only; no code/config/dependency/migration/env change, application data mutation, PayPal/Render service call, feature tick, deployment, commit or publication.
+
 ### C4. Plan-your-work drag on the calendar (P2)
 
 Only if every P0 and P1 task is done. Let freelancers drag their **own tasks** (not legal deadlines) to a "planned" date in Bryntum; legal deadline events stay locked per event. Needs a nullable `tasks.planned_date` column and `POST /tasks/:id/plan`. Write a full sub-plan before starting; do not start without the user's go-ahead.
+
+### Phase 7 and 8: remaining tasks (21–28, added 2026-11-06)
+
+These cover what [build flow §Phase 7–8](build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58) still needs after tasks 1–20.
+**Not added, because they are done or cut:** "Try as judge" (A5), rate limits (A2), the AI budget cap (it already exists; F1 sets the December value), last-sync display (E1), durable manual close (E2). PLAN §6 stretch features are cut because the feature freeze is Nov 8 and C4 is still open.
+G tasks are Phase 7. H tasks are Phase 8. Tasks marked **(user)** are done by the user: deployment, PayPal/Render dashboards, browser checks and recording are theirs (AGENTS.md, section 3). For those, the coding model writes the exact steps, records only the results the user reports, and ticks only what was verified.
+
+### G1. Disclaimer says "sandbox only" (P0, Phase 7)
+
+**Objective:** the Phase 7 disclaimer must cover four points: not tax advice, no CA review, one seller per deployment, sandbox only. [disclaimer/page.tsx](<../apps/web/src/app/(public)/disclaimer/page.tsx>) already covers the first three. It does not mention the sandbox.
+
+**Change:** add one paragraph reusing A5's exact wording: **"This demo uses PayPal sandbox accounts only. No real money moves."** Add it to PLAN §23 as well, so the page and PLAN stay identical in meaning.
+
+**Tests:** extend the existing disclaimer assertion in [index.test.tsx](../apps/web/src/index.test.tsx) to check for the new sentence.
+
+**Acceptance:** `pnpm verify` and `pnpm build` pass.
+
+### G2. Judge-mode keys in the Render Blueprint (P0, Phase 7)
+
+**Objective:** A5 reads `JUDGE_MODE` and `JUDGE_BUYER_EMAIL` on the API, but `niryat-api` in [render.yaml](../render.yaml) declares neither. Without them, the hosted demo hides both demo buttons and `/auth/judge` returns 404.
+
+**Change:**
+- Add both keys to `niryat-api` as `sync: false`. The user supplies the values in the Render dashboard; never commit a value.
+- Add no other service or key.
+
+**Tests:** extend the Blueprint guardrail in [scripts/guardrails.test.mts](../scripts/guardrails.test.mts) to assert that `niryat-api` declares both keys as `sync: false`.
+
+**Docs:** add an entry to [RENDER.md](RENDER.md) (sponsor-doc rule in AGENTS.md).
+
+**Acceptance:** `pnpm verify` passes. Nothing is deployed.
+
+### G3. Hosted deploy and smoke check (P0, Phase 7, user)
+
+**Objective:** a running hosted demo that judges can open. The coding model writes nothing here except the results the user reports, in [V11](verification.md#v11-hosted-resources) and [RENDER.md](RENDER.md).
+
+**User steps:**
+1. Deploy the Blueprint. Confirm that `niryat-db` is on a **paid** plan that does not expire before 2026-12-15 (PLAN §20: free databases expire after 30 days).
+2. Enter every `sync: false` value in the Render dashboard, using **sandbox** PayPal credentials only. Set `JUDGE_MODE=true`, `JUDGE_BUYER_EMAIL` and `AI_MONTHLY_BUDGET_USD`.
+3. From the `niryat-api` shell, run `corepack pnpm db:migrate`, then `corepack pnpm seed:judge`.
+4. In the PayPal sandbox app, register the webhook at `https://<api-public-host>/webhooks/paypal` and put its ID in `PAYPAL_WEBHOOK_ID`. Set `PAYPAL_LOGIN_RETURN_URL` and `PUBLIC_APP_URL` to the hosted URLs.
+5. Confirm that the `niryat-worker` workflow lists the `monthlyClose` task and that the three crons appear.
+
+**Smoke checks (expected results):** `GET /health` → `{"status":"ok"}`. `GET /judge-mode` → `true`. The home page and both login pages show both demo buttons. Try as freelancer → `/overview` as Ananya. Try as CA → `/ca` with three clients. Response headers include `X-Frame-Options: DENY` (A1).
+
+**Acceptance:** each smoke result is recorded as reported. Mark anything not observed as pending.
+
+### G4. Hosted reliability checks (P0, Phase 7, user)
+
+**Objective:** close the four reliability checkboxes in build flow §Phase 7. E1 and E2 built the code. Only the hosted checks remain.
+
+**User checks** (exact steps for E1/E2 are in RENDER.md):
+1. **Webhooks:** pay a sandbox invoice, and open and refund a dispute against the hosted URL. Expect a valid signature, the payment or dispute on the right invoice, a task, and no duplicate when PayPal resends. Record the results in [V06](verification.md#v06-events-refunds-disputes-and-history).
+2. **Freshness:** with a webhook missed (for example, before registering it, or with it paused), the 30-minute `niryat-sync-light` cron recovers the event without terminal commands. Record the measured delay.
+3. **Last sync:** the Today and invoices pages show the last update. A failed cron run does not advance it, and the next good run clears the stale notice.
+4. **Durable close:** restart `niryat-api` during a manual close. The run finishes, or shows a recoverable failure. It does not get stuck and creates no duplicate proposals or tasks. No claimed reminder is replayed.
+
+**Acceptance:** tick each build-flow checkbox only after its check passes. A failed check becomes an H1 bug fix and stays unticked.
+
+### G5. Feature freeze and hosted demo-script run (P0, Phase 7 exit gate)
+
+**Objective:** the Phase 7 exit gate. Freeze features on **2026-11-08**, and run the full demo script on the hosted demo.
+
+**Rules after the freeze:** only fixes for failures found in G3, G4 or H1, plus docs. No new features, migrations or dependencies. If C4 is not done by Nov 8, it is dropped.
+
+**User check:** run the five F1 video scenes end to end on the hosted demo. Record each scene as pass or fail in build flow §Phase 7, and set the exit-gate status. Fix failures under H1 before recording the video.
+
+### H1. Testing sweep of pending manual checks (P0, Phase 8, Nov 8–10)
+
+**Objective:** Phase 8 "testing". Many tasks above end with "awaiting user verification". Work through them on the hosted demo, starting with the ones on the demo path and the security ones: role isolation (B1–B4), CA can only view (B5), synthetic refunds blocked (A5), then the rest.
+
+**Process:** the user runs each block's steps and reports pass or fail. The coding model marks each block **verified** or **failed** in place, with the date. For each failure, it writes a minimal fix with a regression test, runs `pnpm verify` (plus `pnpm build` for web changes), and the user re-runs the check.
+
+**Acceptance:** no demo-path check left as failed. Checks not run stay "awaiting user verification" and are listed as limitations in F1's Devpost text.
+
+### H2. Video, compliance checklist and submission (P0, Phase 8, user)
+
+**Objective:** submit on **2026-11-11**, one day before the deadline.
+
+**User steps:**
+1. Record the video under 3 minutes from the F1 script, on the hosted demo. Use no third-party logos or copyrighted music. Upload it to YouTube as public.
+2. Make the repository public, with the LICENSE shown in the About section.
+3. Go through [PLAN §19](PLAN.md#19-hackathon-compliance-checklist). The coding model ticks each box only when the user confirms it. The licence item depends on V15.
+4. Submit on Devpost with the F1 text. Choose **AG Studio** as the single sponsor prize (section 0).
+
+**Acceptance:** the submission is confirmed by the user. The PLAN §19 ticks match what was confirmed.
+
+### H3. Keep alive to Dec 15 and refresh demo dates (P0, Phase 8, user)
+
+**Objective:** keep the hosted demo usable for all of judging, 2026-12-01 to 2026-12-15.
+
+**Refresh synthetic demo dates (user only):** Ananya's LUT ends **15 days after the first seed**, and reruns keep the original dates (A5). An expired LUT blocks invoice issuing. Before a later rehearsal or judging, use the existing Profile form to refresh this synthetic fixture. Preserve the database, invoice numbers and approval history: PayPal retains sent invoices, so deleting Niryat's history can cause later sends to reuse their numbers. This fixture change does not renew a real LUT; real profiles must reflect the filed document.
+
+**Manual steps (awaiting user verification):**
+1. Start the dedicated sandbox demo using the [rehearsal setup](submission.md#recording-and-rehearsal-user-only), or use its hosted web origin. Choose **Try as freelancer (demo)** and confirm the profile is Ananya's synthetic account.
+2. At `/profile`, keep the synthetic LUT reference and valid-from date. Set **LUT valid to** after the planned demonstration; for December judging, use **2026-12-16** so it stays valid through December 15. Save the profile. Do not reset/reseed the database to refresh this date.
+3. Reload `/profile` and `/health-check`. Expect the saved end date and no `lut_expired` high flag; a near-expiry warning can remain. At `/invoices`, confirm existing invoices and numbers remain. Record the date, demo origin and observed results in V11. The assistant has not changed any profile or database.
+
+**Weekly checks until Dec 15:** `/health` responds; the crons and the `monthlyClose` task ran; the AI budget has room; the sandbox seller and buyer accounts still work; the database plan and Render credits last to Dec 15; the licences still render (V15). Record any outage or fix in V11.
 
 ---
 

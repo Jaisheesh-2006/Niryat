@@ -2,6 +2,16 @@
 
 Ordinary automated checks require no credentials; explicit database integration suites use a separate test database. The entries below distinguish user-confirmed sandbox evidence from remaining account, deployment and source-review checks.
 
+## V17 Submission materials and rehearsal
+
+**F1, 2026-11-06: docs prepared; user checks pending.** [Submission materials](submission.md) contain Devpost copy, limits and exact startup/account/input/URL/expected-result instructions. [PLAN section 16](PLAN.md#16-demo-script-3-minutes) now has five scenes totalling 2:55; README describes both dashboards and all sponsor integrations. Phase 7 tracks shipped implementation without claiming hosted acceptance. This task changes no product behavior, deployment configuration or feature checklist.
+
+**Licence follow-up — user only:** in the PayPal Discord, ask AG Studio whether the supplied hackathon/trial licence covers the hosted demo through **2026-12-15 inclusive**. Privately retain the answer and record its date, permitted period and a non-secret evidence reference in V15. Do not paste a key. Bryntum is already user-confirmed through that date (V15, 2026-11-05); retain that result and obtain a Discord clarification only if its terms or coverage are still in doubt. No Discord message was sent by the assistant. AG Studio remains **awaiting user verification**.
+
+**December budget — user only:** choose an affordable positive USD amount for the whole deployment's December AI use. In the Render dashboard set `AI_MONTHLY_BUDGET_USD` consistently for API, worker and nightly sync; apply/restart the affected services and confirm they use it. Do not change it on the light sync, which does not run AI. Recheck headroom on December 1; the configured limit persists. Dashboard, extraction and monthly close all check spending since the start of the current execution month in IST, regardless of the close's report month. Run a dashboard prompt and monthly close, confirm cost/run records and remaining headroom, and monitor the provider's actual spend through December 15. Exhaustion should leave manual forms and deterministic proposals available, rather than bypassing the cap. The stored estimate can overshoot by in-flight work; use provider billing controls too. Record configured amount (not credentials), date/services, observed result and outstanding limits here. Budget selection/configuration and live checks remain **awaiting user verification**. See the [Render operator record](RENDER.md#f1-december-ai-budget-and-submission-evidence-2026-11-06).
+
+**Rehearsal — user only:** follow [the five scene checks](submission.md#scene-checks-and-expected-results), then record date, origin and observed results here. Current status: all five scenes **awaiting user verification**. Hosted webhooks/freshness/restart checks remain V06/V11 and Phase 7; prior local evidence is not a hosted pass. The video/public URLs, public repository, compliance checklist and final submission remain user work. Do not tick those items from F1's document completion.
+
 ## V01 PayPal documentation migration
 
 TODO(verify): Confirm the retired prompt URL's replacement with PayPal; configurations use the exact local command from the [current official quickstart](https://developer.paypal.com/ai-tools/mcp-server). The original docs.paypal.ai URL returned 404.
