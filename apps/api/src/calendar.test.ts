@@ -1,11 +1,37 @@
 import { advanceTaxDates, cite, gstr1Period, gstr1PeriodsDueBetween } from "@niryat/rules";
-import { calendarEventSchema, type Invoice, type InvoiceView } from "@niryat/shared";
+import { calendarEventSchema, type Invoice, type InvoiceView, taskSchema } from "@niryat/shared";
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvents } from "./calendar";
+import { buildCalendarEvents, buildTaskEvents } from "./calendar";
 import { toInvoiceView } from "./compliance";
 import { rules } from "./rules";
 
 const today = "2026-10-31";
+
+it("uses planned date, then due date, then today for open tasks only", () => {
+  const task = taskSchema.parse({
+    id: "10000000-0000-4000-8000-000000000001",
+    type: "agent_suggestion",
+    status: "open",
+    message: "Check records",
+    plannedDate: null,
+    dueDate: null,
+    invoiceId: null,
+    sourceRuleId: "TEST",
+    createdAt: "2026-10-01T00:00:00Z",
+    doneAt: null,
+  });
+  expect(buildTaskEvents([task], today)[0]).toMatchObject({
+    date: today,
+    title: "Unplanned task: Check records",
+    ruleId: null,
+    source: null,
+  });
+  expect(buildTaskEvents([{ ...task, dueDate: "2026-11-01" }], today)[0]?.date).toBe("2026-11-01");
+  expect(
+    buildTaskEvents([{ ...task, dueDate: "2026-11-01", plannedDate: "2026-10-30" }], today)[0],
+  ).toMatchObject({ date: "2026-10-30", state: "past", title: "Planned task: Check records" });
+  expect(buildTaskEvents([{ ...task, status: "done" }], today)).toEqual([]);
+});
 const profile = {
   gstRegistered: true,
   lutValidTo: "2027-03-31",

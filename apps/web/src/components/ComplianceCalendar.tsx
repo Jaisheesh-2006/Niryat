@@ -12,9 +12,11 @@ const CalendarView = dynamic(() => import("./CalendarView"), {
 export function ComplianceCalendar({
   events,
   resources = calendarResources,
+  canPlan = false,
 }: {
   events: readonly (CalendarEvent & { freelancerId?: string })[];
   resources?: typeof calendarResources;
+  canPlan?: boolean;
 }) {
-  return <CalendarView events={events} resources={resources} />;
+  return <CalendarView events={events} resources={resources} canPlan={canPlan} />;
 }

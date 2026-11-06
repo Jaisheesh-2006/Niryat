@@ -1,9 +1,9 @@
-import { getProfile, listCaClients, listInvoices } from "@niryat/db";
+import { getProfile, listCaClients, listInvoices, listTasks } from "@niryat/db";
 import { caCalendarSchema, calendarEventSchema } from "@niryat/shared";
 import { Hono } from "hono";
 import { clientAccessDenied, readClientAccess } from "../auth/client-access";
 import { readCaSession } from "../auth/session";
-import { buildCalendarEvents } from "../calendar";
+import { buildCalendarEvents, buildTaskEvents } from "../calendar";
 import { toInvoiceView } from "../compliance";
 import { rules, todayInIndia } from "../rules";
 import type { AppDeps } from "./auth";
@@ -22,7 +22,12 @@ export function calendarRoutes(
       toInvoiceView(invoice, profile?.gstRegistered ?? null, today),
     );
     return c.json(
-      calendarEventSchema.array().parse(buildCalendarEvents({ profile, views }, today, rules)),
+      calendarEventSchema
+        .array()
+        .parse([
+          ...buildCalendarEvents({ profile, views }, today, rules),
+          ...buildTaskEvents(await listTasks(deps.db, userId), today),
+        ]),
     );
   });
   routes.get("/ca/calendar", async (c) => {

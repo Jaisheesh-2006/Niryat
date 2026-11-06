@@ -116,6 +116,7 @@ it("renders tile values, only proposed approvals, and the IST header date", asyn
       status,
       message: "Check",
       dueDate: null,
+      plannedDate: null,
       invoiceId: null,
       sourceRuleId: "Test",
       createdAt: "2026-11-01T00:00:00Z",

@@ -1,6 +1,12 @@
 import { type CalendarEvent, calendarEventSchema } from "@niryat/shared";
 import { expect, it } from "vitest";
-import { caCalendarResources, calendarResources, deadlineList, toBryntumEvents } from "./calendar";
+import {
+  caCalendarResources,
+  calendarResources,
+  deadlineList,
+  planningResources,
+  toBryntumEvents,
+} from "./calendar";
 
 it.each(["overdue", "upcoming", "past"] as const)(
   "maps an all-day %s event and preserves its title and link",
@@ -23,6 +29,9 @@ it.each(["overdue", "upcoming", "past"] as const)(
         startDate: "2026-12-31T00:00:00",
         endDate: "2027-01-01T00:00:00",
         allDay: true,
+        readOnly: true,
+        draggable: false,
+        resizable: false,
         resourceId: "rbi",
         cls: `niryat-${state}`,
         href: event.href,
@@ -36,6 +45,28 @@ it.each(["overdue", "upcoming", "past"] as const)(
 
 it("maps an empty calendar", () => {
   expect(toBryntumEvents([])).toEqual([]);
+});
+
+it("keeps planned work out of the legal deadline list", () => {
+  const task = calendarEventSchema.parse({
+    id: "task:1",
+    kind: "planned_task",
+    date: "2026-11-05",
+    title: "Planned task",
+    state: "upcoming",
+    action: "Plan work",
+    source: null,
+    ruleId: null,
+    href: "/tasks",
+  });
+  expect(deadlineList([task], 10)).toEqual([]);
+  expect(toBryntumEvents([task], true)[0]).toMatchObject({
+    readOnly: false,
+    draggable: true,
+    resizable: false,
+    resourceId: "tasks",
+  });
+  expect(toBryntumEvents([{ ...task, freelancerId: "owner" }], true)[0]?.readOnly).toBe(true);
 });
 
 it("assigns client resources and cycles token colours without merging equal names", () => {
@@ -79,6 +110,7 @@ it("assigns every event kind to its category resource", () => {
     rbi_deadline: "rbi",
     dispute_response: "paypal",
     recurring_invoice: "paypal",
+    planned_task: "tasks",
   } satisfies Record<CalendarEvent["kind"], string>;
   for (const kind of calendarEventSchema.shape.kind.options) {
     const event: CalendarEvent = {
@@ -94,7 +126,7 @@ it("assigns every event kind to its category resource", () => {
     };
     const mapped = toBryntumEvents([event])[0];
     expect(mapped?.resourceId).toBe(categories[kind]);
-    expect(calendarResources.some((resource) => resource.id === mapped?.resourceId)).toBe(true);
+    expect(planningResources.some((resource) => resource.id === mapped?.resourceId)).toBe(true);
     expect(mapped).not.toHaveProperty("eventColor");
   }
   expect(calendarResources).toEqual([

@@ -413,6 +413,7 @@ export const calendarEventSchema = z.object({
     "credit_note_declare_by",
     "dispute_response",
     "recurring_invoice",
+    "planned_task",
   ]),
   title: z.string(),
   action: z.string().min(1),
@@ -715,12 +716,15 @@ export const taskSchema = z.object({
   status: z.enum(["open", "done"]),
   message: z.string(),
   dueDate: z.iso.date().nullable(),
+  plannedDate: z.iso.date().nullable(),
   invoiceId: z.uuid().nullable(),
   sourceRuleId: z.string(),
   createdAt: z.iso.datetime(),
   doneAt: z.iso.datetime().nullable(),
 });
 export type Task = z.infer<typeof taskSchema>;
+
+export const taskPlanInputSchema = z.strictObject({ plannedDate: z.iso.date().nullable() });
 
 export const userRoles = ["freelancer", "ca"] as const;
 export type UserRole = (typeof userRoles)[number];

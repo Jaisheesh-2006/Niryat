@@ -4,7 +4,7 @@ import { ComplianceCalendar } from "../../../components/ComplianceCalendar";
 import { PageHeader } from "../../../components/PageHeader";
 import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
-import { deadlineList } from "../../../lib/calendar";
+import { deadlineList, planningResources } from "../../../lib/calendar";
 import { formatDate } from "../../../lib/format";
 
 export const metadata = { title: "Calendar" };
@@ -51,7 +51,12 @@ export default async function Calendar() {
         </li>
       </ul>
       <div className="card calendar-card">
-        <ComplianceCalendar events={events} />
+        <p>
+          Drag your tasks to plan a work date. Legal deadlines stay locked. You can also set or
+          clear planned dates on the <Link href="/tasks">Tasks page</Link>. Unplanned tasks appear
+          on their due date, or today when there is no due date.
+        </p>
+        <ComplianceCalendar events={events} resources={planningResources} canPlan />
       </div>
       <section aria-labelledby="calendar-deadlines">
         <h2 id="calendar-deadlines">Overdue and next 10 upcoming deadlines</h2>

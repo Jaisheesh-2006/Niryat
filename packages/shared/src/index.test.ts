@@ -575,6 +575,7 @@ it("rejects unknown task types and statuses", () => {
     status: "open",
     message: "Test task",
     dueDate: null,
+    plannedDate: null,
     invoiceId: null,
     sourceRuleId: "CREDIT_NOTE",
     createdAt: "2026-10-27T12:00:00Z",

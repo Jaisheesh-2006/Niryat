@@ -6,7 +6,7 @@ import {
   gstr1PeriodsDueBetween,
   type RuleMetadata,
 } from "@niryat/rules";
-import type { CalendarEvent, InvoiceView, ProfileInput } from "@niryat/shared";
+import type { CalendarEvent, InvoiceView, ProfileInput, Task } from "@niryat/shared";
 import { z } from "zod";
 
 const calendarActions = {
@@ -24,6 +24,7 @@ const calendarActions = {
     "Review the dispute in PayPal and submit your response there if it is still open.",
   recurring_invoice:
     "Check in PayPal whether the expected invoice was created and review it before taking any action.",
+  planned_task: "Plan when to work on this task. Its due date stays unchanged.",
 } satisfies Record<CalendarEvent["kind"], string>;
 
 export function buildCalendarEvents(
@@ -163,4 +164,23 @@ export function buildCalendarEvents(
   return [...events.values()].sort(
     (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
   );
+}
+
+export function buildTaskEvents(tasks: readonly Task[], today: string): CalendarEvent[] {
+  return tasks
+    .filter((task) => task.status === "open")
+    .map((task) => {
+      const date = task.plannedDate ?? task.dueDate ?? today;
+      return {
+        id: `task:${task.id}`,
+        date,
+        kind: "planned_task",
+        title: `${task.plannedDate ? "Planned" : "Unplanned"} task: ${task.message}`,
+        state: date < today ? "past" : "upcoming",
+        href: `/tasks#task-${task.id}`,
+        ruleId: null,
+        source: null,
+        action: calendarActions.planned_task,
+      };
+    });
 }

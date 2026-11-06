@@ -3,19 +3,31 @@ import type { CalendarEvent } from "@niryat/shared";
 import { isValidElement } from "react";
 import { expect, it, vi } from "vitest";
 import { calendarResources } from "../lib/calendar";
-import CalendarView from "./CalendarView";
+import { sendJson } from "../lib/forms";
+import CalendarViewComponent from "./CalendarView";
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+function CalendarView(props: Parameters<typeof CalendarViewComponent>[0]) {
+  return CalendarViewComponent(props).props.children[1];
+}
+
+const { push, refresh, setMessage } = vi.hoisted(() => ({
+  push: vi.fn(),
+  refresh: vi.fn(),
+  setMessage: vi.fn(),
+}));
 
 vi.mock("@bryntum/calendar-react", () => ({ BryntumCalendar: () => null }));
 vi.mock("@bryntum/calendar/calendar.css", () => ({}));
 vi.mock("@bryntum/calendar/svalbard-light.css", () => ({}));
 vi.mock("@bryntum/calendar/fontawesome/css/fontawesome.css", () => ({}));
 vi.mock("@bryntum/calendar/fontawesome/css/solid.css", () => ({}));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
+vi.mock("../lib/forms", () => ({ sendJson: vi.fn() }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useRef: () => ({ current: null }),
+  useState: () => ["", setMessage],
+  useMemo: (compute: () => unknown) => compute(),
 }));
 
 it("shows category filters and five read-only modes, navigating only for known local events", () => {
@@ -141,4 +153,88 @@ it("uses text nodes for untrusted tooltip data and omits unsafe Open links", asy
     ],
   });
   expect(await tooltip.renderer({ eventRecord: { id: "missing" } })).toBe("");
+});
+
+it("locks deadlines and CA events, persisting task moves before accepting a drop", async () => {
+  const id = "10000000-0000-4000-8000-000000000001";
+  const task: CalendarEvent = {
+    id: `task:${id}`,
+    date: "2026-11-05",
+    kind: "planned_task",
+    title: "Plan work",
+    state: "upcoming",
+    action: "Plan work",
+    source: null,
+    ruleId: null,
+    href: "/tasks",
+  };
+  const deadline = { ...task, id: "legal", kind: "advance_tax" as const };
+  const caTask = { ...task, id: `client:task:${id}`, freelancerId: id };
+  const element = CalendarView({ events: [task, deadline, caTask], canPlan: true });
+  expect(element.props.readOnly).toBe(false);
+  expect(element.props.autoCreate).toBe(false);
+  expect(element.props.eventEditFeature).toBe(false);
+  expect(element.props.eventCopyPasteFeature).toBe(false);
+  expect(element.props.onBeforeEventDelete()).toBe(false);
+  expect(element.props.eventMenuFeature).toBe(false);
+  expect(element.props.scheduleMenuFeature).toBe(false);
+  expect(element.props.dragFeature).toEqual({ creatable: false, resizable: false });
+  expect(element.props.events.map((event: { readOnly: boolean }) => event.readOnly)).toEqual([
+    false,
+    true,
+    true,
+  ]);
+  for (const item of [deadline, caTask, { ...task, id: "unknown" }]) {
+    expect(element.props.onBeforeDragMove({ eventRecord: { id: item.id } })).toBe(false);
+    expect(
+      await element.props.onBeforeDragMoveEnd({
+        eventRecord: { id: item.id },
+        newStartDate: new Date(2026, 10, 6),
+      }),
+    ).toBe(false);
+  }
+  expect(
+    CalendarView({ events: [task] }).props.onBeforeDragMove({ eventRecord: { id: task.id } }),
+  ).toBe(false);
+  expect(element.props.onBeforeDragMove({ eventRecord: { id: task.id } })).toBe(true);
+  expect(
+    await element.props.onBeforeDragMoveEnd({
+      eventRecord: { id: task.id },
+      newStartDate: new Date(2026, 10, 6),
+      validation: false,
+    }),
+  ).toBe(false);
+  let resolve: (value: { ok: false; message: string }) => void = () => {
+    throw new Error("Expected pending save");
+  };
+  vi.mocked(sendJson).mockImplementationOnce(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const pending = element.props.onBeforeDragMoveEnd({
+    eventRecord: { id: task.id },
+    newStartDate: new Date(2026, 11, 31),
+  });
+  expect(element.props.onBeforeDragMove({ eventRecord: { id: task.id } })).toBe(false);
+  resolve({ ok: false, message: "Could not save." });
+  expect(await pending).toBe(false);
+  expect(setMessage).toHaveBeenLastCalledWith("Could not save.");
+  expect(sendJson).toHaveBeenLastCalledWith(
+    `/api/tasks/${id}/plan`,
+    "POST",
+    { plannedDate: "2026-12-31" },
+    expect.anything(),
+  );
+  vi.mocked(sendJson).mockResolvedValueOnce({ ok: true, data: {} });
+  expect(
+    await element.props.onBeforeDragMoveEnd({
+      eventRecord: { id: task.id },
+      newStartDate: new Date(2027, 0, 1),
+    }),
+  ).toBe(true);
+  expect(setMessage).toHaveBeenLastCalledWith("Planned date saved.");
+  element.props.onDragMoveEnd();
+  expect(refresh).toHaveBeenCalled();
 });

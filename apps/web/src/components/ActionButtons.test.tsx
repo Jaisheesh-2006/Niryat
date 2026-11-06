@@ -780,6 +780,7 @@ it.each([
       status: "open",
       message: "Check this record.",
       dueDate: null,
+      plannedDate: null,
       invoiceId: null,
       sourceRuleId: "RBI_REALISATION",
       createdAt: action.createdAt,

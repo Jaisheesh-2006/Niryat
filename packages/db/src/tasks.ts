@@ -1,5 +1,6 @@
-import { type Task, taskSchema } from "@niryat/shared";
+import { type Task, taskPlanInputSchema, taskSchema } from "@niryat/shared";
 import { and, desc, eq, sql } from "drizzle-orm";
+import { z } from "zod";
 import type { Db } from "./client";
 import { tasks } from "./schema";
 
@@ -62,6 +63,26 @@ export async function completeTask(
     .update(tasks)
     .set({ status: "done", doneAt: sql`coalesce(${tasks.doneAt}, now())` })
     .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+    .returning()
+    .catch(() => {
+      throw new Error("Task save failed");
+    });
+  return row ? parseTask(row) : undefined;
+}
+
+export async function planTask(
+  db: Db,
+  userId: string,
+  taskId: string,
+  input: z.infer<typeof taskPlanInputSchema>,
+): Promise<Task | undefined> {
+  const owner = z.uuid().parse(userId);
+  const id = z.uuid().parse(taskId);
+  const plan = taskPlanInputSchema.parse(input);
+  const [row] = await db
+    .update(tasks)
+    .set(plan)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, owner), eq(tasks.status, "open")))
     .returning()
     .catch(() => {
       throw new Error("Task save failed");

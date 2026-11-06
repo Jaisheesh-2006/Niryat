@@ -38,6 +38,7 @@ import {
   markSent,
   monthLedger,
   paymentLink,
+  planTask,
   profiles,
   proposeReminder,
   recordPayment,
@@ -395,6 +396,11 @@ describe("storage query failures", () => {
     {
       operation: "completeTask",
       run: (db: Db) => completeTask(db, userId, userId),
+      message: "Task save failed",
+    },
+    {
+      operation: "planTask",
+      run: (db: Db) => planTask(db, userId, userId, { plannedDate: null }),
       message: "Task save failed",
     },
     {

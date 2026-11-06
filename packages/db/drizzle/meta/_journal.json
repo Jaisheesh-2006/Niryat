@@ -78,6 +78,13 @@
       "when": 1793893377080,
       "tag": "0010_hard_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793947533312,
+      "tag": "0011_vengeful_exodus",
+      "breakpoints": true
     }
   ]
 }

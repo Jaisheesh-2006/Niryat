@@ -40,6 +40,7 @@ describe("calendar route with fake reads", () => {
     vi.spyOn(clock, "todayInIndia").mockReturnValue("2026-10-31");
     vi.spyOn(db, "getProfile").mockResolvedValue(undefined);
     vi.spyOn(db, "listInvoices").mockResolvedValue([]);
+    vi.spyOn(db, "listTasks").mockResolvedValue([]);
   });
   afterEach(() => vi.restoreAllMocks());
   afterAll(() => database.close());

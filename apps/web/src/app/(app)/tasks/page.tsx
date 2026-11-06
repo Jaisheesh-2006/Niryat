@@ -6,6 +6,7 @@ import { ListChecks } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { TaskDoneButton } from "../../../components/TaskDoneButton";
+import { TaskPlanForm } from "../../../components/TaskPlanForm";
 import { Term } from "../../../components/Term";
 import { apiGet } from "../../../lib/api";
 import { formatDate } from "../../../lib/format";
@@ -60,7 +61,7 @@ export default async function Tasks() {
             </thead>
             <tbody>
               {openTasks.map((task) => (
-                <tr key={task.id}>
+                <tr key={task.id} id={`task-${task.id}`}>
                   <td>{task.dueDate ? formatDate(task.dueDate) : "—"}</td>
                   <td>
                     <strong>{labels[task.type]}</strong>
@@ -81,6 +82,7 @@ export default async function Tasks() {
                       </Link>
                     )}
                     <TaskDoneButton taskId={task.id} />
+                    <TaskPlanForm key={task.id} taskId={task.id} plannedDate={task.plannedDate} />
                   </td>
                 </tr>
               ))}

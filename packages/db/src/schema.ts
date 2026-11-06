@@ -279,6 +279,7 @@ export const tasks = pgTable("tasks", {
   invoiceId: uuid("invoice_id").references(() => invoices.id),
   type: text("type").notNull(),
   dueDate: date("due_date"),
+  plannedDate: date("planned_date"),
   status: text("status").notNull().default("open"),
   sourceRuleId: text("source_rule_id").notNull(),
   message: text("message").notNull(),
