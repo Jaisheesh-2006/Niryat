@@ -126,7 +126,7 @@ describe.skipIf(!testDatabaseUrl)("FIRA demo seed", () => {
         status: "paid",
         pdfUrl: null,
         action: null,
-        number: `2026-27/000${index + 1}`,
+        number: `${line.date.replaceAll("-", "")}/000${index + 1}`,
         fy: "2026-27",
         date: line.date,
         currency: line.currency,
@@ -247,9 +247,9 @@ describe.skipIf(!testDatabaseUrl)("FIRA demo seed", () => {
     expect(
       (await listInvoices(t.db, account.id)).map(({ fy, number }) => ({ fy, number })),
     ).toEqual([
-      { fy: "2027-28", number: "2027-28/0001" },
-      { fy: "2026-27", number: "2026-27/0002" },
-      { fy: "2026-27", number: "2026-27/0001" },
+      { fy: "2027-28", number: "20270401/0001" },
+      { fy: "2026-27", number: "20270330/0002" },
+      { fy: "2026-27", number: "20270331/0001" },
     ]);
   });
 

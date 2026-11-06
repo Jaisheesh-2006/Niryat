@@ -57,6 +57,8 @@ The `niryat-sync` cron is configured for 02:00 IST; hosted operation is not yet 
 
 For invoices, PLAN maps GSTIN to invoicer.tax_id, LUT text to detail.terms_and_conditions, notes to detail.note and numbering to detail.invoice_number. Verify attachments/partial-payment fields against [Invoicing v2](https://developer.paypal.com/docs/api/invoicing/v2/); link a PDF in the note when attachments are unavailable. Record India limitations in the relevant spec without dropping the whole feature.
 
+New invoices issued after the 2026-11-06 numbering correction use `YYYYMMDD/seq` in Niryat, the PDF and PayPal's `detail.invoice_number`; the database-backed financial-year sequence does not reset daily. Existing numbers/queued requests are immutable under this change. A date prefix avoids the confirmed old-format hosted/local collision but cannot coordinate independent databases: use one database per sandbox seller, or separate sellers for local/hosted deployments. Preserve history. A failed old-number request is rejected by the user, then replaced by a newly issued/reviewed invoice, never silently renumbered during approval. [Rules/source record](rules-sources.md), [hosted recovery steps](RENDER.md#g4-invoice-number-collision-correction-2026-11-06).
+
 ## Log in with PayPal
 
 Email and PayPal sign-in both remain available. The login flow uses the same sandbox `PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET` as the seller integrations, with `openid email https://uri.paypal.com/services/paypalattributes`. Userinfo supplies the payer ID (user-confirmed 2026-10-30). The account that owns the app must use email sign-in because PayPal rejects its userinfo request; other accounts can use the PayPal button.

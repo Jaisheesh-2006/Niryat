@@ -98,6 +98,8 @@ Sandbox result (2026-10-25): partial payments are rejected ("not available in yo
 
 ## V06 Events, refunds, disputes and history
 
+G4 check 1 attempt (2026-11-06), user-reported: approving a new USD 10 invoice from the hosted judge-freelancer account returned HTTP 502 from `/api/actions/:id/approve`, with PayPal code `UNPROCESSABLE_ENTITY`. The failed upstream path is `/v2/invoicing/invoices` (creation, before send), number `2026-27/0004`, debug ID `ca565aa3b38ba`; other details are masked. The user then confirmed the number already exists in the configured sandbox seller account; their screenshot shows a distinct USD 100 refunded invoice issued 2026-10-29. Number collision is confirmed; PayPal's exact detailed issue remains unavailable. The REST adapter retains only top-level code/debug ID and the approval runner returns only the code. Local correction uses `YYYYMMDD/seq` for new invoices while preserving old rows/PDFs/requests and the existing financial-year counter. Exact user-only redeploy/reject-old/issue-new steps, same-day cross-database limits and automated results are in [RENDER](RENDER.md#g4-invoice-number-collision-correction-2026-11-06). Hosted replacement-send, payment/refund/dispute webhook acceptance and all G4 recovery checks remain pending. No assistant PayPal call or application-database change was performed.
+
 Fresh credential-free follow-up (2026-10-31), user-confirmed during P5-13: with `.env` outside the repository, `pnpm verify --force` passed all 27 tasks with zero cached; the standalone API reported auth disabled because `DATABASE_URL` was absent, listened on 3001, and served `/health` (`{"status":"ok"}`) and `/purpose-codes` (HTTP 200). The user restored configuration afterwards. This supplies the fresh no-credentials API evidence carried from P4-15; it does not resolve the combined `pnpm dev` launch problem or the refund/FIRA evidence below.
 
 Remaining: save the actual refund-delivery body and HTTP result, verify automatic dispute-event delivery and a PayPal-decided lost outcome, and check FX on a flow that converts currency. [Webhook events](https://developer.paypal.com/api/rest/webhooks/event-names/), [Disputes testing](https://developer.paypal.com/docs/disputes/test-go-live/).
@@ -213,15 +215,36 @@ Retry in a local working return with a valid, permitted test identity and a matc
 
 ## V11 Hosted resources
 
-**G3 user report (2026-11-06): not deployed yet.** No public web/API URLs or hosted results were supplied. Paid database retention through December 15, dashboard configuration, migrations/judge seed, sandbox webhook setup, `monthlyClose` and all three crons, health/judge-mode responses, demo entry and security headers remain **awaiting user verification**. No hosted acceptance is recorded.
+**G3 passed — user-confirmed (2026-11-06).** The user supplied the hosted origins below and reported that all G3 checks passed. This supersedes the earlier not-deployed/judge-mode-disabled status. The assistant did not independently operate the browser or call the hosted services.
+- Web: https://niryat-web.onrender.com/
+- API: https://niryat-api.onrender.com
 
-**Defined locally; hosted verification pending (2026-10-31).** `render.yaml` defines `niryat-worker` with task `monthlyClose`, a `niryat-monthly-close` cron (`30 1 1 * *` UTC), and nightly `niryat-sync` (`30 20 * * *` UTC). The trigger dispatches `niryat-worker/monthlyClose`; hosted task registration and cron execution have not been observed. Worker/trigger tests use fakes.
+G4 check 1 is blocked at invoice approval (2026-11-06): the user's new USD 10 invoice returned HTTP 502 with `UNPROCESSABLE_ENTITY`; a collision with an older seller invoice is user-confirmed. The local date-format correction awaits user deployment/re-test; see [V06](#v06-events-refunds-disputes-and-history). G3 setup/smoke results below remain historical passes, not successful end-to-end invoice delivery.
+
+| G3 check                                                                                            | User-reported result                       |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Deployment, paid database retention through 2026-12-15 and required sandbox/dashboard configuration | Pass                                       |
+| Hosted migrations and judge seed                                                                    | Pass                                       |
+| Hosted sandbox webhook registration and login/public URLs                                           | Pass                                       |
+| `niryat-worker` defines `monthlyClose`                                                              | Pass; also shown in the earlier screenshot |
+| All three cron services and configured schedules                                                    | Pass                                       |
+| API `/health` and web `/api/health`                                                                 | Pass: `{"status":"ok"}`                    |
+| API `/judge-mode` and web `/api/judge-mode`                                                         | Pass: `{"enabled":true}`                   |
+| Home, `/login` and `/ca/login` show both demo buttons                                               | Pass                                       |
+| Freelancer demo reaches Ananya's `/overview`; CA demo reaches `/ca` with three clients              | Pass                                       |
+| Web `X-Frame-Options: DENY` response header                                                         | Pass                                       |
+
+The budget amount, run IDs and individual timestamps were not supplied. This records G3 setup/smoke acceptance only. G4 payment/dispute/refund delivery and deduplication, measured missed-webhook recovery, failed/stale-sync recovery and API-restart durability remain **awaiting user verification**. G5's five-scene hosted rehearsal and the Phase 7 exit gate remain open.
+
+**Earlier G3 workflow registration evidence (2026-11-06):** the user reported that Definitions lists `monthlyClose`; the supplied Render screenshot showed one registered task and zero total runs on `niryat-worker`. The subsequent G3 report above confirms cron presence/schedules too; it does not establish G4 execution/recovery results.
+
+**Earlier local definition record (2026-10-31).** `render.yaml` defines `niryat-worker` with task `monthlyClose`, a `niryat-monthly-close` cron (`30 1 1 * *` UTC), and nightly `niryat-sync` (`30 20 * * *` UTC). The trigger dispatches `niryat-worker/monthlyClose`; hosted registration was pending at that time. Worker/trigger tests use fakes.
 
 P5-13 used the allowed API CLI fallback, not Workflows dev: `corepack pnpm --filter @niryat/api close:run --as-of 2027-06-16` and `--as-of 2027-07-01`. On Windows use `corepack.cmd`; do not insert an extra `--` before API CLI options. Runs showed `Monthly close (scheduled)`, the simulated date, advice and approval lists. The latter completed seven users with zero failures. This verifies local scheduled orchestration, not a deployed scheduler.
 
 For Workflows dev, start `render workflows dev -- corepack pnpm --filter @niryat/worker start`, then set `RENDER_USE_LOCAL_DEV=true` in the trigger terminal and run `corepack pnpm --filter @niryat/worker trigger:monthly-close -- --as-of 2027-07-01`. The worker trigger accepts the separator; the API fallback does not. This optional path remains unverified.
 
-Before exposing the hosted demo, deploy in an authorized account, register the task, observe both cron paths, confirm paid Postgres retention/budget through judging and complete the four [Phase 7 reliability checks](build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58): HTTPS webhook delivery/recovery, measured reconciliation freshness without routine user commands, last-success/stale-data UI, and safe job recovery after restart. Never reset/replay a claimed reminder during recovery. [Blueprint reference](https://render.com/docs/blueprint-spec), [Workflows](https://render.com/docs/workflows).
+Next, complete the four [Phase 7 reliability checks](build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58): HTTPS webhook delivery/recovery, measured reconciliation freshness without routine user commands, last-success/stale-data UI, and safe job recovery after restart. G3 registration/configuration does not establish successful scheduled execution. Continue monitoring paid Postgres retention and budget through judging. Never reset/replay a claimed reminder during recovery. [Blueprint reference](https://render.com/docs/blueprint-spec), [Workflows](https://render.com/docs/workflows).
 
 ## V12 Authenticated MCP
 

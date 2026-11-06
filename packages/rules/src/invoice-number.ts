@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const INVOICE_NUMBER_PATTERN = /^[A-Za-z0-9/-]{1,16}$/;
 
 export function financialYear(date: string): string {
@@ -6,8 +8,9 @@ export function financialYear(date: string): string {
 }
 
 export function invoiceNumberFor(date: string, seq: number): { fy: string; number: string } {
+  if (!z.iso.date().safeParse(date).success) throw new RangeError("Invalid invoice date");
   const fy = financialYear(date);
-  const number = `${fy}/${String(seq).padStart(4, "0")}`;
+  const number = `${date.replaceAll("-", "")}/${String(seq).padStart(4, "0")}`;
   if (!Number.isSafeInteger(seq) || seq <= 0 || !INVOICE_NUMBER_PATTERN.test(number)) {
     throw new RangeError("Invalid invoice sequence");
   }

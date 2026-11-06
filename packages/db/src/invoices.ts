@@ -134,6 +134,7 @@ export async function issueInvoice(
   return db
     .transaction(async (tx) => {
       // All users share one configured PayPal seller and its financial-year sequence.
+      // shortcut: only this database reserves numbers; isolate sellers until cross-database reconciliation exists.
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`invoice-number:${input.fy}`}))`,
       );

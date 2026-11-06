@@ -3,6 +3,7 @@ import {
   actionStore,
   agentActions,
   getInvoiceForAction,
+  invoices,
   listReminderActions,
   listTasks,
   payments,
@@ -642,7 +643,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     });
     expect(updated.status).toBe(200);
     clientSchema.parse(await updated.json());
-    expect((await issue(cookie, input)).number).toBe(`${financialYear(invoiceDate)}/0001`);
+    expect((await issue(cookie, input)).number).toBe("20261026/0001");
   });
 
   it("puts the email reason before rule reasons", async () => {
@@ -668,7 +669,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     const { cookie, input, id: userId } = await setup();
     const invoice = await issue(cookie, input);
     expect(invoice).toMatchObject({
-      number: `${financialYear(invoiceDate)}/0001`,
+      number: "20261026/0001",
       date: invoiceDate,
       status: "issued",
       action: {
@@ -727,6 +728,42 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect(create.invoicer.tax_id).toBeUndefined();
   });
 
+  it("continues after legacy numbers across dates without rewriting history or calling PayPal", async () => {
+    const { cookie, input, id: userId } = await setup();
+    const [legacy] = await t.db
+      .insert(invoices)
+      .values({
+        ...input,
+        userId,
+        date: invoiceDate,
+        fy: financialYear(invoiceDate),
+        seq: 3,
+        number: "2026-27/0003",
+        status: "issued",
+      })
+      .returning();
+    if (!legacy) throw new Error("Missing legacy invoice");
+    const invoice = await issue(cookie, input);
+    expect(invoice.number).toBe("20261026/0004");
+    expect(invoice.action?.payload.create).toMatchObject({
+      detail: { invoice_number: "20261026/0004", invoice_date: invoiceDate },
+    });
+    const originalPdf = objects.get(pdfKey(userId, invoice.id));
+    const concurrent = await Promise.all([issue(cookie, input), issue(cookie, input)]);
+    expect(concurrent.map((row) => row.number).sort()).toEqual(["20261026/0005", "20261026/0006"]);
+    vi.mocked(ruleClock.todayInIndia).mockReturnValue("2026-10-27");
+    expect((await issue(cookie, input)).number).toBe("20261027/0007");
+    await saveProfile(cookie, { ...profile, lutValidTo: "2028-03-31" });
+    vi.mocked(ruleClock.todayInIndia).mockReturnValue("2027-04-01");
+    expect((await issue(cookie, input)).number).toBe("20270401/0001");
+    vi.mocked(ruleClock.todayInIndia).mockReturnValue(invoiceDate);
+    const saved = await list(cookie);
+    expect(saved.find((row) => row.id === legacy.id)?.number).toBe("2026-27/0003");
+    expect(saved.find((row) => row.id === invoice.id)).toEqual(invoice);
+    expect(objects.get(pdfKey(userId, invoice.id))).toEqual(originalPdf);
+    expect(calls).toEqual([]);
+  });
+
   it("creates and sends only after approval with deterministic request IDs", async () => {
     const { cookie, input } = await setup();
     const invoice = await issue(cookie, input);
@@ -758,7 +795,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect(invoice).toMatchObject({
       type: "recurring",
       recurrence,
-      number: `${financialYear(invoiceDate)}/0002`,
+      number: "20261026/0002",
       date: invoiceDate,
       status: "issued",
       paypalInvoiceId: null,
@@ -926,7 +963,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
       expect((await post(cookie, `${path}/${operation}`)).status).toBe(409);
     }
     expect(calls).toEqual([]);
-    expect((await issue(cookie, input)).number).toBe(`${financialYear(invoiceDate)}/0002`);
+    expect((await issue(cookie, input)).number).toBe("20261026/0002");
   });
 
   it("hides another user's invoices, clients and actions", async () => {
@@ -985,7 +1022,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "file_storage_unavailable" });
     expect(await list(cookie)).toEqual([]);
-    expect((await issue(cookie, input)).number).toBe(`${financialYear(invoiceDate)}/0001`);
+    expect((await issue(cookie, input)).number).toBe("20261026/0001");
   });
 
   it("releases the numbering lock for another user after a stalled upload times out", async () => {
@@ -1041,7 +1078,7 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
     expect(await response.json()).toEqual({ error: "file_storage_unavailable" });
     if (!waiting) throw new Error("Expected a waiting invoice request");
     expect(await readInvoice(await waiting, 201)).toMatchObject({
-      number: `${financialYear(invoiceDate)}/0001`,
+      number: "20261026/0001",
       action: { status: "proposed" },
     });
     expect(await list(a.cookie)).toEqual([]);
