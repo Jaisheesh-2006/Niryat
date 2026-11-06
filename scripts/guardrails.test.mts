@@ -69,6 +69,17 @@ test("manual and scheduled close dispatch keep the Render key on server services
   assert.doesNotMatch(web, /RENDER_API_KEY/);
 });
 
+test("Render API judge-mode keys require dashboard-supplied values", () => {
+  const services = readFileSync(resolve(root, "render.yaml"), "utf8")
+    .replaceAll("\r\n", "\n")
+    .split(/^ {2}- type: /m);
+  const api = services.find((block) => block.includes("\n    name: niryat-api\n"));
+  assert.ok(api);
+  for (const key of ["JUDGE_MODE", "JUDGE_BUYER_EMAIL"]) {
+    assert.match(api, new RegExp(`^ {6}- key: ${key}\\n {8}sync: false$`, "m"), key);
+  }
+});
+
 function runHook(mode: string, input: unknown) {
   return spawnSync(process.execPath, [hook, mode], {
     cwd: root,

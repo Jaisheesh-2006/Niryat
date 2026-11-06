@@ -2,6 +2,12 @@
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. Hosted deployment and browser results remain awaiting user verification.
 
+## G2: judge-mode Blueprint keys (2026-11-06)
+
+[render.yaml](../render.yaml) now declares `JUDGE_MODE` and `JUDGE_BUYER_EMAIL` as `sync: false` on `niryat-api`, so the user can supply A5's existing API/seed settings in the Render dashboard. No values are committed; no other key or service changed. The [Blueprint guardrail](../scripts/guardrails.test.mts) asserts both declarations on the API service and failed before they were added. Verification passed: `node --test scripts/guardrails.test.mts` (7/7), `corepack.cmd pnpm verify` (27/27 workspace tasks cached; root checks ran fresh) and `git diff --check`. Log: `.tmp/g2-verify.log`. No web/build or DB/API code changed, so no production build or separate database integration run was needed.
+
+Nothing is deployed. Dashboard values, migrations/seeding and hosted demo behavior remain **awaiting user verification** under [G3](IMPROVEMENTS.md#g3-hosted-deploy-and-smoke-check-p0-phase-7-user). Follow its operator steps: on the dedicated sandbox demo set `JUDGE_MODE=true` and a private US sandbox buyer email as `JUDGE_BUYER_EMAIL`; run `corepack pnpm db:migrate` then `corepack pnpm seed:judge` from the API shell (Windows: `corepack.cmd pnpm`). Expect `GET https://<api-public-host>/health` to return `{"status":"ok"}` and `/judge-mode` to return `{"enabled":true}`. Open the hosted home page, `/login` and `/ca/login`; both demo buttons should appear, with freelancer entry reaching Ananya's `/overview` and CA entry reaching `/ca` with three clients. Keep judge mode disabled outside the dedicated shared demo; these declarations alone do not enable or seed it.
+
 ## F1: December AI budget and submission evidence (2026-11-06)
 
 F1 changes documentation only: [README](../README.md#sponsor-tools) describes implemented Workflows/manual-close dispatch, half-hour light polling, nightly reminders and paid Postgres; [submission materials](submission.md) distinguish these from pending hosted evidence. No Blueprint, schedule, service, credential or runtime behavior changed.

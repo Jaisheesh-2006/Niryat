@@ -32,6 +32,10 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+      - key: JUDGE_MODE
+        sync: false
+      - key: JUDGE_BUYER_EMAIL
+        sync: false
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
