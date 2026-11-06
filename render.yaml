@@ -185,6 +185,7 @@ databases:
   - name: niryat-db
     region: oregon
     plan: 0.1c-256mb
-    diskSizeGB: 5
+    # Smallest allowed size; Render can grow storage later but never shrink it.
+    diskSizeGB: 1
     databaseName: niryat
     user: niryat

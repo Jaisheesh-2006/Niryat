@@ -2,6 +2,10 @@
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. Hosted deployment and browser results remain awaiting user verification.
 
+## Postgres disk reduced to 1 GB (2026-11-06)
+
+Before the first deployment, the user asked to cut cost, so [render.yaml](../render.yaml) `niryat-db` `diskSizeGB` changed from 5 to 1. 1 GB is the smallest value Render allows ([Blueprint spec](https://render.com/docs/blueprint-spec): 1 or a multiple of 5). Invoice and FIRA PDFs are stored in S3-compatible storage, not in Postgres, so the database holds only text records. Render can increase disk size later but never decrease it, so this works only because no database exists yet. Verification: `node --test scripts/guardrails.test.mts` and `git diff --check`, both passing (guardrails 7/7). No hosted check has been done; the deployment is still awaiting user verification.
+
 ## G3: user deployment status (2026-11-06)
 
 The user reported that Niryat is not deployed yet. This status is recorded here and in [V11](verification.md#v11-hosted-resources); no hosted URL or smoke result was supplied. All G3 deployment/configuration, database retention, migration/seed, sandbox webhook, workflow/cron and smoke checks remain **awaiting user verification**. No code, Blueprint or deployment setting changed, and the assistant performed no deployment or PayPal/Render service action. `corepack.cmd pnpm verify` passed 27/27 cached workspace tasks with fresh root checks; `git diff --check` passed. Log: `.tmp/g3-status-verify.log`. No build or separate database integration was run for this documentation-only status record; automated verification does not establish hosted acceptance.
