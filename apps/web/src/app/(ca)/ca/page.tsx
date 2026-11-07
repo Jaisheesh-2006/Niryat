@@ -23,12 +23,14 @@ export default async function CaClients() {
   return (
     <>
       <PageHeader title="Clients" description="View records shared by your freelancer clients." />
-      <p>
-        <Term term="fira" />
-      </p>
-      <p>
-        <Term term="realisation" />
-      </p>
+      <div className="terms">
+        <p>
+          <Term term="fira" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+      </div>
       {portfolio.length === 0 ? (
         <EmptyState icon={Users} title="No clients yet">
           <a href="/ca/requests">Accept a request</a> from a freelancer client to see their records

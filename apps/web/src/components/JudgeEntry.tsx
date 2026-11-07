@@ -35,14 +35,15 @@ export function JudgeEntry() {
     }
   }
   return (
-    <div>
+    <div className="judge-entry">
+      <p className="judge-entry-title">Explore with demo data</p>
       <p>Demo accounts use PayPal sandbox only. No real money moves.</p>
       <p>Shared demo accounts contain synthetic records. Do not enter personal information.</p>
       <div className="hero-actions">
         <button
           type="button"
           className="btn"
-          data-variant="secondary"
+          data-variant="primary"
           disabled={submitting}
           onClick={() => enter("freelancer")}
         >

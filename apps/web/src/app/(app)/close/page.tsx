@@ -65,12 +65,14 @@ export default async function Close() {
         description="Claude reviews your PayPal month, explains what needs attention and proposes PayPal reminders. Nothing is sent to PayPal until you approve it."
         actions={<CloseButton />}
       />
-      <p>
-        <Term term="fira" />
-      </p>
-      <p>
-        <Term term="realisation" />
-      </p>
+      <div className="terms">
+        <p>
+          <Term term="fira" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+      </div>
       {latest?.status === "running" && (
         <div className="banner" data-tone="neutral" role="status">
           <span className="spinner" aria-hidden="true" />
@@ -207,7 +209,7 @@ export default async function Close() {
             </table>
           </div>
           {summary.citations.map((citation) => (
-            <p key={citation.ruleId}>
+            <p key={citation.ruleId} className="citation">
               Rule {citation.ruleId}: {citation.source}. Verify with your CA.
             </p>
           ))}

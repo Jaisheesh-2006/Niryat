@@ -97,7 +97,7 @@ export default async function Clients() {
                 </ul>
               </>
             )}
-            <p>
+            <p className="citation">
               Rule {citation.ruleId}: {citation.source}. <em>Verify with your CA.</em>
             </p>
             <details>

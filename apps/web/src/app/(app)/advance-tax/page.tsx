@@ -126,7 +126,7 @@ export default async function AdvanceTax({
           <Term term="presumptive" />
         </p>
         <p>{estimate.eligibility.message}</p>
-        <p>
+        <p className="citation">
           Rule {estimate.eligibility.citation.ruleId}: {estimate.eligibility.citation.source}.
           Verify with your CA.
         </p>
@@ -160,7 +160,7 @@ export default async function AdvanceTax({
             {estimate.citations
               .filter((citation) => citation.ruleId === "ADVANCE_TAX_DATES")
               .map((citation) => (
-                <p key={citation.ruleId}>
+                <p key={citation.ruleId} className="citation">
                   Rule {citation.ruleId}: {citation.source}. Verify with your CA.
                 </p>
               ))}
@@ -198,7 +198,7 @@ export default async function AdvanceTax({
         {estimate.citations
           .filter((citation) => citation.ruleId === "ADVANCE_TAX_DATES")
           .map((citation) => (
-            <p key={citation.ruleId}>
+            <p key={citation.ruleId} className="citation">
               Rule {citation.ruleId}: {citation.source}. Verify with your CA.
             </p>
           ))}

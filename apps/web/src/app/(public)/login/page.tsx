@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthAside } from "../../../components/AuthAside";
 import { AuthForm } from "../../../components/AuthForm";
 import { BrandMark } from "../../../components/icons";
 import { JudgeEntry } from "../../../components/JudgeEntry";
@@ -14,22 +15,25 @@ export default async function Login({
 }) {
   const { error } = await searchParams;
   return (
-    <div className="card auth-card">
-      <BrandMark />
-      <PageHeader title="Sign in" description="For freelancers" />
-      <PayPalLoginError error={error} />
-      <AuthForm mode="login" />
-      <JudgeEntry />
-      <div className="auth-divider">or</div>
-      <a href="/api/auth/paypal/start" className="btn" data-variant="secondary">
-        Log in with PayPal
-      </a>
-      <p className="auth-switch">
-        <Link href="/signup">New here? Create an account</Link>
-      </p>
-      <p className="auth-switch">
-        <Link href="/ca/login">Are you a CA? Sign in here</Link>
-      </p>
+    <div className="auth-layout">
+      <div className="card auth-card">
+        <BrandMark />
+        <PageHeader title="Sign in" description="For freelancers" />
+        <PayPalLoginError error={error} />
+        <AuthForm mode="login" />
+        <JudgeEntry />
+        <div className="auth-divider">or</div>
+        <a href="/api/auth/paypal/start" className="btn" data-variant="secondary">
+          Log in with PayPal
+        </a>
+        <p className="auth-switch">
+          <Link href="/signup">New here? Create an account</Link>
+        </p>
+        <p className="auth-switch">
+          <Link href="/ca/login">Are you a CA? Sign in here</Link>
+        </p>
+      </div>
+      <AuthAside />
     </div>
   );
 }

@@ -91,7 +91,7 @@ export default async function Invoices() {
                 <dd>{daysRemainingLabel(invoice.compliance.deadline.daysRemaining)}</dd>
               </dl>
               <p>{invoice.compliance.deadline.message}</p>
-              <p>
+              <p className="citation">
                 Rule {invoice.compliance.deadline.citation.ruleId}:{" "}
                 {invoice.compliance.deadline.citation.source}. Verify with your CA.
               </p>
@@ -269,7 +269,7 @@ export default async function Invoices() {
             {invoice.compliance.realisation.message && (
               <p>{invoice.compliance.realisation.message}</p>
             )}
-            <p>
+            <p className="citation">
               Rule {invoice.compliance.realisation.citation.ruleId}:{" "}
               {invoice.compliance.realisation.citation.source}. Verify with your CA.
             </p>
@@ -289,7 +289,7 @@ export default async function Invoices() {
                   <dd>{formatDate(note.declareBy)}</dd>
                 </dl>
                 <p>{note.message}</p>
-                <p>
+                <p className="citation">
                   Rule {note.citation.ruleId}: {note.citation.source}. Verify with your CA.
                 </p>
               </div>
@@ -322,7 +322,7 @@ export default async function Invoices() {
                         <dd>{dispute.outcome ?? "Open"}</dd>
                       </dl>
                       {alert && (
-                        <p>
+                        <p className="citation">
                           Rule {alert.citation.ruleId}: {alert.citation.source}. Verify with your
                           CA.
                         </p>

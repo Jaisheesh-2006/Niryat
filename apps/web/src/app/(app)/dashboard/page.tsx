@@ -23,12 +23,14 @@ export default async function Dashboard() {
         title="Dashboard"
         description="Ask Claude a question in plain English, or explore the widgets. Figures come from your PayPal records."
       />
-      <p>
-        <Term term="fira" />
-      </p>
-      <p>
-        <Term term="realisation" />
-      </p>
+      <div className="terms">
+        <p>
+          <Term term="fira" />
+        </p>
+        <p>
+          <Term term="realisation" />
+        </p>
+      </div>
       {/* Payments are listed through invoices, so no invoices means no data at all. */}
       {dashboard?.invoices.length ? (
         <div className="card">

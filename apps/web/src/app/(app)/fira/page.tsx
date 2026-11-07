@@ -19,12 +19,14 @@ export default async function Fira() {
         title="Payment proof"
         description="Upload your payment proof and match each line to your PayPal payments; confirm any uncertain matches."
       />
-      <p>
-        <Term term="fira" />
-      </p>
-      <p>
-        <Term term="purpose_code" />
-      </p>
+      <div className="terms">
+        <p>
+          <Term term="fira" />
+        </p>
+        <p>
+          <Term term="purpose_code" />
+        </p>
+      </div>
       <FiraUpload />
       {documents.map((document) => (
         <section className="card" key={document.id}>

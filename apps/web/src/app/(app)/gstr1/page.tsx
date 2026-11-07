@@ -30,12 +30,14 @@ export default async function Gstr1({
   return (
     <>
       <PageHeader title="GST sales return" description={<Term term="gstr1" />} />
-      <p>
-        <Term term="lut" />
-      </p>
-      <p>
-        <Term term="credit_note" />
-      </p>
+      <div className="terms">
+        <p>
+          <Term term="lut" />
+        </p>
+        <p>
+          <Term term="credit_note" />
+        </p>
+      </div>
       <Gstr1Report preview={preview} />
     </>
   );

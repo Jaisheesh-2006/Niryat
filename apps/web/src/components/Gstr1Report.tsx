@@ -62,7 +62,7 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
         Due {formatDate(preview.dueDate)}. The government sometimes extends this date; check the GST
         portal.
       </p>
-      <p>
+      <p className="citation">
         Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with your CA.
       </p>
       {preview.invoices.length === 0 ? (
@@ -96,7 +96,7 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
                           Invoice {invoice.number} is not covered by your yearly export form (LUT)
                           on {formatDate(invoice.date)}, so it needs IGST. It is not in this file.
                           Ask your CA how to report this invoice.
-                          <p>
+                          <p className="citation">
                             Rule {preview.citation.ruleId}: {preview.citation.source}. Verify with
                             your CA.
                           </p>
@@ -123,7 +123,7 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
             {refund.creditNote && (
               <>
                 <p>{refund.creditNote.message}</p>
-                <p>
+                <p className="citation">
                   Rule {refund.creditNote.citation.ruleId}: {refund.creditNote.citation.source}.
                   Verify with your CA.
                 </p>

@@ -6,8 +6,9 @@ import {
   taskSchema,
 } from "@niryat/shared";
 import Link from "next/link";
-import { Suspense } from "react";
+import { type ComponentType, Suspense } from "react";
 import { CardBoundary } from "../../../components/CardBoundary";
+import { CalendarCheck, CalendarDays, ListChecks, ShieldCheck } from "../../../components/icons";
 import { OverviewApprovals } from "../../../components/OverviewApprovals";
 import { PageHeader } from "../../../components/PageHeader";
 import { StatusBadge } from "../../../components/StatusBadge";
@@ -19,11 +20,20 @@ import { invoiceStatus } from "../../../lib/status";
 
 export const metadata = { title: "Today" };
 
+function TileIcon({ icon: Icon }: { icon: ComponentType<{ size?: number }> }) {
+  return (
+    <span className="stat-icon" aria-hidden="true">
+      <Icon size={18} />
+    </span>
+  );
+}
+
 async function ApprovalsTile() {
   const close = await apiGet("/close", closePageSchema);
   const count = close?.approvals.filter((action) => action.status === "proposed").length ?? 0;
   return (
     <Link href="/close" className="stat-tile" data-tone={count > 0 ? "attention" : "neutral"}>
+      <TileIcon icon={CalendarCheck} />
       <h2>Approvals waiting</h2>
       <p className="stat-value">{count}</p>
       <p>Review in Monthly close</p>
@@ -37,10 +47,11 @@ async function DeadlineTile() {
   const overdue = events.filter((event) => event.state === "overdue").length;
   return (
     <Link href="/calendar" className="stat-tile">
+      <TileIcon icon={CalendarDays} />
       <h2>Next deadline</h2>
       <p className="stat-value">{next ? formatDate(next.date) : "None scheduled"}</p>
-      {next && <p>{next.title}</p>}
       {overdue > 0 && <StatusBadge tone="danger">{overdue} overdue</StatusBadge>}
+      {next && <p>{next.title}</p>}
     </Link>
   );
 }
@@ -57,8 +68,14 @@ async function HealthTile() {
         : "success";
   return (
     <Link href={report ? "/health-check" : "/profile"} className="stat-tile" data-tone={tone}>
+      <TileIcon icon={ShieldCheck} />
       <h2>Health score</h2>
       <p className="stat-value">{report ? `${report.score} / 100` : "—"}</p>
+      {report && (
+        <div className="stat-meter" aria-hidden="true">
+          <div style={{ width: `${report.score}%` }} />
+        </div>
+      )}
       <p>
         {!report
           ? "Complete your profile"
@@ -74,6 +91,7 @@ async function TasksTile() {
   const tasks = (await apiGet("/tasks", taskSchema.array())) ?? [];
   return (
     <Link href="/tasks" className="stat-tile">
+      <TileIcon icon={ListChecks} />
       <h2>Open tasks</h2>
       <p className="stat-value">{tasks.filter((task) => task.status === "open").length}</p>
       <p>View tasks</p>
@@ -99,36 +117,22 @@ async function Deadlines() {
   const deadlines = deadlineList(events, 5);
   return (
     <section className="card" aria-labelledby="overview-deadlines">
-      <h2 id="overview-deadlines">Upcoming deadlines</h2>
+      <div className="card-header">
+        <h2 id="overview-deadlines">Upcoming deadlines</h2>
+        <Link href="/calendar">Calendar</Link>
+      </div>
       {deadlines.length > 0 ? (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Deadline</th>
-                <th>State</th>
-              </tr>
-            </thead>
-            <tbody>
-              {deadlines.map((event) => (
-                <tr key={event.id}>
-                  <td>
-                    <time dateTime={event.date}>{formatDate(event.date)}</time>
-                  </td>
-                  <td>
-                    <Link href={event.href}>{event.title}</Link>
-                  </td>
-                  <td>
-                    <StatusBadge tone={event.state === "overdue" ? "danger" : "success"}>
-                      {event.state === "overdue" ? "Overdue" : "Upcoming"}
-                    </StatusBadge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ol className="deadline-list">
+          {deadlines.map((event) => (
+            <li key={event.id} data-state={event.state}>
+              <time dateTime={event.date}>{formatDate(event.date)}</time>
+              <StatusBadge tone={event.state === "overdue" ? "danger" : "success"}>
+                {event.state === "overdue" ? "Overdue" : "Upcoming"}
+              </StatusBadge>
+              <Link href={event.href}>{event.title}</Link>
+            </li>
+          ))}
+        </ol>
       ) : (
         <p>None scheduled</p>
       )}

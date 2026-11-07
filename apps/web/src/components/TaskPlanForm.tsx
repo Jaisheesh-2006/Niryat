@@ -17,6 +17,7 @@ export function TaskPlanForm({
   const [message, setMessage] = useState("");
   return (
     <form
+      className="task-plan"
       onSubmit={(event) => {
         event.preventDefault();
         const input = taskPlanInputSchema.safeParse({
