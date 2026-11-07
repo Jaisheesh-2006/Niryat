@@ -103,6 +103,17 @@ User browser follow-up (2026-11-02): the desktop sidebar is now resizable by dra
 
 ## 4. Design specification
 
+### 4.0 Visual refresh: "export voucher" (2026-11-08)
+
+The user asked for a less basic look, so this refresh supersedes the subsections below where they differ. The calm-ledger rules (§4.1), status tones, copy rules and quality bars are unchanged; no rules, API contract or approval logic changed.
+1. **Banyan shell.** The desktop sidebar, mobile top bar and menu sheet use `--niryat-banyan` (deep green) with light text, a mint active indicator (`--niryat-mint`, inset 2px edge) and the saffron approvals count. Content stays on warm paper.
+2. **Display type and a Devanagari wordmark.** Anek Devanagari (Ek Type, Mumbai) loads through `next/font/google` as `--niryat-font-display` (variable weight and `wdth`; Latin and Devanagari subsets; no new npm dependency). It sets page titles, the public hero, section titles, stat values and the wordmark. The `Brand` component shows "Niryat" with "निर्यात" (Hindi for export) beneath it; the Devanagari is `aria-hidden`, so the link reads "Niryat". IBM Plex Sans and Mono still carry body text, tables, forms and identifiers.
+3. **Approval voucher (the signature).** Approval cards read as a cheque voucher: the saffron (or danger) edge, a faint guilloche security print fading down from the header, and a perforated tear line with half-moon notches above the decision row ("Nothing is sent to PayPal until you approve" with a lock icon, then Reject and Approve). A container query stacks the decision row on narrow cards, with Approve first below 420px. Done and rejected cards stay one line. Markup is unchanged; it is CSS on the existing `ApprovalCard`/`ActionButtons` classes.
+4. **Page polish.** Today's stat tiles gain icons, a health meter and a hover lift; upcoming deadlines become a timeline list; tables sit flush in cards; definition lists become key/value grids; rule citations carry a `§` marker (`.citation`); loose glossary lines sit in a "Key terms" panel (`.terms`); header disclosures (New invoice, Add a client) read as primary buttons until opened; sign-in and sign-up pages pair the form with a banyan panel (`AuthAside`) of three plain promises.
+5. **Public home.** An eyebrow, the existing headline in the display face, and beside it a static example approval card on a banyan panel, labelled "Example approval". "How it works" is a numbered five-step sequence; the three commitments each gain one plain sentence. The demo entry ("Explore with demo data") puts **Try as freelancer** first as the primary button.
+
+New tokens (light / dark), all measured against WCAG 2.2 on 2026-11-08: `--niryat-banyan` `#0f2a22` / `#0b1311`; `--niryat-banyan-raised` `#173a2f` / `#15211d`; `--niryat-on-banyan` `#e8f1ec` (13.3:1 / 16.3:1 on banyan); `--niryat-on-banyan-muted` `#9dbcb0` (7.5:1 / 9.2:1); nav text at 84% opacity 9.7:1; `--niryat-mint` `#7dd3b7` focus ring and active edge on banyan 8.6:1; `--niryat-brand-saffron` `#f08a2c` approvals count on banyan 6.1:1 with `on-accent` text 6.9:1; `--niryat-brand-green` `#1f6f5c` keeps the mark's square fixed across themes. `--niryat-bg` (light) moves from `#f6f6f2` to `#f3f3ee` so white cards lift off the page: text 15.0:1, muted 5.6:1. Radius is now 8 for controls and 12 for cards; cards use a two-layer shadow in light mode and borders only in dark mode, where the sidebar, hero panel and auth panel add a 1px outline.
+
 ### 4.1 Direction: "calm ledger"
 
 Niryat should feel like a precise, trustworthy financial document, not a marketing site. Three rules decide most choices:
@@ -118,7 +129,7 @@ Keep every existing `--niryat-*` name: AG Studio and Bryntum already read them. 
 
 | Token                                                                  | Light                  | Dark      | Use                                                                                                                          |
 | ---------------------------------------------------------------------- | ---------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `--niryat-bg`                                                          | `#f6f6f2`              | `#101413` | Page background (content column)                                                                                             |
+| `--niryat-bg`                                                          | `#f3f3ee` (§4.0)       | `#101413` | Page background (content column)                                                                                             |
 | `--niryat-surface`                                                     | `#ffffff`              | `#171c1a` | Cards, sidebar, top bar, inputs                                                                                              |
 | `--niryat-sunken`                                                      | `#efefe9`              | `#0c0f0e` | Table headers, code / JSON, hover rows, skeletons                                                                            |
 | `--niryat-border`                                                      | `#e2e2da`              | `#262c2a` | Card and divider lines (decorative)                                                                                          |
@@ -169,28 +180,28 @@ The RBI "days left" cell uses the label from `daysRemainingLabel` and takes dang
 
 ### 4.4 Typography
 
-- **Typefaces:** IBM Plex Sans (400, 500, 600) for UI and IBM Plex Mono (400, 500) for identifiers: invoice numbers, PayPal IDs, rule IDs, purpose codes, JSON payloads. Load both through `next/font/google` as CSS variables `--niryat-font-sans` and `--niryat-font-mono`, falling back to `system-ui` and `ui-monospace`. Plex reads as documentary and precise, fitting a compliance product, and its figures align in tables.
+- **Typefaces:** IBM Plex Sans (400, 500, 600) for UI and IBM Plex Mono (400, 500) for identifiers: invoice numbers, PayPal IDs, rule IDs, purpose codes, JSON payloads. Load both through `next/font/google` as CSS variables `--niryat-font-sans` and `--niryat-font-mono`, falling back to `system-ui` and `ui-monospace`. Plex reads as documentary and precise, fitting a compliance product, and its figures align in tables. Since §4.0, Anek Devanagari (`--niryat-font-display`, used through `--niryat-display`) sets Display, H1, section titles, stat values and the wordmark, at `wdth` 104–112.
 - **Numbers:** `font-variant-numeric: tabular-nums` on tables, money, stat values and dates.
 - **Scale** (size / line height / weight):
 
-| Role    | Desktop                                   | Mobile  | Use                                            |
-| ------- | ----------------------------------------- | ------- | ---------------------------------------------- |
-| Display | 40 / 48 / 600                             | 32 / 40 | Health score, public hero                      |
-| H1      | 30 / 38 / 600                             | 24 / 32 | Page title (one per page)                      |
-| H2      | 20 / 28 / 600                             | 18 / 26 | Section and card titles                        |
-| H3      | 16 / 24 / 600                             | same    | Sub-sections, approval card title              |
-| Body    | 16 / 24 / 400                             | same    | Prose, descriptions                            |
-| Small   | 14 / 20 / 400–500                         | same    | Tables, form labels (500), nav, buttons (500)  |
-| Caption | 13 / 18 / 400                             | same    | Hints, footer, timestamps, rule citations      |
-| Label   | 12 / 16 / 600, uppercase, 0.06em tracking | same    | Sidebar group labels and stat-tile labels only |
+| Role    | Desktop                                   | Mobile                 | Use                                            |
+| ------- | ----------------------------------------- | ---------------------- | ---------------------------------------------- |
+| Display | 48 / 52 / 600 (hero 56 / 58)              | 36 / 40 (hero 38 / 42) | Health score, public hero                      |
+| H1      | 34 / 40 / 600                             | 28 / 34                | Page title (one per page)                      |
+| H2      | 18 / 26 / 600                             | 17 / 24                | Section and card titles                        |
+| H3      | 16 / 24 / 600                             | same                   | Sub-sections, approval card title              |
+| Body    | 16 / 24 / 400                             | same                   | Prose, descriptions                            |
+| Small   | 14 / 20 / 400–500                         | same                   | Tables, form labels (500), nav, buttons (500)  |
+| Caption | 13 / 18 / 400                             | same                   | Hints, footer, timestamps, rule citations      |
+| Label   | 12 / 16 / 600, uppercase, 0.06em tracking | same                   | Sidebar group labels and stat-tile labels only |
 
 Headings and buttons use sentence case ("Run monthly close", not "Run Monthly Close"). Prose lines stop at 68ch.
 
 ### 4.5 Spacing, radius, elevation, motion
 
 - **Spacing:** a 4px scale, `--niryat-space-1` to `-8` = 4, 8, 12, 16, 24, 32, 48, 64. Card padding 24 (16 on mobile). Gap between cards 16 (24 on the overview grid). Section gap 32.
-- **Radius:** 6 for controls (inputs, buttons, nav items), 10 for cards and banners, 999 for badges and pills.
-- **Elevation:** light mode gives cards a border plus `0 1px 2px rgb(16 24 20 / 0.06)` and popovers `0 8px 24px rgb(16 24 20 / 0.12)`. Dark mode uses borders only, no shadows.
+- **Radius:** 8 for controls (inputs, buttons, nav items), 12 for cards, 10 for banners, 999 for badges and pills (§4.0).
+- **Elevation:** light mode gives cards a border plus `--niryat-shadow-card` (two soft layers), linked tiles lift to `--niryat-shadow-raised` on hover, and popovers use `0 8px 24px rgb(16 24 20 / 0.12)`. Dark mode uses borders only, no shadows.
 - **Motion:** 120–150ms ease-out on colour and background only, a 700ms linear spinner, and a skeleton pulse. Under `prefers-reduced-motion: reduce`, the spinner and pulse stop and the text label remains.
 
 ### 4.6 Layout and breakpoints
@@ -235,7 +246,7 @@ The content column has `--niryat-bg`, fills the width remaining beside the sideb
 
 ### 4.7 Sidebar (≥ 1024px)
 
-- **Container:** `<nav aria-label="Main">` inside the single `<aside id="nav-menu" popover="auto">`, initially 248px wide, `--niryat-surface`, 1px right border, `position: sticky; top: 0; height: 100dvh`, padding 16. A keyboard-accessible separator lets users drag the desktop width between 224px and 384px; the width remains during app navigation and resets on reload. Only the link area scrolls, keeping brand and account visible. Desktop CSS overrides both open and closed popover styles and hides the backdrop; mobile uses this same element as its menu sheet, without the resize control.
+- **Container:** `<nav aria-label="Main">` inside the single `<aside id="nav-menu" popover="auto">`, initially 248px wide, `--niryat-banyan` with `--niryat-on-banyan` text since §4.0 (items: 84% light text, muted icons, a 6% white hover, and for the active item a 10% white background, white 600 text, a mint icon and a 2px mint inset edge), `position: sticky; top: 0; height: 100dvh`, padding 16. A keyboard-accessible separator lets users drag the desktop width between 224px and 384px; the width remains during app navigation and resets on reload. Only the link area scrolls, keeping brand and account visible. Desktop CSS overrides both open and closed popover styles and hides the backdrop; mobile uses this same element as its menu sheet, without the resize control.
 - **Brand row** (56px tall): a 28px rounded square mark (`primary` fill with a saffron arrow pointing up-right for "export", inline SVG) plus the "Niryat" wordmark in Plex Sans 18/600. It links to `/overview`.
 - **Sandbox pill** below the brand: "Sandbox", label style, `neutral-soft` background, `neutral-strong` text, 1px border. It is always visible, so judges and the video never mistake this for live money.
 - **Skip link** before the nav: "Skip to content" → `#main`, visible on focus.
