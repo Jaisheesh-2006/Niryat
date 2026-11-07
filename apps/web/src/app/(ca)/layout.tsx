@@ -1,8 +1,8 @@
 import { sessionUserSchema } from "@niryat/shared";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { BrandMark, Menu } from "../../components/icons";
+import { Brand } from "../../components/Brand";
+import { Menu } from "../../components/icons";
 import { NavLinks } from "../../components/NavLinks";
 import { SidebarResize } from "../../components/SidebarResize";
 import { SignOutButton } from "../../components/SignOutButton";
@@ -19,10 +19,7 @@ export default async function CaLayout({ children }: Readonly<{ children: ReactN
         Skip to content
       </a>
       <header className="topbar">
-        <Link href="/ca" className="brand-link">
-          <BrandMark />
-          Niryat
-        </Link>
+        <Brand href="/ca" />
         <span className="sandbox-pill">Sandbox</span>
         <button type="button" className="btn" data-variant="secondary" popoverTarget="nav-menu">
           <Menu />
@@ -30,10 +27,7 @@ export default async function CaLayout({ children }: Readonly<{ children: ReactN
         </button>
       </header>
       <aside id="nav-menu" popover="auto">
-        <Link href="/ca" className="brand-link">
-          <BrandMark />
-          Niryat
-        </Link>
+        <Brand href="/ca" />
         <span className="sandbox-pill">Sandbox</span>
         <NavLinks audience="ca" />
         <div className="nav-account">

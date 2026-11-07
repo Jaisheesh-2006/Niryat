@@ -1,10 +1,10 @@
 import { sessionUserSchema } from "@niryat/shared";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
 import { ApprovalsBadge } from "../../components/ApprovalsBadge";
+import { Brand } from "../../components/Brand";
 import { CardBoundary } from "../../components/CardBoundary";
-import { BrandMark, Menu } from "../../components/icons";
+import { Menu } from "../../components/icons";
 import { NavLinks } from "../../components/NavLinks";
 import { SidebarResize } from "../../components/SidebarResize";
 import { SignOutButton } from "../../components/SignOutButton";
@@ -22,10 +22,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         Skip to content
       </a>
       <header className="topbar">
-        <Link href="/overview" className="brand-link">
-          <BrandMark />
-          Niryat
-        </Link>
+        <Brand href="/overview" />
         <span className="sandbox-pill">Sandbox</span>
         <button type="button" className="btn" data-variant="secondary" popoverTarget="nav-menu">
           <Menu />
@@ -33,10 +30,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         </button>
       </header>
       <aside id="nav-menu" popover="auto">
-        <Link href="/overview" className="brand-link">
-          <BrandMark />
-          Niryat
-        </Link>
+        <Brand href="/overview" />
         <span className="sandbox-pill">Sandbox</span>
         <NavLinks
           badge={

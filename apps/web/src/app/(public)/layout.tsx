@@ -1,6 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { BrandMark } from "../../components/icons";
+import { Brand } from "../../components/Brand";
 import { PublicAuthLinks } from "../../components/PublicAuthLinks";
 import { SiteFooter } from "../../components/SiteFooter";
 
@@ -11,10 +10,7 @@ export default function PublicLayout({ children }: Readonly<{ children: ReactNod
         Skip to content
       </a>
       <header className="public-header">
-        <Link href="/" className="brand-link">
-          <BrandMark />
-          Niryat
-        </Link>
+        <Brand href="/" />
         <PublicAuthLinks />
       </header>
       <main id="main" tabIndex={-1}>

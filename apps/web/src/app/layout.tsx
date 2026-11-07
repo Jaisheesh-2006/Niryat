@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { Anek_Devanagari, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
@@ -15,6 +15,13 @@ const mono = IBM_Plex_Mono({
   display: "swap",
   variable: "--niryat-font-mono",
 });
+// Display face from Ek Type (Mumbai): Latin headings plus the Devanagari wordmark.
+const display = Anek_Devanagari({
+  subsets: ["latin", "devanagari"],
+  axes: ["wdth"],
+  display: "swap",
+  variable: "--niryat-font-display",
+});
 
 export const metadata: Metadata = {
   title: { default: "Niryat", template: "%s · Niryat" },
@@ -22,7 +29,7 @@ export const metadata: Metadata = {
 };
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${display.variable}`}>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );
