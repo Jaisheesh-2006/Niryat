@@ -100,6 +100,13 @@ Sandbox result (2026-10-25): partial payments are rejected ("not available in yo
 
 ## V06 Events, refunds, disputes and history
 
+**G4 check 1 on the hosted demo, user-reported (2026-11-09): payment and refund webhooks pass; dispute webhook not observed.** This was a redeploy with date-prefixed numbering; the refunded invoice was `20261109/0006`.
+- **Payment:** PayPal delivered `INVOICING.INVOICE.PAID` only. **No `PAYMENT.CAPTURE.COMPLETED` was sent for the invoice payment**, so the invoice-paid path is the one that records invoice payments. The API logged `{ event_type: 'INVOICING.INVOICE.PAID', recorded: 1, not_completed: 0, not_found: 0 }`. The invoice showed paid with gross, fee and net. Signature verification passed.
+- **Duplicate delivery:** the user resent the paid event from the PayPal event log. The log printed `recorded: 1` again, because the payment upsert reports every delivery. The invoice still had one payment and no extra task. Deduplication passed.
+- **Refund (closes the P4-15 payload item):** after an approved USD 5.00 partial refund of a USD 10.00 invoice, PayPal sent `INVOICING.INVOICE.REFUNDED` (event `WH-28618790R4644404K-2PE73864BL0244947`, transmission HTTP 200 at 2026-11-09T16:33:34Z). The API logged `recorded: 1` and the invoice became partly refunded. The invoice ID is at **`resource.invoice.id`**, not `resource.id`; refund IDs come from the invoice read (`getInvoiceRefundIds`). Status was `PARTIALLY_REFUNDED`, with `refunds.transactions[].recipient_transaction_id` and refund amount `5.00` USD. The body is saved privately at `.tmp/paypal/refund-event.json`.
+- **Delivery URL:** the registered webhook is `https://niryat-web.onrender.com/api/webhooks/paypal`, which reaches the API through the web proxy with signature headers intact.
+- **Not done:** no dispute webhook (sandbox sends none at inquiry stage), no recovery test while event details are unreadable, and G4 check 2 (automatic dispute/missed-event recovery by the light sync), which the user left as a TODO.
+
 G4 check 1 attempt (2026-11-06), user-reported: approving a new USD 10 invoice from the hosted judge-freelancer account returned HTTP 502 from `/api/actions/:id/approve`, with PayPal code `UNPROCESSABLE_ENTITY`. The failed upstream path is `/v2/invoicing/invoices` (creation, before send), number `2026-27/0004`, debug ID `ca565aa3b38ba`; other details are masked. The user then confirmed the number already exists in the configured sandbox seller account; their screenshot shows a distinct USD 100 refunded invoice issued 2026-10-29. Number collision is confirmed; PayPal's exact detailed issue remains unavailable. The REST adapter retains only top-level code/debug ID and the approval runner returns only the code. Local correction uses `YYYYMMDD/seq` for new invoices while preserving old rows/PDFs/requests and the existing financial-year counter. Exact user-only redeploy/reject-old/issue-new steps, same-day cross-database limits and automated results are in [RENDER](RENDER.md#g4-invoice-number-collision-correction-2026-11-06). Hosted replacement-send, payment/refund/dispute webhook acceptance and all G4 recovery checks remain pending. No assistant PayPal call or application-database change was performed.
 
 Fresh credential-free follow-up (2026-10-31), user-confirmed during P5-13: with `.env` outside the repository, `pnpm verify --force` passed all 27 tasks with zero cached; the standalone API reported auth disabled because `DATABASE_URL` was absent, listened on 3001, and served `/health` (`{"status":"ok"}`) and `/purpose-codes` (HTTP 200). The user restored configuration afterwards. This supplies the fresh no-credentials API evidence carried from P4-15; it does not resolve the combined `pnpm dev` launch problem or the refund/FIRA evidence below.
@@ -221,7 +228,14 @@ Retry in a local working return with a valid, permitted test identity and a matc
 - Web: https://niryat-web.onrender.com/
 - API: https://niryat-api.onrender.com
 
-G4 check 1 is blocked at invoice approval (2026-11-06): the user's new USD 10 invoice returned HTTP 502 with `UNPROCESSABLE_ENTITY`; a collision with an older seller invoice is user-confirmed. The local date-format correction awaits user deployment/re-test; see [V06](#v06-events-refunds-disputes-and-history). G3 setup/smoke results below remain historical passes, not successful end-to-end invoice delivery.
+**G4 results, user-reported (2026-11-09):**
+- **Check 1:** payment and refund webhooks, signature verification and duplicate delivery pass. No dispute webhook was observed. Details are in [V06](#v06-events-refunds-disputes-and-history).
+- **Check 2 (light-sync freshness): not run (TODO).** No measured recovery time exists.
+- **Check 3 (last-sync notice): pass.** The notice was correct. A forced failed `niryat-sync-light` run did not advance the last-success time and showed a failure warning. The next good run cleared it.
+- **Check 4 (manual close across an API restart): pass.** The close completed, with no stuck run and no duplicate proposals or tasks.
+- No timings, run IDs or screenshots were supplied for checks 3–4.
+
+Superseded by the 2026-11-09 redeploy: G4 check 1 was blocked at invoice approval (2026-11-06): the user's new USD 10 invoice returned HTTP 502 with `UNPROCESSABLE_ENTITY`; a collision with an older seller invoice is user-confirmed. The local date-format correction awaits user deployment/re-test; see [V06](#v06-events-refunds-disputes-and-history). G3 setup/smoke results below remain historical passes, not successful end-to-end invoice delivery.
 
 | G3 check                                                                                            | User-reported result                       |
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------ |

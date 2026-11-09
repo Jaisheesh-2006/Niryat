@@ -107,7 +107,7 @@ P4-15 close-out evidence (2026-10-30):
 - The synthetic FIRA upload, confidence levels, confirmation, source text, invoice status and duplicate rejection passed. This is demo-seeded matching, not real-bank-document acceptance. See [V06 and V07](verification.md#v06-events-refunds-disputes-and-history).
 
 Remaining acceptance evidence:
-- Inspect an actual supported refund delivery, save its body privately at `.tmp/paypal/refund-event.json`, and record field names/formats, event type, HTTP result and ledger/task outcome. For the observed invoice-refund event, establish whether the invoice ID is `resource.id` or `resource.invoice.id` and verify the refund-ID read path.
+- **Done (G4, 2026-11-09):** the hosted `INVOICING.INVOICE.REFUNDED` delivery (HTTP 200) is saved privately at `.tmp/paypal/refund-event.json`. The invoice ID is at `resource.invoice.id`; refund IDs are read through the invoice; the invoice became partly refunded. See [V06](verification.md#v06-events-refunds-disputes-and-history).
 - Obtain a consented, redacted real PayPal India FIRA or official anonymised specimen, verify its layout and run the parse/match/flag check. Keep the real-document acceptance criterion open until it succeeds. AI extraction remains Phase 5; dashboard/monthly-close display remains Phases 5–6.
 - Credential-free follow-up passed in P5-13 (user-confirmed 2026-10-31): `.env` unavailable, fresh `pnpm verify --force` with 27 tasks and zero cached; standalone API startup without database/AI keys; `/health` returned `{"status":"ok"}` and `/purpose-codes` returned HTTP 200. The combined development launch's earlier API-startup failure remains undiagnosed; separate API/web terminals are the working workaround. See [V03](verification.md#v03-invoicing-and-reminders) and [V06](verification.md#v06-events-refunds-disputes-and-history).
 
@@ -151,11 +151,18 @@ A5 implementation (2026-11-05): gated freelancer/CA demo entry and an atomic, id
 - Disclaimer / limitations page in the web app, showing [PLAN §23](PLAN.md#23-disclaimer). It covers not tax advice, no CA review of the rules, one seller per deployment and sandbox only.
 - Stretch features ([PLAN §6](PLAN.md#6-stretch-features-only-if-time-allows)) only if 01–13 are solid.
 
-Before opening the hosted demo to users, complete these reliability checks (added after the P5-13 sandbox dispute appeared only on a later sync). These are pending work, not verified deployment behavior:
+Before opening the hosted demo to users, complete these reliability checks (added after the P5-13 sandbox dispute appeared only on a later sync).
+
+G4 user results (2026-11-09):
+- Item 1: payment, refund and duplicate-delivery webhooks pass. A dispute webhook and recovery from unreadable event details were not observed, so item 1 stays open.
+- Item 2: not run.
+- Items 3 and 4: pass.
+
+See [V11](verification.md#v11-hosted-resources).
 - [ ] Verify payment and dispute webhooks against the deployed HTTPS URL, including signature verification, invoice ownership, task creation and duplicate deliveries. Test recovery when event details are not yet readable from PayPal. Record actual delivery results in [V06](verification.md#v06-events-refunds-disputes-and-history) and hosted setup in [V11](verification.md#v11-hosted-resources).
 - [ ] Set and measure a freshness target for payments and disputes. Add more frequent, lightweight reconciliation so a missed webhook does not wait for the current nightly job. Bound retries with backoff, prevent overlapping polls and retain deduplication. Separate this polling schedule from Claude runs; do not invoke AI on every poll. Verify a missed event is recovered automatically within the target, without terminal commands from the user.
-- [ ] Show the last successful sync time and clearly indicate failed or stale data on the relevant pages. Check that a failed sync does not advance the success timestamp and that an automatic recovery updates the displayed state. Distinguish PayPal data freshness from the monthly close's `asOf` date.
-- [ ] Verify E2's configured manual-close dispatch to Workflows survives API restarts; local unconfigured development retains in-process execution. Returning HTTP 202 alone does not establish durability. Restart during a run and verify it completes or reports a recoverable failure, does not remain stuck, and creates no duplicate proposals or tasks. Preserve user-only approval and the one-attempt reminder rule; never replay a claimed PayPal reminder as job recovery.
+- [x] Show the last successful sync time and clearly indicate failed or stale data on the relevant pages. Check that a failed sync does not advance the success timestamp and that an automatic recovery updates the displayed state. Distinguish PayPal data freshness from the monthly close's `asOf` date.
+- [x] Verify E2's configured manual-close dispatch to Workflows survives API restarts; local unconfigured development retains in-process execution. Returning HTTP 202 alone does not establish durability. Restart during a run and verify it completes or reports a recoverable failure, does not remain stuck, and creates no duplicate proposals or tasks. Preserve user-only approval and the one-attempt reminder rule; never replay a claimed PayPal reminder as job recovery.
 
 **Exit gate:** **feature freeze Nov 8**; the full demo script ([PLAN §16](PLAN.md#16-demo-script-3-minutes)) runs on the hosted demo.
 

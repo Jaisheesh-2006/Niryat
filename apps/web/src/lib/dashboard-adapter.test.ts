@@ -79,7 +79,12 @@ describe("createDashboardAdapter", () => {
     [409, "dashboard_busy", "Claude is still answering your previous question."],
     [503, "ai_unavailable", "Questions are not available in this deployment."],
     [502, "ai_failed", "Claude could not answer. Try rephrasing the question."],
-    [413, "too_large", "Claude could not answer. Try rephrasing the question."],
+    [413, "too_large", "This conversation is too long to send. Click New to start a fresh chat."],
+    [
+      429,
+      "rate_limited",
+      "Rate limit reached: too many requests in a short time. Wait 1 minute, then try again. Nothing was sent to PayPal.",
+    ],
   ])(
     "turns HTTP %s into a failed response with the exact message",
     async (status, code, message) => {

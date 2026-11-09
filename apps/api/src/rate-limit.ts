@@ -5,9 +5,12 @@ import { readAnySession, readSession } from "./auth/session";
 import type { AppDeps } from "./routes/auth";
 
 export const RATE_LIMITS = {
-  auth: { windowMs: 60_000, max: 10 },
-  ai: { windowMs: 60_000, max: 6 },
-  share: { windowMs: 3_600_000, max: 10 },
+  // Generous for judges sharing demo accounts; the AI budget, not these limits, caps spend.
+  auth: { windowMs: 60_000, max: 30 },
+  ai: { windowMs: 60_000, max: 30 },
+  // One dashboard question is an agent loop of several turns; the AI budget caps cost.
+  dashboard: { windowMs: 60_000, max: 120 },
+  share: { windowMs: 3_600_000, max: 30 },
 } as const;
 
 const routeGroups: Readonly<Record<string, keyof typeof RATE_LIMITS>> = {
@@ -16,7 +19,7 @@ const routeGroups: Readonly<Record<string, keyof typeof RATE_LIMITS>> = {
   "/auth/ca/login": "auth",
   "/auth/ca/signup": "auth",
   "/auth/judge": "auth",
-  "/dashboard/turn": "ai",
+  "/dashboard/turn": "dashboard",
   "/extract": "ai",
   "/close": "ai",
   "/ca-link": "share",

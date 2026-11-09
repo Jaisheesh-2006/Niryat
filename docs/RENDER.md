@@ -237,3 +237,32 @@ C4 adds `packages/db/drizzle/0011_vengeful_exodus.sql` and generated metadata: n
 Automated: DB182/API796 no skips, web567, API normal532/264 DB skips covered by integration, verify27/build9. Final tooltip cleanup focused integration21 passes. Only a task-created PostgreSQL17 niryat_test container was used, with no private environment loader or application data. Generated snapshot comparison confirms a single added column. IMPROVEMENTS C4 records timings/logs and final cleanup/checks. No Render API call, deployment, environment edit or other task implemented.
 
 Final C4 verify27/build9 passed (45.699s/4.027s); task-created --rm niryat-c4-tests was stopped/removed after integrations. Fresh Next output passed before the final API-only tooltip cleanup. Operator migration/hosted checks remain pending; no application database was accessed. Final logs `.tmp/c4-{verify,build}-final.log`.
+
+## G4: hosted reliability results (2026-11-09)
+
+User-reported on the redeployed services:
+- **Webhooks:** the invoice-paid and invoice-refunded webhooks reached `niryat-api` through the `niryat-web` proxy, passed signature verification and recorded once, including on a resent duplicate.
+- **Light sync freshness (check 2): not run.** The 30-minute recovery target remains unmeasured.
+- **Last-sync notice (check 3): pass.** A forced failed `niryat-sync-light` run left the last-success time unchanged and showed a warning; the next good run cleared it.
+- **Durable close (check 4): pass.** After restarting `niryat-api`, the Workflows `monthlyClose` run completed with no duplicates.
+
+Details: [V06](verification.md#v06-events-refunds-disputes-and-history), [V11](verification.md#v11-hosted-resources). Docs only; no code, Blueprint or service change by the assistant.
+
+## G5 fix: generous rate limits and clear rate-limit errors (2026-11-09)
+
+The user's hosted rehearsal of scene 4 got HTTP 429 `rate_limited` from `POST /api/dashboard/turn`, which the dashboard showed as "Claude could not answer. Try rephrasing". One AG Studio question is an agent loop: the main agent hands work to the Page and Widget agents, and each round trip is a separate turn. Those turns shared the A2 `ai` budget of 6 requests per minute with extraction and close.
+
+The user asked for limits generous enough that judges never hit them, and for rate-limit errors that say so plainly. The new limits in `apps/api/src/rate-limit.ts`, per IP and user (auth per IP only):
+
+| Group           | Routes                               | Before              | Now            |
+| --------------- | ------------------------------------ | ------------------- | -------------- |
+| auth            | sign-in, sign-up, judge entry        | 10 per minute       | 30 per minute  |
+| ai              | extraction, monthly close            | 6 per minute        | 30 per minute  |
+| dashboard (new) | `/dashboard/turn`, freelancer and CA | shared the ai group | 120 per minute |
+| share           | CA share requests                    | 10 per hour         | 30 per hour    |
+
+Cost is still bounded by the deployment-wide monthly AI budget and the one-turn-at-a-time rule (`dashboard_busy`). The limiter remains in memory per instance.
+
+Messages: every rate-limited form goes through `sendJson` in `apps/web/src/lib/forms.ts`. The dashboard adapter uses the same message function. Both now show "Rate limit reached: too many requests in a short time. Wait N minute(s), then try again. Nothing was sent to PayPal.", with N taken from `Retry-After`. Separately, the dashboard's `too_large` now says the conversation is too long and to click New, instead of "Try rephrasing".
+
+Tests: `rate-limit.test.ts` now derives every boundary from `RATE_LIMITS` and covers the separate dashboard budget. `forms.test.ts` covers the message for a 60-second, a 3600-second and a missing `Retry-After`. `dashboard-adapter.test.ts` covers 429 and 413. The hosted re-check of scene 4 after redeploying is awaiting user verification.

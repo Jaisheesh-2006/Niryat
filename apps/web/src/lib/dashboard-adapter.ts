@@ -1,6 +1,7 @@
 import { dashboardTurnResponseSchema } from "@niryat/shared";
 import type { AgAiEvent, AgLlmAdapter, AgLlmResponse } from "ag-studio";
 import { z } from "zod";
+import { rateLimitMessage } from "./forms";
 
 export const DASHBOARD_PROMPT_STARTERS = [
   "Show my PayPal fees by client this year",
@@ -13,11 +14,15 @@ const errorMessages: Record<string, string> = {
   ai_budget_exhausted:
     "The monthly AI budget is used up. The dashboard still works without questions.",
   dashboard_busy: "Claude is still answering your previous question.",
+  too_large: "This conversation is too long to send. Click New to start a fresh chat.",
 };
 const FALLBACK_ERROR = "Claude could not answer. Try rephrasing the question.";
 
-function ended(status: "failed" | "cancelled", code: string): AgLlmResponse {
-  const message = errorMessages[code] ?? FALLBACK_ERROR;
+function ended(
+  status: "failed" | "cancelled",
+  code: string,
+  message = errorMessages[code] ?? FALLBACK_ERROR,
+): AgLlmResponse {
   return {
     id: `dashboard-${status}`,
     createdAt: Date.now(),
@@ -56,6 +61,13 @@ export function createDashboardAdapter(fetcher: typeof fetch): AgLlmAdapter {
           if (response.ok) {
             const parsed = dashboardTurnResponseSchema.safeParse(body);
             return parsed.success ? parsed.data : ended("failed", "invalid_response");
+          }
+          if (response.status === 429) {
+            return ended(
+              "failed",
+              "rate_limited",
+              rateLimitMessage(response.headers.get("Retry-After")),
+            );
           }
           const error = z.object({ error: z.string() }).safeParse(body);
           return ended("failed", error.success ? error.data.error : "ai_failed");

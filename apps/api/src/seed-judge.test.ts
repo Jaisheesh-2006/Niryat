@@ -319,6 +319,7 @@ describe.skipIf(!testDatabaseUrl)("judge seed and sessions", () => {
       rateLimits: {
         auth: createRateLimiter(RATE_LIMITS.auth),
         ai: createRateLimiter(RATE_LIMITS.ai),
+        dashboard: createRateLimiter(RATE_LIMITS.dashboard),
         share: createRateLimiter(RATE_LIMITS.share),
       },
     });

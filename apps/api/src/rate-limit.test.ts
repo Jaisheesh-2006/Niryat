@@ -47,6 +47,7 @@ describe("route rate limits", () => {
       rateLimits: {
         auth: createRateLimiter(RATE_LIMITS.auth),
         ai: createRateLimiter(RATE_LIMITS.ai),
+        dashboard: createRateLimiter(RATE_LIMITS.dashboard),
         share: createRateLimiter(RATE_LIMITS.share),
       },
     });
@@ -69,10 +70,10 @@ describe("route rate limits", () => {
     );
   }
 
-  it("rejects the eleventh login, isolates IPs, and resets after a minute", async () => {
+  it("rejects logins past the auth limit, isolates IPs, and resets after a minute", async () => {
     const time = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
     const app = limitedApp();
-    for (let i = 0; i < 10; i++) expect((await post(app)).status).toBe(400);
+    for (let i = 0; i < RATE_LIMITS.auth.max; i++) expect((await post(app)).status).toBe(400);
     const blocked = await post(app);
     expect(blocked.status).toBe(429);
     expect(await blocked.json()).toEqual({ error: "rate_limited" });
@@ -86,7 +87,8 @@ describe("route rate limits", () => {
 
   it("shares the auth budget across signup, login and reserved CA/judge paths", async () => {
     const app = limitedApp();
-    for (let i = 0; i < 10; i++) expect((await post(app, "/auth/signup")).status).toBe(400);
+    for (let i = 0; i < RATE_LIMITS.auth.max; i++)
+      expect((await post(app, "/auth/signup")).status).toBe(400);
     for (const path of [
       "/auth/login",
       "/auth/signup",
@@ -103,9 +105,9 @@ describe("route rate limits", () => {
   });
 
   it.each([
-    { path: "/auth/login", max: 10 },
-    { path: "/extract", max: 6 },
-    { path: "/ca-link", max: 10 },
+    { path: "/auth/login", max: RATE_LIMITS.auth.max },
+    { path: "/extract", max: RATE_LIMITS.ai.max },
+    { path: "/ca-link", max: RATE_LIMITS.share.max },
   ])("ignores forged forwarding headers for $path outside Render", async ({ path, max }) => {
     const app = limitedApp();
     const cookie = await cookieFor(randomUUID(), base.sessionSecret);
@@ -144,7 +146,7 @@ describe("route rate limits", () => {
         },
         { incoming: { socket: { remoteAddress: socketIp } } },
       );
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < RATE_LIMITS.auth.max; i++) {
       expect((await request("192.0.2.1", `203.0.113.${i}, 192.0.2.1`, "10.0.0.1")).status).toBe(
         400,
       );
@@ -169,7 +171,7 @@ describe("route rate limits", () => {
         },
         { incoming: { socket: { remoteAddress: ip } } },
       );
-    for (let i = 0; i < 10; i++) expect((await request("::1")).status).toBe(400);
+    for (let i = 0; i < RATE_LIMITS.auth.max; i++) expect((await request("::1")).status).toBe(400);
     expect((await request("::1")).status).toBe(429);
     expect((await request("::1", "invalid, 192.0.2.2")).status).toBe(429);
     expect((await request("::2")).status).toBe(400);
@@ -178,25 +180,25 @@ describe("route rate limits", () => {
 
   it("leaves requests unlimited when the dependency is absent", async () => {
     const app = createApp(base);
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < RATE_LIMITS.auth.max + 2; i++) {
       const response = await post(app);
       expect(response.status).toBe(400);
       expect(response.headers.has("Retry-After")).toBe(false);
     }
   });
 
-  it("shares six AI requests per IP/user, keeping other users and auth independent", async () => {
+  it("shares the AI budget per IP/user, keeping dashboard, other users and auth independent", async () => {
     const app = limitedApp();
     const cookie = await cookieFor(randomUUID(), base.sessionSecret);
     const otherCookie = await cookieFor(randomUUID(), base.sessionSecret);
-    for (const path of ["/extract", "/close", "/dashboard/turn"]) {
-      for (let i = 0; i < 2; i++) {
-        expect((await post(app, path, "192.0.2.1", cookie)).status).toBe(
-          path === "/dashboard/turn" ? 503 : 400,
-        );
+    for (const path of ["/extract", "/close"]) {
+      for (let i = 0; i < RATE_LIMITS.ai.max / 2; i++) {
+        expect((await post(app, path, "192.0.2.1", cookie)).status).toBe(400);
       }
     }
-    for (const path of ["/extract", "/close", "/dashboard/turn"]) {
+    // Dashboard turns have their own budget, so exhausted extract/close requests don't block them.
+    expect((await post(app, "/dashboard/turn", "192.0.2.1", cookie)).status).toBe(503);
+    for (const path of ["/extract", "/close"]) {
       const blocked = await post(app, path, "192.0.2.1", cookie);
       expect(blocked.status).toBe(429);
       expect(blocked.headers.get("Retry-After")).toBe("60");
@@ -208,11 +210,11 @@ describe("route rate limits", () => {
     expect((await post(app)).status).toBe(400);
   });
 
-  it("limits CA portfolio questions to the same six requests per IP/user", async () => {
+  it("limits dashboard questions, including the CA portfolio, to their own budget per IP/user", async () => {
     const app = limitedApp();
     const cookie = await cookieFor(randomUUID(), base.sessionSecret, "ca");
     const other = await cookieFor(randomUUID(), base.sessionSecret, "ca");
-    for (let index = 0; index < 6; index++) {
+    for (let index = 0; index < RATE_LIMITS.dashboard.max; index++) {
       expect((await post(app, "/dashboard/turn", "192.0.2.1", cookie)).status).toBe(503);
     }
     const blocked = await post(app, "/dashboard/turn", "192.0.2.1", cookie);
@@ -226,13 +228,13 @@ describe("route rate limits", () => {
     expect((await post(app, "/extract", "192.0.2.1", cookie)).status).toBe(401);
   });
 
-  it("reserves an independent ten-per-hour share budget for each IP/user", async () => {
+  it("reserves an independent hourly share budget for each IP/user", async () => {
     const app = limitedApp();
     const cookie = await cookieFor(randomUUID(), base.sessionSecret);
     const otherCookie = await cookieFor(randomUUID(), base.sessionSecret);
     const time = vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const start = Date.now();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < RATE_LIMITS.share.max; i++) {
       expect((await post(app, "/ca-link", "192.0.2.1", cookie)).status).toBe(400);
     }
     const blocked = await post(app, "/ca-link", "192.0.2.1", cookie);

@@ -60,3 +60,11 @@ Light theme only (2026-11-09): the user removed dark mode, so the dashboards alw
 ## Licence coverage confirmed (2026-11-09)
 
 The user confirmed that the AG Studio licence and the December AI budget, which limits dashboard questions, last through judging on 2026-12-15. No dates, terms, key or amount were supplied or inspected. Recorded in [V15](verification.md#v15-sponsor-licences) and [V17](verification.md#v17-submission-materials-and-rehearsal). Docs only: no code, configuration or deployment change. H3's weekly check that the dashboard still renders remains with the user.
+
+## G5 fix: Studio theme and style isolation (2026-11-09)
+
+The user's hosted G5 rehearsal found that the dashboard didn't match the design system. Cause: house element styles in `apps/web/src/app/globals.css` leaked into Studio's panels. For example, `button { margin-top: 16px }` pushed the AI Assistant header controls out of the header. Changes:
+- `globals.css` resets margins, button minimum height and shadow inside `.dashboard-studio`. The selectors use zero-specificity `:where()`, so Studio's own rules still win ties.
+- The shared `theme` in `apps/web/src/components/Dashboard.tsx` now uses design tokens for base font size, borders, radii, widget padding and widget title size and weight. The extra outer wrapper border is removed. The theme is shared, so the freelancer `/dashboard` and the CA `/ca` both change.
+
+Web typecheck, tests (570/570) and `pnpm build` (9/9 tasks) pass. The browser check is awaiting user verification: after redeploying, open `/dashboard` as Ananya and `/ca` as the CA. Expect the AI Assistant header controls inside the header, widget titles at a readable size without truncation, and Studio panels using Niryat's border colour and radii.

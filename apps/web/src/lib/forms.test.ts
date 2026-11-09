@@ -233,6 +233,22 @@ it.each([
 });
 
 it.each([
+  ["60", "/api/extract", "Wait 1 minute"],
+  ["3600", "/api/ca-link", "Wait 60 minutes"],
+  [null, "/api/auth/judge", "Wait 1 minute"],
+])("names the rate limit and the wait (Retry-After %s on %s)", async (retryAfter, url, wait) => {
+  const headers: Record<string, string> = retryAfter === null ? {} : { "Retry-After": retryAfter };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(Response.json({ error: "rate_limited" }, { status: 429, headers })),
+  );
+  expect(await sendJson(url, "POST", {})).toEqual({
+    ok: false,
+    message: `Rate limit reached: too many requests in a short time. ${wait}, then try again. Nothing was sent to PayPal.`,
+  });
+});
+
+it.each([
   [0, "Due today"],
   [1, "1"],
   [5, "5"],

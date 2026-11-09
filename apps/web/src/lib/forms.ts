@@ -172,8 +172,17 @@ export async function sendPdf(url: string, file: File): Promise<FormResult> {
   }
 }
 
+// A rate-limited request is rejected before its handler runs, so nothing reached PayPal or Claude.
+export function rateLimitMessage(retryAfterSeconds: string | null): string {
+  const minutes = Math.ceil(Number(retryAfterSeconds) / 60) || 1;
+  return `Rate limit reached: too many requests in a short time. Wait ${minutes} minute${minutes === 1 ? "" : "s"}, then try again. Nothing was sent to PayPal.`;
+}
+
 async function responseResult(response: Response, reminderApproval = false): Promise<FormResult> {
   if (response.ok) return { ok: true };
+  if (response.status === 429) {
+    return { ok: false, message: rateLimitMessage(response.headers.get("Retry-After")) };
+  }
   const parsed = z
     .object({
       error: z.string(),

@@ -2170,6 +2170,14 @@ button:has(.spinner)::before {
 .dashboard-studio {
   height: 60rem;
 }
+/* House element styles must not leak into AG Studio's own panels and widgets. */
+.dashboard-studio :where(button, p, h1, h2, h3, ul, ol, label, summary) {
+  margin: 0;
+}
+.dashboard-studio :where(button) {
+  min-height: 0;
+  box-shadow: none;
+}
 main:has(.dashboard-studio, .calendar-card),
 .content:has(.dashboard-studio, .calendar-card) {
   max-width: none;
@@ -2209,6 +2217,15 @@ main:has(.dashboard-studio, .calendar-card),
 }
 .page-header details.card[open] {
   max-width: 48rem;
+}
+.page-header details.card[open] > .table-wrap {
+  margin-top: var(--niryat-space-4);
+}
+.page-header details.card[open] > button + button {
+  margin-left: var(--niryat-space-2);
+}
+.page-header details.card[open] > button ~ p {
+  margin-top: var(--niryat-space-3);
 }
 .page-header details.card[open] > h2 ~ h2 {
   margin-top: var(--niryat-space-6);
