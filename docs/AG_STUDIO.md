@@ -56,3 +56,7 @@ Verification: `corepack.cmd pnpm verify` 27/27 (web 570/570); `corepack.cmd pnpm
 Follow-up (2026-11-09): [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx) palette fill and stroke 2 now read `--niryat-cat-paypal` (`#2f6a8a` / `#9ed0ea`) instead of `--niryat-accent`, because Neel reserves marigold for actions waiting for the user's decision. Verification: web 570/570, `corepack.cmd pnpm verify` 27/27, `corepack pnpm build` 9/9. Pending user verification: `/dashboard` and `/ca` charts in light and dark; in dark, series 1 (lavender) and series 2 (light blue) are close in lightness, so check they are told apart by legend and position.
 
 Light theme only (2026-11-09): the user removed dark mode, so the dashboards always use the light Neel values; the dark values and dark checks above no longer apply.
+
+## Licence coverage confirmed (2026-11-09)
+
+The user confirmed that the AG Studio licence and the December AI budget, which limits dashboard questions, last through judging on 2026-12-15. No dates, terms, key or amount were supplied or inspected. Recorded in [V15](verification.md#v15-sponsor-licences) and [V17](verification.md#v17-submission-materials-and-rehearsal). Docs only: no code, configuration or deployment change. H3's weekly check that the dashboard still renders remains with the user.

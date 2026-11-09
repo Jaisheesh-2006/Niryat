@@ -10,6 +10,8 @@ Ordinary automated checks require no credentials; explicit database integration 
 
 **December budget — user only:** choose an affordable positive USD amount for the whole deployment's December AI use. In the Render dashboard set `AI_MONTHLY_BUDGET_USD` consistently for API, worker and nightly sync; apply/restart the affected services and confirm they use it. Do not change it on the light sync, which does not run AI. Recheck headroom on December 1; the configured limit persists. Dashboard, extraction and monthly close all check spending since the start of the current execution month in IST, regardless of the close's report month. Run a dashboard prompt and monthly close, confirm cost/run records and remaining headroom, and monitor the provider's actual spend through December 15. Exhaustion should leave manual forms and deterministic proposals available, rather than bypassing the cap. The stored estimate can overshoot by in-flight work; use provider billing controls too. Record configured amount (not credentials), date/services, observed result and outstanding limits here. Budget selection/configuration and live checks remain **awaiting user verification**. See the [Render operator record](RENDER.md#f1-december-ai-budget-and-submission-evidence-2026-11-06).
 
+**Licence and budget update (2026-11-09):** the user confirmed that AG Studio licence coverage and the December AI budget last through 2026-12-15 ([V15](#v15-sponsor-licences)). No amount or spend figures were supplied. The licence follow-up and budget items above are closed on that statement.
+
 **Rehearsal — user only:** follow [the five scene checks](submission.md#scene-checks-and-expected-results), then record date, origin and observed results here. Current status: all five scenes **awaiting user verification**. Hosted webhooks/freshness/restart checks remain V06/V11 and Phase 7; prior local evidence is not a hosted pass. The video/public URLs, public repository, compliance checklist and final submission remain user work. Do not tick those items from F1's document completion.
 
 ## V01 PayPal documentation migration
@@ -259,6 +261,8 @@ TODO(verify): Confirm the checked-in hooks in an installed Claude Code session o
 TODO(verify): Observe the first GitHub Actions run on both Windows and Linux. Local verification here runs on Windows; the workflow covers clean frozen installs, checks, builds and secret scanning. [GitHub Actions](https://docs.github.com/en/actions).
 
 ## V15 Sponsor licences
+
+**User-confirmed 2026-11-09:** the user stated that all sponsor licences (AG Studio and Bryntum) and the AI budget last through judging, 2026-12-15. No trial start/expiry dates, licence terms or budget amount were supplied or inspected; this records the user's statement, not observed dates. Weekly H3 checks still confirm that the licences render.
 
 **Installed; licence evidence still open (2026-11-01).** AG Studio/React 3.0.0 and Bryntum Calendar/React 7.3.8 are installed; Bryntum uses the trial alias and reviewed helper 1.0.1. Installation facts and the user-approved early Bryntum/D2 exception are in [tooling sources](tooling-sources.md#versions-and-installation-gate). Installation and successful rendering do not establish actual trial start/expiry or judging permission. [Sponsor requirements in PLAN](PLAN.md#12-sponsor-tools).
 
