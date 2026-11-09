@@ -23,9 +23,6 @@ export function AuthAside({ audience = "freelancer" }: { audience?: UserRole }) 
   const { title, points } = copy[audience];
   return (
     <aside className="auth-aside" aria-label="About Niryat">
-      <p className="auth-aside-hindi" lang="hi" aria-hidden="true">
-        निर्यात
-      </p>
       <h2>{title}</h2>
       <ul>
         {points.map((point) => (

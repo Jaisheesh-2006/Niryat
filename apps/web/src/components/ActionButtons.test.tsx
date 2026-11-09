@@ -141,7 +141,7 @@ it("disables a simple caller while its transition is pending", () => {
   expect(buttons(TaskDoneButton({ taskId: action.id }))[0]?.props.disabled).toBe(true);
 });
 
-it.each(["proposed", "failed"] as const)("gives the approval card its %s edge hook", (status) => {
+it.each(["proposed", "failed"] as const)("gives the approval card its %s status hook", (status) => {
   const html = renderToStaticMarkup(
     <ApprovalCard
       action={{ ...action, status }}
@@ -158,7 +158,7 @@ it.each(["proposed", "failed"] as const)("gives the approval card its %s edge ho
   expect(html).toContain("Suggestion from Claude");
   expect(html).toContain('class="btn" data-variant="ghost"');
   if (status === "proposed") {
-    expect(html.match(/Waiting for your approval/g)).toHaveLength(1);
+    expect(html.match(/Your decision/g)).toHaveLength(1);
     expect(html).toContain("Nothing is sent to PayPal until you approve.");
   }
 });

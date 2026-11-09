@@ -213,7 +213,7 @@ export default async function CaClient({
                     </td>
                     <td>{event.title}</td>
                     <td>
-                      <StatusBadge tone={event.state === "overdue" ? "danger" : "success"}>
+                      <StatusBadge tone={event.state === "overdue" ? "danger" : "neutral"}>
                         {event.state === "overdue" ? "Overdue" : "Upcoming"}
                       </StatusBadge>
                     </td>

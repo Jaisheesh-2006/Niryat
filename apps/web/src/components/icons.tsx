@@ -298,18 +298,13 @@ export function Loader(props: IconProps) {
   );
 }
 
+// Neel mark: a marigold disc with an indigo leaf and seed; colours come from globals.css.
 export function BrandMark({ size = 28 }: IconProps) {
   return (
-    <svg className="brand-mark" width={size} height={size} viewBox="0 0 28 28" aria-hidden="true">
-      <rect width="28" height="28" rx="6" />
-      <path
-        d="M8 20 20 8M10 8h10v10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className="brand-mark" width={size} height={size} viewBox="0 0 44 44" aria-hidden="true">
+      <circle className="brand-disc" cx="22" cy="22" r="21" />
+      <path d="M22 9c6 6 6 13 0 19c-6-6-6-13 0-19z" fill="currentColor" />
+      <circle cx="22" cy="33" r="3" fill="currentColor" />
     </svg>
   );
 }

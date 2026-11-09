@@ -6,7 +6,7 @@ import { Menu } from "../../components/icons";
 import { NavLinks } from "../../components/NavLinks";
 import { SidebarResize } from "../../components/SidebarResize";
 import { SignOutButton } from "../../components/SignOutButton";
-import { SiteFooter } from "../../components/SiteFooter";
+import { SandboxBar, SiteFooter } from "../../components/SiteFooter";
 import { apiGet } from "../../lib/api";
 
 export default async function CaLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -20,7 +20,6 @@ export default async function CaLayout({ children }: Readonly<{ children: ReactN
       </a>
       <header className="topbar">
         <Brand href="/ca" />
-        <span className="sandbox-pill">Sandbox</span>
         <button type="button" className="btn" data-variant="secondary" popoverTarget="nav-menu">
           <Menu />
           Menu
@@ -28,7 +27,6 @@ export default async function CaLayout({ children }: Readonly<{ children: ReactN
       </header>
       <aside id="nav-menu" popover="auto">
         <Brand href="/ca" />
-        <span className="sandbox-pill">Sandbox</span>
         <NavLinks audience="ca" />
         <div className="nav-account">
           <p className="account-email" title={me.email}>
@@ -39,6 +37,7 @@ export default async function CaLayout({ children }: Readonly<{ children: ReactN
       </aside>
       <SidebarResize />
       <div className="content">
+        <SandboxBar />
         <main id="main" tabIndex={-1}>
           {children}
         </main>

@@ -8,7 +8,7 @@ import { Menu } from "../../components/icons";
 import { NavLinks } from "../../components/NavLinks";
 import { SidebarResize } from "../../components/SidebarResize";
 import { SignOutButton } from "../../components/SignOutButton";
-import { SiteFooter } from "../../components/SiteFooter";
+import { SandboxBar, SiteFooter } from "../../components/SiteFooter";
 import { apiGet } from "../../lib/api";
 
 export default async function AppLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -23,7 +23,6 @@ export default async function AppLayout({ children }: Readonly<{ children: React
       </a>
       <header className="topbar">
         <Brand href="/overview" />
-        <span className="sandbox-pill">Sandbox</span>
         <button type="button" className="btn" data-variant="secondary" popoverTarget="nav-menu">
           <Menu />
           Menu
@@ -31,7 +30,6 @@ export default async function AppLayout({ children }: Readonly<{ children: React
       </header>
       <aside id="nav-menu" popover="auto">
         <Brand href="/overview" />
-        <span className="sandbox-pill">Sandbox</span>
         <NavLinks
           badge={
             <CardBoundary title="Approvals" quiet>
@@ -50,6 +48,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
       </aside>
       <SidebarResize />
       <div className="content">
+        <SandboxBar />
         <main id="main" tabIndex={-1}>
           {children}
         </main>

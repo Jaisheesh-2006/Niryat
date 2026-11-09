@@ -27,6 +27,7 @@ it("renders the CA shell around its page from a verified session", async () => {
   const html = renderToStaticMarkup(await CaLayout({ children: <p>CA page</p> }));
   expect(apiGet).toHaveBeenCalledExactlyOnceWith("/auth/me", sessionUserSchema, "/ca/login");
   expect(html).toContain('title="ca@example.com">ca@example.com</p>');
+  expect(html).toContain('<p class="systembar">PayPal sandbox only · Not tax or legal advice · ');
   expect(html).toContain('href="#main">Skip to content</a>');
   expect(html).toContain('id="main"');
   expect(html).toContain("<p>CA page</p>");

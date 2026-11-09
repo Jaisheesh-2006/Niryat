@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 export function SidebarResize() {
-  const [width, setWidth] = useState(248);
+  const [width, setWidth] = useState(264);
 
   function resize(handle: HTMLElement, value: number) {
     const next = Math.min(384, Math.max(224, value));

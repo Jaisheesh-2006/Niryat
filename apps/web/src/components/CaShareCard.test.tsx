@@ -240,7 +240,7 @@ it.each(["success", "invalid", "network"])(
         ? ""
         : outcome === "invalid"
           ? "This invitation code is invalid or no longer pending. Ask your client for a new one."
-          : "Something went wrong. Try again.",
+          : "We couldn't complete this request. Try again.",
     );
   },
 );

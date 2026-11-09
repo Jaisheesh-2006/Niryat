@@ -117,7 +117,8 @@ const labels: Record<string, string> = {
 type FormResult =
   | { ok: true; data?: never }
   | { ok: false; message: string; reasons?: string[]; loginPath?: "/ca/login" | "/login" };
-const fallback = { ok: false, message: "Something went wrong. Try again." } as const;
+// Also reached after a PayPal approval whose outcome is unknown, so it must not claim nothing was sent.
+const fallback = { ok: false, message: "We couldn't complete this request. Try again." } as const;
 const reminderFallback = {
   ok: false,
   message:

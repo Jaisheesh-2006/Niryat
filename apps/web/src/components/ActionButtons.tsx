@@ -95,7 +95,7 @@ export function ActionButtons({ action, inCard = false }: { action: Action; inCa
       )}
       <button
         className="btn"
-        data-variant={action.paypalAction === "refund_payment" ? "danger" : "primary"}
+        data-variant={action.paypalAction === "refund_payment" ? "danger" : "decision"}
         type="button"
         disabled={submitting || isPending}
         onClick={() => submit("approve")}
@@ -261,7 +261,7 @@ function ReminderButtons({ action, inCard }: { action: Action; inCard: boolean }
       {action.status === "proposed" && (
         <button
           className="btn"
-          data-variant="primary"
+          data-variant="decision"
           type="button"
           disabled={submitting || isPending || approvalStarted.current}
           onClick={() => submit("approve")}

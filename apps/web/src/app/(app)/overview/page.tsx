@@ -126,7 +126,7 @@ async function Deadlines() {
           {deadlines.map((event) => (
             <li key={event.id} data-state={event.state}>
               <time dateTime={event.date}>{formatDate(event.date)}</time>
-              <StatusBadge tone={event.state === "overdue" ? "danger" : "success"}>
+              <StatusBadge tone={event.state === "overdue" ? "danger" : "neutral"}>
                 {event.state === "overdue" ? "Overdue" : "Upcoming"}
               </StatusBadge>
               <Link href={event.href}>{event.title}</Link>

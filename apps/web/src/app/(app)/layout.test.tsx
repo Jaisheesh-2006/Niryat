@@ -27,6 +27,7 @@ it("checks the session once and renders the account email and protected content"
   expect(apiGet).toHaveBeenCalledExactlyOnceWith("/auth/me", sessionUserSchema);
   expect(redirect).not.toHaveBeenCalled();
   expect(html).toContain('title="seller@example.com">seller@example.com</p>');
+  expect(html).toContain('<p class="systembar">PayPal sandbox only · Not tax or legal advice · ');
   expect(html).toContain("<p>Protected content</p>");
   expect(html).not.toContain(user.id);
 });

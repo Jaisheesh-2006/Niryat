@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { SidebarResize } from "./SidebarResize";
 
-const state = vi.hoisted(() => ({ width: 248 }));
+const state = vi.hoisted(() => ({ width: 264 }));
 vi.mock("react", () => ({
   useState: () => [
     state.width,
@@ -11,7 +11,7 @@ vi.mock("react", () => ({
   ],
 }));
 afterEach(() => {
-  state.width = 248;
+  state.width = 264;
 });
 
 function handle() {
@@ -59,8 +59,8 @@ it("supports keyboard resizing and exposes the current value", () => {
   const currentTarget = handle();
   const preventDefault = vi.fn();
   for (const [key, expected] of [
-    ["ArrowRight", 264],
-    ["ArrowLeft", 248],
+    ["ArrowRight", 280],
+    ["ArrowLeft", 264],
     ["Home", 224],
     ["ArrowLeft", 224],
     ["End", 384],

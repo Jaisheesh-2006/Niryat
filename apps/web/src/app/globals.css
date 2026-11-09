@@ -1,46 +1,63 @@
-﻿/* Niryat design system: "export voucher" (docs/frontend-plan.md §4).
+/* Niryat Neel design system (docs/IMPLEMENTATION-FRONTEND.md; values from Neel tokens.json).
    Token names are shared with AG Studio and Bryntum; keep them stable. */
 :root {
-  --niryat-bg: #f3f3ee;
+  /* Palette */
+  --niryat-neel-900: #1e1a4d;
+  --niryat-neel-600: #3b348c;
+  --niryat-neel-300: #a9a2f5;
+  --niryat-mist: #f3f2f9;
+  --niryat-marigold: #f2a93b;
+  --niryat-leaf: #2f7d5b;
+  --niryat-kumkum: #b4432f;
+  /* Roles */
+  --niryat-bg: var(--niryat-mist);
   --niryat-surface: #ffffff;
-  --niryat-sunken: #efefe9;
-  --niryat-border: #e2e2da;
-  --niryat-border-strong: #8c948f;
-  --niryat-text: #1b1f1d;
-  --niryat-muted: #5a625e;
-  --niryat-primary: #1f6f5c;
-  --niryat-primary-hover: #185a4a;
-  --niryat-primary-soft: #e3f1ec;
-  --niryat-primary-strong: #175646;
+  --niryat-sunken: #eceaf5;
+  --niryat-border: #dcd9ee;
+  --niryat-border-strong: #7c78a3;
+  --niryat-text: #1c1a33;
+  --niryat-muted: #55527a;
+  --niryat-primary: var(--niryat-neel-600);
+  --niryat-primary-hover: #2e2873;
+  --niryat-primary-soft: #e8e6f7;
+  --niryat-primary-strong: #2a2470;
   --niryat-on-primary: #ffffff;
-  --niryat-accent: #e07a1f;
-  --niryat-on-accent: #2a1603;
-  --niryat-attention-soft: #fcefe1;
-  --niryat-attention-strong: #8a4508;
-  --niryat-danger: #b42318;
+  /* Marigold means one thing: waiting for your decision. Never text, always a fill. */
+  --niryat-accent: var(--niryat-marigold);
+  --niryat-accent-hover: #f5ba5e;
+  --niryat-on-accent: var(--niryat-neel-900);
+  --niryat-attention-soft: #fdf0da;
+  --niryat-attention-strong: #8a5300;
+  --niryat-success: var(--niryat-leaf);
+  --niryat-success-soft: #e1f0e8;
+  --niryat-success-strong: #1f5c41;
+  --niryat-danger: var(--niryat-kumkum);
   --niryat-on-danger: #ffffff;
-  --niryat-danger-soft: #fdebe9;
-  --niryat-danger-strong: #9a1d14;
-  --niryat-neutral-soft: #eeeeea;
-  --niryat-neutral-strong: #4b5250;
+  --niryat-danger-soft: #fbe9e5;
+  --niryat-danger-strong: #8f3221;
+  --niryat-neutral-soft: #eceaf5;
+  --niryat-neutral-strong: #3a3760;
+  --niryat-focus: var(--niryat-neel-600);
+  --niryat-focus-on-shell: var(--niryat-marigold);
+  /* Shell: sidebar, mobile top bar and brand panels. */
+  --niryat-shell: var(--niryat-neel-900);
+  --niryat-shell-raised: #2b2666;
+  --niryat-on-shell: var(--niryat-mist);
+  --niryat-on-shell-muted: #b9b4e6;
+  --niryat-shell-line: rgb(243 242 249 / 0.16);
+  --niryat-shell-accent: var(--niryat-neel-300);
+  --niryat-backdrop: rgb(14 12 34 / 0.55);
+  /* Calendar names stay as Bryntum and AG Studio read them. */
   --niryat-overdue: var(--niryat-danger);
-  --niryat-upcoming: #1f6f5c;
-  --niryat-past: #6b7280;
-  --niryat-event-text: #fff;
-  --niryat-cat-gst: #1f6f5c;
-  --niryat-cat-income-tax: #7048a5;
-  --niryat-cat-rbi: #8a4508;
-  --niryat-cat-paypal: #375c78;
-  /* Banyan: the deep green of the sidebar and brand panels. */
-  --niryat-banyan: #0f2a22;
-  --niryat-banyan-raised: #173a2f;
-  --niryat-on-banyan: #e8f1ec;
-  --niryat-on-banyan-muted: #9dbcb0;
-  --niryat-banyan-line: rgb(232 241 236 / 0.12);
-  --niryat-mint: #7dd3b7;
-  --niryat-brand-green: #1f6f5c;
-  --niryat-brand-saffron: #f08a2c;
+  --niryat-upcoming: var(--niryat-primary);
+  --niryat-past: #6b6890;
+  --niryat-event-text: #ffffff;
+  --niryat-cat-gst: var(--niryat-neel-600);
+  --niryat-cat-income-tax: #7a3e8f;
+  --niryat-cat-rbi: #8a5300;
+  --niryat-cat-paypal: #2f6a8a;
   --niryat-display: var(--niryat-font-display), var(--niryat-font-sans), system-ui, sans-serif;
+  --niryat-font-mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
   --niryat-space-1: 4px;
   --niryat-space-2: 8px;
   --niryat-space-3: 12px;
@@ -49,69 +66,30 @@
   --niryat-space-6: 32px;
   --niryat-space-7: 48px;
   --niryat-space-8: 64px;
-  --niryat-radius-control: 8px;
-  --niryat-radius-card: 12px;
+  --niryat-radius-inner: 10px;
+  --niryat-radius-control: 12px;
+  --niryat-radius-card: 18px;
+  --niryat-radius-sheet: 24px;
   --niryat-radius-pill: 999px;
-  --niryat-shadow-card: 0 1px 2px rgb(16 24 20 / 0.05), 0 3px 8px -4px rgb(16 24 20 / 0.08);
-  --niryat-shadow-raised: 0 2px 4px rgb(16 24 20 / 0.06), 0 14px 32px -10px rgb(16 24 20 / 0.2);
-  --niryat-shadow-popover: 0 8px 24px rgb(16 24 20 / 0.12);
-  --niryat-shadow-button: 0 1px 2px rgb(16 24 20 / 0.06);
-  --niryat-backdrop: rgb(0 0 0 / 0.4);
-  --niryat-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a625e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  /* Security-print waves, as on cheques and stamp paper; used as a mask, so colour comes from tokens. */
-  --niryat-guilloche: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='36' viewBox='0 0 120 36' fill='none' stroke='%23000' stroke-width='.8'%3E%3Cpath d='M0 18c15-14 45-14 60 0s45 14 60 0M0 18c15 14 45 14 60 0s45-14 60 0M0 13c15-10 45-10 60 0s45 10 60 0M0 23c15 10 45 10 60 0s45-10 60 0M0 8c15-6 45-6 60 0s45 6 60 0M0 28c15 6 45 6 60 0s45-6 60 0'/%3E%3C/svg%3E");
+  --niryat-shadow-button: 0 1px 2px rgb(30 26 77 / 0.08);
+  --niryat-shadow-card: 0 1px 2px rgb(30 26 77 / 0.06), 0 4px 12px -6px rgb(30 26 77 / 0.1);
+  --niryat-shadow-raised: 0 2px 4px rgb(30 26 77 / 0.06), 0 16px 32px -12px rgb(30 26 77 / 0.22);
+  --niryat-shadow-popover: 0 8px 24px rgb(30 26 77 / 0.16);
+  --niryat-control-height: 44px;
+  --niryat-control-height-lg: 52px;
+  --niryat-icon-sm: 16px;
+  --niryat-icon-md: 20px;
+  --niryat-content-max: 1200px;
+  --niryat-reading-max: 680px;
+  --niryat-z-sticky: 10;
+  --niryat-z-pill: 30;
+  --niryat-z-overlay: 40;
+  --niryat-z-modal: 50;
+  --niryat-ease: cubic-bezier(0.2, 0, 0, 1);
+  --niryat-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2355527a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --niryat-bg: #101413;
-    --niryat-surface: #171c1a;
-    --niryat-sunken: #0c0f0e;
-    --niryat-border: #262c2a;
-    --niryat-border-strong: #6a736f;
-    --niryat-text: #e7ebe9;
-    --niryat-muted: #a1aaa6;
-    --niryat-primary: #7dd3b7;
-    --niryat-primary-hover: #9fe3cc;
-    --niryat-primary-soft: #15312a;
-    --niryat-primary-strong: #9fe3cc;
-    --niryat-on-primary: #0e241d;
-    --niryat-accent: #ffb46a;
-    --niryat-on-accent: #2a1603;
-    --niryat-attention-soft: #3a2512;
-    --niryat-attention-strong: #ffc690;
-    --niryat-danger: #ffb4ab;
-    --niryat-on-danger: #3b0a06;
-    --niryat-danger-soft: #3d1714;
-    --niryat-danger-strong: #ffc4bc;
-    --niryat-neutral-soft: #262c2a;
-    --niryat-neutral-strong: #c3c8d1;
-    --niryat-upcoming: #7dd3b7;
-    --niryat-past: #c3c8d1;
-    --niryat-event-text: #14251f;
-    --niryat-cat-gst: #7dd3b7;
-    --niryat-cat-income-tax: #c7b0ef;
-    --niryat-cat-rbi: #ffc690;
-    --niryat-cat-paypal: #a7cbea;
-    --niryat-banyan: #0b1311;
-    --niryat-banyan-raised: #15211d;
-    --niryat-shadow-card: none;
-    --niryat-shadow-raised: none;
-    --niryat-shadow-popover: none;
-    --niryat-shadow-button: none;
-    --niryat-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1aaa6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    color-scheme: dark;
-  }
-  .approval-card::after {
-    opacity: 0.07;
-  }
-  #nav-menu,
-  .hero-figure,
-  .auth-aside {
-    outline: 1px solid var(--niryat-border);
-    outline-offset: -1px;
-  }
-}
+/* Light only: the user chose no dark theme (IMPLEMENTATION-FRONTEND.md §12). */
 
 /* ---------- Base ---------- */
 *,
@@ -125,8 +103,8 @@ body {
   background: var(--niryat-bg);
   color: var(--niryat-text);
   font-family: var(--niryat-font-sans), system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: 15px;
+  line-height: 22px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -149,22 +127,25 @@ h1,
 h2,
 h3 {
   margin: 0 0 var(--niryat-space-4);
-  font-weight: 600;
+  font-weight: 700;
+  text-wrap: balance;
 }
+/* Neel title-1. */
 h1 {
   font-family: var(--niryat-display);
-  font-size: 34px;
-  font-variation-settings: "wdth" 108;
-  line-height: 40px;
+  font-size: 40px;
+  line-height: 44px;
   letter-spacing: -0.015em;
 }
+/* Neel title-4: card and section titles. */
 h2 {
+  font-family: var(--niryat-display);
   font-size: 18px;
-  line-height: 26px;
-  letter-spacing: -0.005em;
+  line-height: 24px;
 }
 h3 {
   font-size: 16px;
+  font-weight: 600;
   line-height: 24px;
 }
 main > h2:not(:first-child) {
@@ -173,8 +154,7 @@ main > h2:not(:first-child) {
 .display {
   font-family: var(--niryat-display);
   font-size: 48px;
-  font-variation-settings: "wdth" 110;
-  font-weight: 600;
+  font-weight: 800;
   line-height: 52px;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -203,13 +183,13 @@ a {
   color: var(--niryat-primary);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  transition: color 150ms ease-out;
+  transition: color 120ms var(--niryat-ease);
 }
 a:hover {
   color: var(--niryat-primary-hover);
 }
 :focus-visible {
-  outline: 2px solid var(--niryat-primary);
+  outline: 2px solid var(--niryat-focus);
   outline-offset: 2px;
 }
 section + section {
@@ -249,7 +229,7 @@ legend {
   display: block;
   margin-top: var(--niryat-space-4);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 20px;
 }
 fieldset {
@@ -263,7 +243,7 @@ select,
 textarea {
   display: block;
   width: 100%;
-  min-height: 38px;
+  min-height: var(--niryat-control-height);
   margin-top: 6px;
   border: 1px solid var(--niryat-border-strong);
   border-radius: var(--niryat-radius-control);
@@ -272,11 +252,10 @@ textarea {
   color: var(--niryat-text);
   font: inherit;
   font-size: 15px;
-  box-shadow: inset 0 1px 2px rgb(16 24 20 / 0.04);
   transition:
-    color 150ms ease-out,
-    background-color 150ms ease-out,
-    border-color 150ms ease-out;
+    color 120ms var(--niryat-ease),
+    background-color 120ms var(--niryat-ease),
+    border-color 120ms var(--niryat-ease);
 }
 select {
   appearance: none;
@@ -289,7 +268,12 @@ select {
 input:hover,
 select:hover,
 textarea:hover {
-  border-color: var(--niryat-muted);
+  border-color: var(--niryat-primary);
+}
+:is(input, select, textarea):disabled {
+  border-color: var(--niryat-border);
+  background: var(--niryat-sunken);
+  color: var(--niryat-muted);
 }
 input:focus-visible,
 select:focus-visible,
@@ -310,9 +294,9 @@ textarea {
 }
 input:is([type="checkbox"], [type="radio"]) {
   display: inline-block;
-  width: 18px;
-  min-height: 18px;
-  height: 18px;
+  width: 20px;
+  min-height: 20px;
+  height: 20px;
   flex: none;
   margin: 0 var(--niryat-space-2) 0 0;
   box-shadow: none;
@@ -326,7 +310,7 @@ label:has(input:is([type="checkbox"], [type="radio"])) {
   font-weight: 400;
 }
 [aria-invalid="true"] {
-  border-color: var(--niryat-danger);
+  border: 2px solid var(--niryat-danger);
 }
 [role="alert"] {
   color: var(--niryat-danger-strong);
@@ -344,33 +328,33 @@ input::file-selector-button {
   margin-right: var(--niryat-space-3);
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Buttons (Neel Button: one meaning per variant; "ghost" is Neel's quiet) ---------- */
 button,
 .btn,
 input::file-selector-button {
   display: inline-flex;
-  min-height: 36px;
+  min-height: var(--niryat-control-height);
   align-items: center;
   justify-content: center;
   gap: var(--niryat-space-2);
-  border: 1px solid var(--niryat-border-strong);
+  border: 1.5px solid var(--niryat-border-strong);
   border-radius: var(--niryat-radius-control);
-  padding: 0 14px;
+  padding: 0 var(--niryat-space-4);
   background: var(--niryat-surface);
   color: var(--niryat-text);
   font: inherit;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   line-height: 20px;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
   box-shadow: var(--niryat-shadow-button);
   transition:
-    color 150ms ease-out,
-    background-color 150ms ease-out,
-    border-color 150ms ease-out,
-    box-shadow 150ms ease-out;
+    color 120ms var(--niryat-ease),
+    background-color 120ms var(--niryat-ease),
+    border-color 120ms var(--niryat-ease),
+    box-shadow 120ms var(--niryat-ease);
 }
 button {
   margin-top: var(--niryat-space-4);
@@ -379,56 +363,73 @@ button {
   margin: 0;
 }
 :is(button, .btn) > svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex: none;
 }
 button:where(:hover:not(:disabled)),
 .btn:where(:hover),
 input::file-selector-button:hover {
-  background: var(--niryat-sunken);
+  background: var(--niryat-primary-soft);
   color: var(--niryat-text);
+}
+:is(button, .btn):where(:active:not(:disabled)) {
+  transform: translateY(1px);
 }
 form button[type="submit"],
 .btn[data-variant="primary"] {
   border-color: transparent;
   background: var(--niryat-primary);
   color: var(--niryat-on-primary);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.14),
-    0 1px 2px rgb(16 24 20 / 0.18);
 }
 form button[type="submit"]:where(:hover:not(:disabled)),
-.btn[data-variant="primary"]:hover {
+.btn[data-variant="primary"]:where(:hover:not(:disabled)) {
   background: var(--niryat-primary-hover);
   color: var(--niryat-on-primary);
 }
+/* The one marigold button: approving a PayPal action. */
+.btn[data-variant="decision"] {
+  border-color: transparent;
+  background: var(--niryat-accent);
+  color: var(--niryat-on-accent);
+}
+.btn[data-variant="decision"]:where(:hover:not(:disabled)) {
+  background: var(--niryat-accent-hover);
+  color: var(--niryat-on-accent);
+}
 .btn[data-variant="secondary"] {
-  border-color: var(--niryat-border-strong);
-  background: var(--niryat-surface);
-  color: var(--niryat-text);
+  border-color: var(--niryat-primary);
+  background: transparent;
+  color: var(--niryat-primary);
+  box-shadow: none;
 }
 .btn[data-variant="ghost"] {
   border-color: transparent;
   background: transparent;
-  color: var(--niryat-text);
+  color: var(--niryat-primary);
   box-shadow: none;
 }
-.btn:is([data-variant="secondary"], [data-variant="ghost"]):hover {
-  background: var(--niryat-sunken);
+.btn:is([data-variant="secondary"], [data-variant="ghost"]):where(:hover:not(:disabled)) {
+  background: var(--niryat-primary-soft);
+  color: var(--niryat-primary);
 }
 .btn[data-variant="danger"] {
   border-color: transparent;
   background: var(--niryat-danger);
   color: var(--niryat-on-danger);
 }
-.btn[data-variant="danger"]:hover {
+.btn[data-variant="danger"]:where(:hover:not(:disabled)) {
   background: var(--niryat-danger-strong);
   color: var(--niryat-on-danger);
 }
-:disabled,
-.btn[aria-disabled="true"] {
-  opacity: 0.5;
+:disabled {
+  cursor: not-allowed;
+}
+:is(button, .btn):is(:disabled, [aria-disabled="true"]) {
+  border-color: var(--niryat-border);
+  background: var(--niryat-sunken);
+  color: var(--niryat-muted);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -442,8 +443,8 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 15px;
+  line-height: 22px;
 }
 caption {
   padding: var(--niryat-space-3) var(--niryat-space-4);
@@ -462,10 +463,10 @@ thead th {
   position: sticky;
   top: 0;
   border-top: 1px solid var(--niryat-border);
-  padding-block: 10px;
-  background: var(--niryat-sunken);
+  padding-block: 12px;
+  background: var(--niryat-surface);
   color: var(--niryat-muted);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 18px;
   white-space: nowrap;
@@ -477,7 +478,7 @@ tbody > :where(tr:last-child) > * {
   border-bottom: 0;
 }
 tbody > :where(tr:hover) > * {
-  background: color-mix(in srgb, var(--niryat-sunken) 60%, transparent);
+  background: var(--niryat-sunken);
 }
 td > p {
   margin: 2px 0 0;
@@ -541,6 +542,7 @@ details {
 summary {
   display: flex;
   width: fit-content;
+  min-height: var(--niryat-control-height);
   align-items: center;
   gap: var(--niryat-space-2);
   border-radius: var(--niryat-radius-control);
@@ -551,7 +553,7 @@ summary {
   line-height: 20px;
   list-style: none;
   cursor: pointer;
-  transition: background-color 150ms ease-out;
+  transition: background-color 120ms var(--niryat-ease);
 }
 summary::-webkit-details-marker {
   display: none;
@@ -566,7 +568,7 @@ summary::before {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E")
     center / contain no-repeat;
   opacity: 0.7;
-  transition: transform 150ms ease-out;
+  transition: transform 120ms var(--niryat-ease);
 }
 details[open] > summary::before {
   transform: rotate(90deg);
@@ -606,7 +608,7 @@ details.card:where([open]) > summary {
 .card,
 .stat-tile {
   min-width: 0;
-  border: 1px solid var(--niryat-border);
+  border: 0;
   border-radius: var(--niryat-radius-card);
   padding: var(--card-pad, var(--niryat-space-5));
   background: var(--niryat-surface);
@@ -631,7 +633,7 @@ details.card:where([open]) > summary {
   margin-top: 0;
 }
 [id^="invoice-"]:target {
-  outline: 2px solid var(--niryat-primary);
+  outline: 2px solid var(--niryat-focus);
   outline-offset: 2px;
   scroll-margin-top: calc(var(--niryat-space-8) + var(--niryat-space-4));
 }
@@ -671,23 +673,30 @@ details.card:where([open]) > summary {
 .page-header {
   align-items: flex-end;
   margin-bottom: var(--niryat-space-5);
-  padding-top: 40px;
+  padding-top: var(--niryat-space-7);
 }
+/* Neel lead: the one summary sentence under the title. */
 .page-header > :where(div:first-child) > p {
   margin: var(--niryat-space-2) 0 0;
-  color: var(--niryat-muted);
+  font-size: 17px;
+  line-height: 26px;
 }
 
 /* ---------- Tones, badges, banners, suggestions ---------- */
 [data-tone="success"] {
-  --tone-soft: var(--niryat-primary-soft);
-  --tone-strong: var(--niryat-primary-strong);
-  --tone-edge: var(--niryat-primary);
+  --tone-soft: var(--niryat-success-soft);
+  --tone-strong: var(--niryat-success-strong);
+  --tone-edge: var(--niryat-success);
+}
+[data-tone="decision"] {
+  --tone-soft: var(--niryat-accent);
+  --tone-strong: var(--niryat-on-accent);
+  --tone-edge: var(--niryat-accent);
 }
 [data-tone="attention"] {
   --tone-soft: var(--niryat-attention-soft);
   --tone-strong: var(--niryat-attention-strong);
-  --tone-edge: var(--niryat-accent);
+  --tone-edge: var(--niryat-attention-strong);
 }
 [data-tone="danger"] {
   --tone-soft: var(--niryat-danger-soft);
@@ -706,37 +715,41 @@ details.card:where([open]) > summary {
 }
 .badge {
   display: inline-flex;
-  min-height: 22px;
+  min-height: 24px;
   align-items: center;
-  gap: 6px;
+  gap: var(--niryat-space-1);
   border-radius: var(--niryat-radius-pill);
-  padding: 0 9px 0 8px;
+  padding: 0 10px;
   font-size: 12px;
-  font-weight: 500;
-  line-height: 18px;
+  font-weight: 700;
+  line-height: 16px;
   white-space: nowrap;
   vertical-align: middle;
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--tone-strong, var(--niryat-neutral-strong)) 14%, transparent);
 }
 .fira-lines .badge {
   white-space: normal;
   overflow-wrap: normal;
 }
-.badge::before {
-  width: 6px;
-  height: 6px;
+/* Leaf and kumkum differ by hue only, so success and danger always carry an icon. */
+.badge:is([data-tone="success"], [data-tone="danger"])::before {
+  width: 14px;
+  height: 14px;
   flex: none;
-  border-radius: 50%;
   background: currentColor;
   content: "";
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+.badge[data-tone="danger"]::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");
 }
 .badge:has(.spinner)::before {
   display: none;
 }
 .banner,
 .suggestion {
-  border-radius: 10px;
+  border-radius: var(--niryat-radius-control);
   padding: var(--niryat-space-3) var(--niryat-space-4);
 }
 .banner {
@@ -746,13 +759,29 @@ details.card:where([open]) > summary {
   margin-block: var(--niryat-space-3);
   font-size: 14px;
   line-height: 20px;
-  box-shadow: inset 3px 0 0 var(--tone-edge, var(--niryat-border-strong));
 }
-.banner > svg {
+.banner > svg,
+.banner:not(:has(> svg))::before {
   width: 18px;
   height: 18px;
   flex: none;
   margin-top: 1px;
+}
+.banner:not(:has(> svg))::before {
+  background: currentColor;
+  content: "";
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+.banner[data-tone="success"]:not(:has(> svg))::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E");
+}
+.banner[data-tone="attention"]:not(:has(> svg))::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 6v6l4 2'/%3E%3C/svg%3E");
+}
+.banner[data-tone="danger"]:not(:has(> svg))::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");
 }
 .banner > :is(p, h2, h3) {
   margin: 0;
@@ -790,48 +819,14 @@ p.suggestion {
   max-width: 72ch;
 }
 
-/* ---------- Approval voucher: the card you sign, with a perforated counterfoil ---------- */
+/* ---------- Decision card (Neel DecisionCard; Approve stays on the card, see IMPLEMENTATION-FRONTEND.md §10) ---------- */
 .approval-card {
-  --notch-bg: var(--niryat-bg);
-  --voucher-edge: transparent;
-  --voucher-ink: transparent;
-  position: relative;
-  isolation: isolate;
   container-type: inline-size;
-  border: 0;
-  box-shadow:
-    inset 3px 0 0 var(--voucher-edge),
-    inset 0 0 0 1px var(--niryat-border),
-    var(--niryat-shadow-card);
 }
-.card .approval-card {
-  --notch-bg: var(--niryat-surface);
-}
+/* Neel does not nest cards: an approval inside a section is outlined, not raised. */
 .card .approval-card {
   margin-top: var(--niryat-space-4);
-}
-.approval-card[data-status="proposed"] {
-  --voucher-edge: var(--niryat-accent);
-  --voucher-ink: var(--niryat-accent);
-}
-.approval-card[data-status="failed"] {
-  --voucher-edge: var(--niryat-danger);
-  --voucher-ink: var(--niryat-danger);
-}
-.approval-card::after {
-  position: absolute;
-  z-index: -1;
-  inset: 0 0 auto;
-  height: 96px;
-  border-radius: var(--niryat-radius-card) var(--niryat-radius-card) 0 0;
-  background: var(--voucher-ink);
-  content: "";
-  mask:
-    var(--niryat-guilloche) 0 0 / 120px 36px repeat,
-    linear-gradient(to bottom, #000, transparent);
-  mask-composite: intersect;
-  opacity: 0.13;
-  pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--niryat-border);
 }
 .approval-card > .card-header {
   margin-bottom: var(--niryat-space-3);
@@ -874,7 +869,7 @@ p.suggestion {
 .approval-facts dd {
   margin: 2px 0 0;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .approval-outcome {
@@ -907,7 +902,6 @@ p.suggestion {
   margin-block: 0;
 }
 .approval-controls > details > summary {
-  min-height: 32px;
   margin-inline: -6px;
 }
 .approval-controls > :is(.btn, .approval-caption) {
@@ -934,13 +928,14 @@ p.suggestion {
   order: 2;
   margin-left: auto;
 }
-/* Narrow vouchers: the reassurance gets its own line and both decisions stay together. */
+/* Narrow decision cards: the reassurance gets its own line and both decisions stay together. */
 @container (max-width: 420px) {
   .approval-controls > .btn {
     flex: 1 1 100%;
     margin-left: 0;
   }
-  .approval-controls > .btn:is([data-variant="primary"], [data-variant="danger"]) {
+  .approval-controls
+    > .btn:is([data-variant="decision"], [data-variant="primary"], [data-variant="danger"]) {
     order: 2;
   }
   .approval-controls > .btn[data-variant="secondary"] {
@@ -958,34 +953,18 @@ p.suggestion {
     padding-left: var(--niryat-space-4);
   }
 }
-.approval-controls > .btn:is([data-variant="primary"], [data-variant="danger"]) {
+.approval-controls
+  > .btn:is([data-variant="decision"], [data-variant="primary"], [data-variant="danger"]) {
   order: 3;
 }
-/* The perforation: a dashed tear line with half-moon notches cut from both edges. */
+/* A hairline splits the request from the decision (Neel panel foot). */
 .approval-controls::before {
   flex: 0 0 calc(100% + 2 * var(--card-pad, var(--niryat-space-5)));
-  height: 18px;
+  height: 1px;
   margin: var(--niryat-space-2) calc(-1 * var(--card-pad, var(--niryat-space-5)));
-  background:
-    radial-gradient(
-      circle at 0 50%,
-      var(--notch-bg) 0 8px,
-      var(--niryat-border) 8px 9px,
-      transparent 9.5px
-    )
-    no-repeat,
-    radial-gradient(
-      circle at 100% 50%,
-      var(--notch-bg) 0 8px,
-      var(--niryat-border) 8px 9px,
-      transparent 9.5px
-    )
-    no-repeat,
-    linear-gradient(90deg, var(--niryat-border-strong) 0 6px, transparent 6px 11px) 0 50% / 11px 1px
-    repeat-x;
+  background: var(--niryat-border);
   content: "";
   order: 1;
-  opacity: 0.9;
 }
 
 /* ---------- Overview ---------- */
@@ -1014,15 +993,15 @@ p.suggestion {
   display: flex;
   min-height: 152px;
   flex-direction: column;
-  padding: 20px 22px;
+  padding: var(--card-pad, var(--niryat-space-5));
   color: var(--niryat-text);
   text-decoration: none;
 }
 a.stat-tile {
   transition:
-    border-color 150ms ease-out,
-    box-shadow 150ms ease-out,
-    transform 150ms ease-out;
+    border-color 120ms var(--niryat-ease),
+    box-shadow 120ms var(--niryat-ease),
+    transform 120ms var(--niryat-ease);
 }
 a.stat-tile:hover {
   border-color: var(--niryat-border-strong);
@@ -1032,12 +1011,12 @@ a.stat-tile:hover {
 }
 .stat-tile > :is(h2, dt),
 .nav-group,
-.sandbox-pill,
 .eyebrow {
+  font-family: var(--niryat-font-sans), system-ui, sans-serif;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 16px;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .stat-tile > :is(h2, dt) {
@@ -1047,19 +1026,13 @@ a.stat-tile:hover {
 .stat-tile > :where(p, dd) {
   margin: 0;
 }
+/* Neel amount-lg. */
 .stat-value {
-  color: var(--tone-strong, var(--niryat-text));
-  font-family: var(--niryat-display);
-  font-size: 34px;
-  font-variation-settings: "wdth" 104;
-  font-weight: 600;
-  line-height: 40px;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-}
-.stat-tile[data-tone="success"] .stat-value,
-.stat-tile[data-tone="neutral"] .stat-value {
   color: var(--niryat-text);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 36px;
+  font-variant-numeric: tabular-nums;
 }
 .stat-tile > :where(.stat-value + p, .stat-value + .badge) {
   margin-top: 6px;
@@ -1087,7 +1060,7 @@ a.stat-tile > :where(p:last-child)::after {
   width: 34px;
   height: 34px;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--niryat-radius-inner);
   background: var(--tone-soft, var(--niryat-primary-soft));
   color: var(--tone-strong, var(--niryat-primary-strong));
 }
@@ -1099,21 +1072,6 @@ a.stat-tile > :where(p:last-child)::after {
 .stat-icon > svg {
   width: 18px;
   height: 18px;
-}
-.stat-tile[data-tone="attention"] {
-  background: linear-gradient(
-    140deg,
-    color-mix(in srgb, var(--niryat-accent) 9%, var(--niryat-surface)),
-    var(--niryat-surface) 55%
-  );
-  box-shadow:
-    inset 3px 0 0 var(--niryat-accent),
-    var(--niryat-shadow-card);
-}
-.stat-tile[data-tone="attention"]:hover {
-  box-shadow:
-    inset 3px 0 0 var(--niryat-accent),
-    var(--niryat-shadow-raised);
 }
 .stat-meter {
   height: 6px;
@@ -1133,10 +1091,6 @@ a.stat-tile > :where(p:last-child)::after {
   align-items: center;
   gap: var(--niryat-space-2);
   margin: 0 0 var(--niryat-space-2);
-  border: 1px solid var(--niryat-border);
-  border-radius: var(--niryat-radius-pill);
-  padding: 4px 12px 4px 10px;
-  background: var(--niryat-surface);
   color: var(--niryat-muted);
   font-size: 13px;
   line-height: 18px;
@@ -1151,7 +1105,7 @@ a.stat-tile > :where(p:last-child)::after {
   content: "";
 }
 .sync-status[data-state="stale"]::before {
-  background: var(--niryat-accent);
+  background: var(--niryat-attention-strong);
   box-shadow: 0 0 0 3px var(--niryat-attention-soft);
 }
 .sync-status p {
@@ -1201,7 +1155,7 @@ a.stat-tile > :where(p:last-child)::after {
 .deadline-list a {
   grid-column: 1 / -1;
   color: var(--niryat-text);
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
 }
 .deadline-list a:hover {
@@ -1226,20 +1180,10 @@ a.stat-tile > :where(p:last-child)::after {
 .health-bar > div {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--niryat-primary-strong), var(--niryat-primary));
+  background: var(--niryat-primary);
 }
 .card > .display {
   margin-bottom: var(--niryat-space-3);
-}
-article.card:has(> .badge[data-tone="danger"]) {
-  box-shadow:
-    inset 3px 0 0 var(--niryat-danger),
-    var(--niryat-shadow-card);
-}
-article.card:has(> .badge[data-tone="attention"]) {
-  box-shadow:
-    inset 3px 0 0 var(--niryat-accent),
-    var(--niryat-shadow-card);
 }
 article.card > :where(.badge + p) {
   margin-top: var(--niryat-space-3);
@@ -1287,9 +1231,9 @@ article.card > :where(.badge + p) {
   width: 26px;
   height: 26px;
   place-items: center;
-  border: 1.5px solid var(--niryat-accent);
   border-radius: 50%;
-  color: var(--niryat-attention-strong);
+  background: var(--niryat-primary-soft);
+  color: var(--niryat-primary-strong);
   font-family: var(--niryat-display);
   font-size: 14px;
   font-weight: 600;
@@ -1355,9 +1299,9 @@ article.card > :where(.badge + p) {
   gap: var(--niryat-space-2) var(--niryat-space-5);
   margin: 0 0 var(--niryat-space-5);
   border: 1px solid var(--niryat-border);
-  border-radius: 10px;
+  border-radius: var(--niryat-radius-control);
   padding: var(--niryat-space-3) var(--niryat-space-4);
-  background: color-mix(in srgb, var(--niryat-surface) 55%, transparent);
+  background: var(--niryat-surface);
   color: var(--niryat-muted);
   font-size: 13px;
   line-height: 19px;
@@ -1575,7 +1519,7 @@ button:has(.spinner)::before {
 
 /* ---------- App shell ---------- */
 .app-shell {
-  --niryat-sidebar-width: 248px;
+  --niryat-sidebar-width: 264px;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -1597,82 +1541,72 @@ button:has(.spinner)::before {
 .brand-link:hover {
   color: inherit;
 }
+/* Marigold disc with an indigo leaf and seed, beside the lowercase wordmark. */
 .brand-mark {
-  color: var(--niryat-brand-saffron);
+  flex: none;
+  color: var(--niryat-neel-900);
 }
-.brand-mark rect {
-  fill: var(--niryat-brand-green);
+.brand-disc {
+  fill: var(--niryat-marigold);
 }
 .brand-name {
-  display: flex;
-  flex-direction: column;
   font-family: var(--niryat-display);
-  font-size: 20px;
-  font-variation-settings: "wdth" 112;
-  font-weight: 650;
-  line-height: 20px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
   letter-spacing: -0.01em;
+  text-transform: lowercase;
 }
-.brand-hindi {
-  margin-top: 3px;
-  color: var(--niryat-muted);
-  font-size: 12px;
-  font-variation-settings: "wdth" 100;
+/* Sandbox and not-advice bar at the top of every signed-in page (Neel AppShell). */
+.systembar {
+  max-width: none;
+  margin: 0 calc(-1 * var(--content-pad));
+  padding: var(--niryat-space-2) var(--content-pad);
+  background: var(--niryat-attention-soft);
+  color: var(--niryat-attention-strong);
+  font-size: 13px;
   font-weight: 500;
-  line-height: 14px;
-  letter-spacing: 0.02em;
+  line-height: 18px;
 }
-.sandbox-pill {
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  border: 1px dashed var(--niryat-border-strong);
-  border-radius: 6px;
-  padding: 3px 8px;
-  color: var(--niryat-neutral-strong);
-  font-size: 11px;
-  letter-spacing: 0.1em;
+.systembar a {
+  color: inherit;
+  font-weight: 700;
 }
 .topbar {
   position: sticky;
   top: 0;
   z-index: 1;
   display: flex;
-  height: 60px;
+  min-height: 56px;
   flex-shrink: 0;
   align-items: center;
   gap: var(--niryat-space-3);
-  border-bottom: 1px solid var(--niryat-banyan-line);
+  border-bottom: 1px solid var(--niryat-shell-line);
   padding-inline: var(--niryat-space-4);
-  background: var(--niryat-banyan);
-  color: var(--niryat-on-banyan);
+  background: var(--niryat-shell);
+  color: var(--niryat-on-shell);
 }
-.topbar .sandbox-pill {
+.topbar .brand-link {
   margin-right: auto;
 }
 .topbar button {
   margin-top: 0;
 }
 :is(.topbar, #nav-menu) .brand-link {
-  color: var(--niryat-on-banyan);
-}
-:is(.topbar, #nav-menu) .brand-hindi {
-  color: var(--niryat-on-banyan-muted);
-}
-:is(.topbar, #nav-menu) .brand-mark rect {
-  stroke: rgb(255 255 255 / 0.14);
+  color: var(--niryat-on-shell);
 }
 :is(.topbar, #nav-menu) :focus-visible {
-  outline-color: var(--niryat-mint);
+  outline-color: var(--niryat-focus-on-shell);
 }
 .topbar .btn[data-variant="secondary"] {
-  border-color: rgb(232 241 236 / 0.28);
+  border-color: var(--niryat-shell-line);
   background: transparent;
-  color: var(--niryat-on-banyan);
+  color: var(--niryat-on-shell);
   box-shadow: none;
 }
 .topbar .btn[data-variant="secondary"]:hover {
-  background: rgb(255 255 255 / 0.08);
+  background: var(--niryat-shell-raised);
+  color: var(--niryat-on-shell);
 }
 #nav-menu {
   position: fixed;
@@ -1684,9 +1618,8 @@ button:has(.spinner)::before {
   overflow: hidden;
   border: 0;
   padding: var(--niryat-space-3) var(--niryat-space-4) var(--niryat-space-4);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent 240px), var(--niryat-banyan);
-  color: var(--niryat-on-banyan);
+  background: var(--niryat-shell);
+  color: var(--niryat-on-shell);
   box-shadow: var(--niryat-shadow-popover);
 }
 #nav-menu:popover-open {
@@ -1699,9 +1632,6 @@ button:has(.spinner)::before {
 #nav-menu > .brand-link {
   margin-left: 2px;
 }
-#nav-menu > .sandbox-pill {
-  margin: 2px 0 var(--niryat-space-2) 4px;
-}
 #nav-menu nav {
   display: flex;
   flex: 1;
@@ -1713,77 +1643,103 @@ button:has(.spinner)::before {
   gap: 2px;
   margin-inline: -4px;
   padding: var(--niryat-space-2) 4px var(--niryat-space-4);
-  scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+  scrollbar-color: var(--niryat-shell-line) transparent;
   scrollbar-width: thin;
 }
 .nav-item {
   display: flex;
-  min-height: 36px;
+  min-height: var(--niryat-control-height);
   align-items: center;
   gap: 10px;
-  border-radius: var(--niryat-radius-control);
-  padding: 0 10px;
-  color: rgb(232 241 236 / 0.84);
+  border-radius: var(--niryat-radius-inner);
+  padding: 0 12px;
+  color: var(--niryat-on-shell-muted);
+  font-size: 15px;
+  font-weight: 500;
   text-decoration: none;
   transition:
-    background-color 150ms ease-out,
-    color 150ms ease-out;
+    background-color 120ms var(--niryat-ease),
+    color 120ms var(--niryat-ease);
 }
 .nav-item:hover {
-  background: rgb(255 255 255 / 0.06);
-  color: var(--niryat-on-banyan);
+  background: var(--niryat-shell-raised);
+  color: var(--niryat-on-shell);
 }
 .nav-item[aria-current="page"] {
-  background: rgb(255 255 255 / 0.1);
-  color: #ffffff;
+  background: var(--niryat-on-shell);
+  color: var(--niryat-shell);
   font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--niryat-mint);
 }
 .nav-item > svg {
-  width: 18px;
-  height: 18px;
+  width: var(--niryat-icon-md);
+  height: var(--niryat-icon-md);
   flex: none;
-  color: var(--niryat-on-banyan-muted);
-}
-.nav-item:where([aria-current="page"]) > svg {
-  color: var(--niryat-mint);
 }
 .nav-item + .nav-item {
   margin-top: 2px;
 }
 .nav-count {
   display: inline-flex;
-  min-width: 20px;
-  height: 20px;
+  min-width: 22px;
+  height: 22px;
   flex: none;
   align-items: center;
   justify-content: center;
   margin-left: auto;
   border-radius: var(--niryat-radius-pill);
-  padding-inline: 6px;
-  background: var(--niryat-brand-saffron);
+  padding-inline: 7px;
+  background: var(--niryat-accent);
   color: var(--niryat-on-accent);
   font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-  box-shadow: 0 0 0 3px rgb(240 138 44 / 0.18);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+/* The month path: Neel's sidebar stations drawn on the existing nav groups. */
+#nav-menu nav > div:has(> .nav-group) {
+  position: relative;
+  padding-top: var(--niryat-space-4);
+}
+#nav-menu nav > div:has(> .nav-group)::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 14px;
+  width: 2px;
+  background: var(--niryat-shell-line);
+  content: "";
+}
+#nav-menu nav > div:has(> .nav-group) > .nav-item {
+  margin-left: 24px;
 }
 .nav-group {
-  margin: 22px 10px 8px;
-  color: var(--niryat-on-banyan-muted);
-  font-size: 11px;
-  letter-spacing: 0.09em;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  padding: 4px 9px;
+  color: var(--niryat-on-shell-muted);
+}
+.nav-group::before {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 2px solid var(--niryat-on-shell-muted);
+  border-radius: 50%;
+  background: var(--niryat-shell);
+  content: "";
 }
 .nav-account {
   flex-shrink: 0;
   margin-top: auto;
-  border-top: 1px solid var(--niryat-banyan-line);
+  border-top: 1px solid var(--niryat-shell-line);
   padding-top: var(--niryat-space-3);
 }
 .account-email {
   overflow: hidden;
   margin: 0 0 var(--niryat-space-2) 10px;
-  color: var(--niryat-on-banyan-muted);
+  color: var(--niryat-on-shell-muted);
   font-size: 13px;
   line-height: 18px;
   text-overflow: ellipsis;
@@ -1793,20 +1749,16 @@ button:has(.spinner)::before {
   width: 100%;
   justify-content: flex-start;
   margin: 0;
-  padding-inline: 10px;
-  color: rgb(232 241 236 / 0.84);
+  padding-inline: 12px;
+  color: var(--niryat-on-shell-muted);
 }
 .nav-account .btn[data-variant="ghost"]:hover {
-  background: rgb(255 255 255 / 0.06);
-  color: var(--niryat-on-banyan);
+  background: var(--niryat-shell-raised);
+  color: var(--niryat-on-shell);
 }
 .nav-account [role="alert"] {
   color: #ffc4bc;
   font-size: 13px;
-}
-:is(.topbar, #nav-menu) .sandbox-pill {
-  border-color: rgb(232 241 236 / 0.32);
-  color: var(--niryat-on-banyan-muted);
 }
 .skip-link {
   position: fixed;
@@ -1823,12 +1775,13 @@ button:has(.spinner)::before {
   transform: none;
 }
 .content {
+  --content-pad: 40px;
   display: flex;
   flex-direction: column;
   width: 100%;
   min-width: 0;
   min-height: 100dvh;
-  padding: 0 40px;
+  padding: 0 var(--content-pad);
 }
 .app-shell > .content {
   flex: 1;
@@ -1839,6 +1792,11 @@ button:has(.spinner)::before {
   max-width: none;
   margin: 0;
   padding: 0 0 var(--niryat-space-5);
+}
+.app-shell .content > main {
+  width: 100%;
+  max-width: var(--niryat-content-max);
+  margin-inline: auto;
 }
 .site-footer {
   flex-shrink: 0;
@@ -1873,9 +1831,6 @@ button:has(.spinner)::before {
   display: flex;
   gap: var(--niryat-space-2);
 }
-.public-header .btn {
-  min-height: 40px;
-}
 .eyebrow {
   margin: 0 0 var(--niryat-space-4);
   color: var(--niryat-primary-strong);
@@ -1889,7 +1844,6 @@ button:has(.spinner)::before {
 .public-hero .display {
   margin-bottom: var(--niryat-space-5);
   font-size: 56px;
-  font-variation-settings: "wdth" 112;
   line-height: 58px;
   letter-spacing: -0.025em;
   text-wrap: balance;
@@ -1938,52 +1892,21 @@ button:has(.spinner)::before {
   overflow: hidden;
   border-radius: 20px;
   padding: 56px 40px 32px;
-  background:
-    radial-gradient(120% 80% at 100% 0%, rgb(125 211 183 / 0.16), transparent 60%),
-    var(--niryat-banyan);
-  color: var(--niryat-on-banyan);
-}
-.hero-figure::before {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  background: var(--niryat-mint);
-  content: "";
-  mask:
-    var(--niryat-guilloche) 0 0 / 120px 36px repeat,
-    linear-gradient(160deg, #000, transparent 70%);
-  mask-composite: intersect;
-  opacity: 0.12;
-}
-.hero-figure::after {
-  position: absolute;
-  z-index: -1;
-  right: -12px;
-  bottom: -36px;
-  color: rgb(232 241 236 / 0.06);
-  content: "निर्यात";
-  font-family: var(--niryat-display);
-  font-size: 150px;
-  font-weight: 700;
-  line-height: 1;
+  background: var(--niryat-shell);
+  color: var(--niryat-on-shell);
 }
 .hero-figure .approval-card {
   max-width: 34rem;
   margin-inline: auto;
   color: var(--niryat-text);
-  box-shadow:
-    inset 3px 0 0 var(--voucher-edge),
-    0 24px 48px -16px rgb(0 0 0 / 0.5);
+  box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.5);
   transform: rotate(-1.25deg);
   pointer-events: none;
   user-select: none;
 }
-.hero-figure .approval-card {
-  --notch-bg: var(--niryat-banyan);
-}
 .hero-figure figcaption {
   margin-top: var(--niryat-space-5);
-  color: var(--niryat-on-banyan-muted);
+  color: var(--niryat-on-shell-muted);
   font-size: 13px;
   line-height: 18px;
   text-align: center;
@@ -1992,7 +1915,6 @@ button:has(.spinner)::before {
   margin: 0 0 var(--niryat-space-2);
   font-family: var(--niryat-display);
   font-size: 30px;
-  font-variation-settings: "wdth" 108;
   line-height: 36px;
   letter-spacing: -0.015em;
 }
@@ -2014,7 +1936,6 @@ button:has(.spinner)::before {
 .how-it-works > li {
   position: relative;
   margin: 0;
-  border: 1px solid var(--niryat-border);
   border-radius: var(--niryat-radius-card);
   padding: var(--niryat-space-5) 20px 20px;
   background: var(--niryat-surface);
@@ -2028,8 +1949,8 @@ button:has(.spinner)::before {
   place-items: center;
   margin-bottom: var(--niryat-space-4);
   border-radius: 50%;
-  background: var(--niryat-banyan);
-  color: var(--niryat-on-banyan);
+  background: var(--niryat-shell);
+  color: var(--niryat-on-shell);
   content: counter(step);
   font-family: var(--niryat-display);
   font-size: 15px;
@@ -2107,9 +2028,6 @@ button:has(.spinner)::before {
   max-width: none;
   margin: 0;
 }
-.auth-card > .brand-mark {
-  margin-bottom: var(--niryat-space-2);
-}
 .auth-card .page-header {
   margin-bottom: var(--niryat-space-3);
   padding-top: var(--niryat-space-3);
@@ -2120,10 +2038,6 @@ button:has(.spinner)::before {
 }
 .auth-card .btn {
   width: 100%;
-}
-.public-header .btn,
-.auth-card :is(input, .btn, button) {
-  min-height: 42px;
 }
 .auth-form > button {
   width: 100%;
@@ -2166,43 +2080,30 @@ button:has(.spinner)::before {
   flex-direction: column;
   justify-content: flex-end;
   overflow: hidden;
-  border-radius: 20px;
+  border-radius: var(--niryat-radius-card);
   padding: 40px;
-  background:
-    radial-gradient(120% 80% at 0% 0%, rgb(125 211 183 / 0.14), transparent 60%),
-    var(--niryat-banyan);
-  color: var(--niryat-on-banyan);
+  background: var(--niryat-shell);
+  color: var(--niryat-on-shell);
 }
+/* Niryat wave print, as on cheques and stamp paper: lavender lines fading toward the text. */
 .auth-aside::before {
   position: absolute;
   z-index: -1;
   inset: 0;
-  background: var(--niryat-mint);
+  background: var(--niryat-shell-accent);
   content: "";
   mask:
-    var(--niryat-guilloche) 0 0 / 120px 36px repeat,
-    linear-gradient(200deg, #000, transparent 65%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='36' viewBox='0 0 120 36' fill='none' stroke='%23000' stroke-width='.6'%3E%3Cpath d='M0 18c15-14 45-14 60 0s45 14 60 0M0 18c15 14 45 14 60 0s45-14 60 0M0 13c15-10 45-10 60 0s45 10 60 0M0 23c15 10 45 10 60 0s45-10 60 0M0 8c15-6 45-6 60 0s45 6 60 0M0 28c15 6 45 6 60 0s45-6 60 0'/%3E%3C/svg%3E")
+    0 0 / 180px 54px repeat,
+    linear-gradient(172deg, #000 8%, transparent 70%);
   mask-composite: intersect;
-  opacity: 0.12;
-}
-.auth-aside-hindi {
-  position: absolute;
-  z-index: -1;
-  top: 12px;
-  right: -8px;
-  margin: 0;
-  color: rgb(232 241 236 / 0.07);
-  font-family: var(--niryat-display);
-  font-size: 128px;
-  font-weight: 700;
-  line-height: 1.1;
+  opacity: 0.28;
 }
 .auth-aside h2 {
   max-width: 18ch;
   margin-bottom: var(--niryat-space-5);
   font-family: var(--niryat-display);
   font-size: 32px;
-  font-variation-settings: "wdth" 110;
   line-height: 36px;
   letter-spacing: -0.015em;
 }
@@ -2214,7 +2115,7 @@ button:has(.spinner)::before {
 .auth-aside li {
   position: relative;
   padding-left: 28px;
-  color: rgb(232 241 236 / 0.86);
+  color: var(--niryat-on-shell);
   font-size: 15px;
   line-height: 22px;
 }
@@ -2227,7 +2128,7 @@ button:has(.spinner)::before {
   left: 0;
   width: 16px;
   height: 16px;
-  background: var(--niryat-mint);
+  background: var(--niryat-shell-accent);
   content: "";
   mask:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
@@ -2286,16 +2187,14 @@ main:has(.dashboard-studio, .calendar-card),
 }
 .page-header details.card:not([open]) > summary {
   width: auto;
-  min-height: 38px;
+  min-height: var(--niryat-control-height);
   margin: 0;
   padding: 0 16px 0 12px;
   background: var(--niryat-primary);
   color: var(--niryat-on-primary);
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.14),
-    0 1px 2px rgb(16 24 20 / 0.18);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: var(--niryat-shadow-button);
 }
 .page-header details.card:not([open]) > summary:hover {
   background: var(--niryat-primary-hover);
@@ -2318,9 +2217,11 @@ main:has(.dashboard-studio, .calendar-card),
 }
 
 /* ---------- Breakpoints ---------- */
-@media (min-width: 640px) {
+.stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 768px) {
   .form-grid,
-  .stat-grid,
   .trust-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2328,7 +2229,7 @@ main:has(.dashboard-studio, .calendar-card),
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .auth-layout {
     grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
     align-items: stretch;
@@ -2391,41 +2292,39 @@ main:has(.dashboard-studio, .calendar-card),
   }
   .sidebar-resize:is(:hover, :focus-visible) {
     border-inline: 3px solid transparent;
-    background: var(--niryat-mint);
+    background: var(--niryat-shell-accent);
     background-clip: padding-box;
   }
   .stat-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .overview-grid {
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
   .overview-grid > :last-child {
     grid-column: 1 / -1;
   }
-  .content {
-    padding-inline: 48px;
-  }
 }
 @media (max-width: 1023px) {
+  .content {
+    --content-pad: 24px;
+  }
   .hero-figure {
     padding: 40px 20px 24px;
   }
 }
-@media (max-width: 639px) {
-  main,
-  .content {
+@media (max-width: 767px) {
+  main {
     padding-inline: var(--niryat-space-4);
   }
-  h1 {
-    font-size: 28px;
-    line-height: 34px;
+  .content {
+    --content-pad: var(--niryat-space-4);
   }
-  h2 {
-    font-size: 17px;
-    line-height: 24px;
+  h1 {
+    font-size: 30px;
+    line-height: 36px;
   }
   .display {
     font-size: 36px;
@@ -2496,7 +2395,8 @@ main:has(.dashboard-studio, .calendar-card),
   input::file-selector-button {
     transition: none;
   }
-  a.stat-tile:hover {
+  a.stat-tile:hover,
+  :is(button, .btn):active {
     transform: none;
   }
 }
@@ -2506,9 +2406,7 @@ main:has(.dashboard-studio, .calendar-card),
   .card {
     border: 1px solid CanvasText;
   }
-  .approval-card::after,
   .approval-controls::before,
-  .hero-figure::before,
   .auth-aside::before {
     display: none;
   }

@@ -159,3 +159,11 @@ Verification: both regressions fail before the fix and pass afterward in the ful
 Final documentation verify passed 27/27, all cached (83ms Turbo plus fresh root checks); `.tmp/c4-form-docs-verify.log`. Whitespace passes; required automated work is complete.
 
 Manual check — awaiting user verification: use the existing C4 prerequisites/migrations and an open task, run `corepack.cmd pnpm dev` (POSIX: `corepack pnpm dev`), sign in at http://localhost:3000/login and open http://localhost:3000/tasks. With keyboard only, set Planned work date to 2026-12-31 and activate Save plan. Wait until the refresh settles: the date must remain 2026-12-31 and “Planned date saved.” must remain in the status region. Clear the input and save again: it must remain blank after refresh with the same persistent confirmation. Check that the label/button/status elements are preserved across the refresh, and verify screen-reader announcement and keyboard focus behavior. The due date stays unchanged. Browser/hosted/accessibility outcomes are not claimed by the element-identity tests.
+
+## Niryat Neel visual system (2026-11-09)
+
+The calendar's resource colours still come from the `--niryat-cat-*` tokens and its state classes from `--niryat-overdue`, `--niryat-upcoming`, `--niryat-past` and `--niryat-event-text`; [calendar.ts](../apps/web/src/lib/calendar.ts) is unchanged. The token values in [globals.css](../apps/web/src/app/globals.css) now follow the approved Niryat Neel design system ([IMPLEMENTATION-FRONTEND.md](IMPLEMENTATION-FRONTEND.md)): GST `#3b348c` / `#c3befa`, Income tax `#7a3e8f` / `#e0b2ee`, RBI `#8a5300` / `#f5c77e`, PayPal `#2f6a8a` / `#9ed0ea` (light / dark); `upcoming` aliases indigo primary, `past` `#6b6890` / `#b6b3cf`, event text white / `#1e1a4d`. No Bryntum package, licence or behaviour change.
+
+Verification: `corepack.cmd pnpm verify` 27/27 (web 570/570, including CalendarView tests); `corepack.cmd pnpm build` 9/9 with a fresh Next build. Pending user verification: `/calendar` and `/ca/calendar` in light and dark, checking event colours, legend and event text contrast.
+
+Light theme only (2026-11-09): the user removed dark mode from [globals.css](../apps/web/src/app/globals.css), so the calendar always uses the light `--niryat-cat-*` and state colours; the dark values and dark checks above no longer apply. No calendar code changed.

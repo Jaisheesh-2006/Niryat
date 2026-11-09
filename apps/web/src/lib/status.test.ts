@@ -87,7 +87,7 @@ it("covers every invoice and FIRA status with the existing labels and specified 
 
 it.each(actionStatusSchema.options)("labels and tones approval status %s", (status) => {
   const expected: Record<ActionStatus, { label: string; tone: Tone }> = {
-    proposed: { label: "Waiting for your approval", tone: "attention" },
+    proposed: { label: "Your decision", tone: "decision" },
     approved: { label: "Sending…", tone: "neutral" },
     rejected: { label: "Rejected", tone: "neutral" },
     done: { label: "Done", tone: "success" },

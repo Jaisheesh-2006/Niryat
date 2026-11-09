@@ -103,6 +103,8 @@ User browser follow-up (2026-11-02): the desktop sidebar is now resizable by dra
 
 ## 4. Design specification
 
+> **Superseded 2026-11-09 by Niryat Neel.** The approved Neel design system replaces the colours, type, shell and approval-card styling below; the token mapping, component decisions and what was deliberately kept are in [IMPLEMENTATION-FRONTEND.md](IMPLEMENTATION-FRONTEND.md). Niryat ships the light theme only (user decision, 2026-11-09); dark-mode guidance below no longer applies. Copy rules, quality bars and page blueprints below still apply where Neel is silent.
+
 ### 4.0 Visual refresh: "export voucher" (2026-11-08)
 
 The user asked for a less basic look, so this refresh supersedes the subsections below where they differ. The calm-ledger rules (§4.1), status tones, copy rules and quality bars are unchanged; no rules, API contract or approval logic changed.

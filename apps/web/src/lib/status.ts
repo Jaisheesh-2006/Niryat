@@ -8,7 +8,8 @@ import {
   reminderStageSchema,
 } from "@niryat/shared";
 
-export type Tone = "success" | "attention" | "danger" | "neutral";
+// "decision" (marigold) only marks an action waiting for the user's approval.
+export type Tone = "success" | "decision" | "attention" | "danger" | "neutral";
 
 export const agentActor: Record<AgentRun["toolCalls"][number]["actor"], string> = {
   agent: "Claude",
@@ -67,7 +68,7 @@ export const invoiceFira: Record<FiraStatus, { label: string; tone: Tone }> = {
 };
 
 const actionStatus: Record<ActionStatus, { label: string; tone: Tone }> = {
-  proposed: { label: "Waiting for your approval", tone: "attention" },
+  proposed: { label: "Your decision", tone: "decision" },
   approved: { label: "Sending…", tone: "neutral" },
   rejected: { label: "Rejected", tone: "neutral" },
   done: { label: "Done", tone: "success" },

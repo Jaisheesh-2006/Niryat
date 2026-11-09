@@ -1,24 +1,17 @@
 import type { Metadata } from "next";
-import { Anek_Devanagari, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-const sans = IBM_Plex_Sans({
-  weight: ["400", "500", "600"],
+// Neel type: Figtree for text and tabular figures; Bricolage Grotesque (optical size on) for titles.
+const sans = Figtree({
   subsets: ["latin"],
   display: "swap",
   variable: "--niryat-font-sans",
 });
-const mono = IBM_Plex_Mono({
-  weight: ["400", "500"],
+const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  display: "swap",
-  variable: "--niryat-font-mono",
-});
-// Display face from Ek Type (Mumbai): Latin headings plus the Devanagari wordmark.
-const display = Anek_Devanagari({
-  subsets: ["latin", "devanagari"],
-  axes: ["wdth"],
+  axes: ["opsz"],
   display: "swap",
   variable: "--niryat-font-display",
 });
@@ -29,7 +22,7 @@ export const metadata: Metadata = {
 };
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable} ${display.variable}`}>
+    <html lang="en" className={`${sans.variable} ${display.variable}`}>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );

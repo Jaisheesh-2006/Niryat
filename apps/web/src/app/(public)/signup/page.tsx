@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AuthAside } from "../../../components/AuthAside";
 import { AuthForm } from "../../../components/AuthForm";
-import { BrandMark } from "../../../components/icons";
 import { PageHeader } from "../../../components/PageHeader";
 import { PayPalLoginError } from "../../../components/PayPalLoginError";
 
@@ -16,7 +15,6 @@ export default async function Signup({
   return (
     <div className="auth-layout">
       <div className="card auth-card">
-        <BrandMark />
         <PageHeader title="Create account" description="For freelancers" />
         <PayPalLoginError error={error} />
         <AuthForm mode="signup" />

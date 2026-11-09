@@ -46,3 +46,13 @@ A5 populates the existing freelancer dashboard and CA portfolio through apps/api
 Focused seed/session/close integration passes 10/10; full DB passes 180/180 without skips. Full API/web/verify/build and root seed-command results are recorded in IMPROVEMENTS A5. Populated widgets, CA switching, live prompts and licence coverage remain awaiting user verification; exact startup/URLs/actions/expected results are in A5's manual checklist. No browser/helper or sponsor-service call, deployment or feature tick.
 
 A5 final result (2026-11-06): full API 792/792 and DB 180/180 without skips; web 559/559, verify 27/27, build 9/9 (fresh Next build also passed). Root seed command passed twice with unchanged fixture counts on a disposable DB; container removed. No Studio behavior or licence change, live prompt/browser verification or deployment. Exact evidence and pending user checks remain in IMPROVEMENTS A5.
+
+## Niryat Neel visual system (2026-11-09)
+
+The dashboards' theme in [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx) is unchanged in code, but the tokens it reads now carry Neel values ([globals.css](../apps/web/src/app/globals.css); mapping in [IMPLEMENTATION-FRONTEND.md](IMPLEMENTATION-FRONTEND.md)). Why: the user approved the Niryat Neel design system as the frontend's visual source of truth. Effect: `--niryat-primary` (accent and palette fill 1) is indigo `#3b348c` / lavender `#a9a2f5` in dark; `--niryat-accent` (fill 2) is marigold `#f2a93b`; surface, text, muted, neutral-strong and danger follow Neel; `--niryat-font-sans` is now Figtree instead of IBM Plex Sans. No AG Studio package, licence, widget or AI Assistant change.
+
+Verification: `corepack.cmd pnpm verify` 27/27 (web 570/570); `corepack.cmd pnpm build` 9/9 with a fresh Next build. Pending user verification: `/dashboard` and `/ca` in light and dark, checking chart colours and text contrast.
+
+Follow-up (2026-11-09): [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx) palette fill and stroke 2 now read `--niryat-cat-paypal` (`#2f6a8a` / `#9ed0ea`) instead of `--niryat-accent`, because Neel reserves marigold for actions waiting for the user's decision. Verification: web 570/570, `corepack.cmd pnpm verify` 27/27, `corepack pnpm build` 9/9. Pending user verification: `/dashboard` and `/ca` charts in light and dark; in dark, series 1 (lavender) and series 2 (light blue) are close in lightness, so check they are told apart by legend and position.
+
+Light theme only (2026-11-09): the user removed dark mode, so the dashboards always use the light Neel values; the dark values and dark checks above no longer apply.

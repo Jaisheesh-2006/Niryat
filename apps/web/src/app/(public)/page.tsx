@@ -17,8 +17,8 @@ function ExampleApproval() {
     <figure className="hero-figure">
       <div className="card approval-card" data-status="proposed" aria-hidden="true">
         <div className="card-header">
-          <span className="badge" data-tone="attention">
-            Waiting for your approval
+          <span className="badge" data-tone="decision">
+            Your decision
           </span>
           <span className="approval-kind">Reminder · 30-day stage</span>
         </div>
@@ -48,7 +48,7 @@ function ExampleApproval() {
           <span className="btn" data-variant="secondary">
             Reject
           </span>
-          <span className="btn" data-variant="primary">
+          <span className="btn" data-variant="decision">
             Send reminder
           </span>
         </div>

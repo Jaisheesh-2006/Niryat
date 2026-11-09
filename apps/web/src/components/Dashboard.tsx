@@ -6,7 +6,7 @@ import { AgStudio, AgStudioProvider } from "ag-studio-react";
 import { dashboardInitialState, dashboardSources } from "../lib/dashboard";
 import { createDashboardAdapter, DASHBOARD_PROMPT_STARTERS } from "../lib/dashboard-adapter";
 
-// D12 tokens switch for dark mode in globals.css, so the theme follows them.
+// The theme reads the Neel tokens in globals.css (light only).
 export const theme = studioTheme.withParams({
   accentColor: "var(--niryat-primary)",
   backgroundColor: "var(--niryat-surface)",
@@ -14,11 +14,11 @@ export const theme = studioTheme.withParams({
   chartAxisLineColor: "var(--niryat-muted)",
   fontFamily: "var(--niryat-font-sans), system-ui, sans-serif",
   chartPaletteFills1Color: "var(--niryat-primary)",
-  chartPaletteFills2Color: "var(--niryat-accent)",
+  chartPaletteFills2Color: "var(--niryat-cat-paypal)",
   chartPaletteFills3Color: "var(--niryat-neutral-strong)",
   chartPaletteFills4Color: "var(--niryat-danger)",
   chartPaletteStrokes1Color: "var(--niryat-primary)",
-  chartPaletteStrokes2Color: "var(--niryat-accent)",
+  chartPaletteStrokes2Color: "var(--niryat-cat-paypal)",
   chartPaletteStrokes3Color: "var(--niryat-neutral-strong)",
   chartPaletteStrokes4Color: "var(--niryat-danger)",
 });

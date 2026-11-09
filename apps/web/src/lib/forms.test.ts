@@ -212,7 +212,7 @@ it.each([undefined, "admin", "https://evil.example"])(
     );
     expect(await sendJson("/api/auth/login", "POST", {})).toEqual({
       ok: false,
-      message: "Something went wrong. Try again.",
+      message: "We couldn't complete this request. Try again.",
     });
   },
 );
@@ -340,7 +340,7 @@ it("validates successful extraction responses before returning them", async () =
   });
   expect(await sendJson("/api/extract", "POST", {}, extractionResultSchema)).toEqual({
     ok: false,
-    message: "Something went wrong. Try again.",
+    message: "We couldn't complete this request. Try again.",
   });
 });
 
@@ -980,7 +980,7 @@ it.each([
     "refund_exceeds_payment",
     "The refund is more than what is left to refund on this payment. Enter a smaller amount.",
   ],
-  ["other", "Something went wrong. Try again."],
+  ["other", "We couldn't complete this request. Try again."],
 ])("maps the %s error", async (error, message) => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error }, { status: 400 })));
   expect(await sendJson("/api/auth/login", "POST", {})).toEqual({ ok: false, message });
@@ -996,7 +996,7 @@ it.each([
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status: 500 })));
   expect(await sendJson("/api/auth/login", "POST", {})).toEqual({
     ok: false,
-    message: "Something went wrong. Try again.",
+    message: "We couldn't complete this request. Try again.",
   });
 });
 
@@ -1004,7 +1004,7 @@ it("handles network failures without exposing the error", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("private transport detail")));
   expect(await sendJson("/api/auth/login", "POST", {})).toEqual({
     ok: false,
-    message: "Something went wrong. Try again.",
+    message: "We couldn't complete this request. Try again.",
   });
 });
 
@@ -1052,7 +1052,7 @@ it.each(["network", "malformed"])(
     );
     expect(await sendPdf("/api/fira", new File([], "fira.pdf"))).toEqual({
       ok: false,
-      message: "Something went wrong. Try again.",
+      message: "We couldn't complete this request. Try again.",
     });
   },
 );

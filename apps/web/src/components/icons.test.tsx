@@ -14,10 +14,11 @@ it.each(Object.entries(icons).filter(([name]) => name !== "BrandMark"))(
   },
 );
 
-it("renders the brand at 28px with an export arrow", () => {
+it("renders the brand at 28px as a disc with a leaf", () => {
   const html = renderToStaticMarkup(<icons.BrandMark />);
   expect(html).toContain('class="brand-mark"');
   expect(html).toContain('width="28" height="28"');
   expect(html).toContain('aria-hidden="true"');
-  expect(html).toContain('d="M8 20 20 8M10 8h10v10"');
+  expect(html).toContain('class="brand-disc"');
+  expect(html).toContain('d="M22 9c6 6 6 13 0 19c-6-6-6-13 0-19z"');
 });
