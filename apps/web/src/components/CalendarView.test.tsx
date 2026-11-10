@@ -50,7 +50,7 @@ it("shows category filters and five read-only modes, navigating only for known l
       readOnly: boolean;
       mode: string;
       modes: Record<string, boolean>;
-      sidebar: { collapsed: boolean; items: { resourceFilter: boolean } };
+      sidebar: { collapsed: boolean; items?: unknown };
       resources: typeof calendarResources;
       events: { resourceId: string; cls: string; name: string }[];
       eventTooltipFeature: {
@@ -74,7 +74,7 @@ it("shows category filters and five read-only modes, navigating only for known l
     agenda: true,
     list: true,
   });
-  expect(element.props.sidebar).toEqual({ collapsed: false, items: { resourceFilter: true } });
+  expect(element.props.sidebar).toEqual({ collapsed: false }); // keep Bryntum's default resource filter
   expect(element.props.resources).toEqual(calendarResources);
   expect(element.props.events[0]).toMatchObject({
     resourceId: "rbi",

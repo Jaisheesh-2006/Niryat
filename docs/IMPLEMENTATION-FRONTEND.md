@@ -126,7 +126,7 @@ None of these happen without explicit approval.
 
 ### A. Design tokens and global styling
 
-- Files: `apps/web/src/app/globals.css` (`:root` and the dark block only); `docs/frontend-plan.md` §4; `apps/web/AGENTS.md` (point "visual source of truth" at Neel and this file); `docs/BRYUNTUM.md` and `docs/AG_STUDIO.md` (their colours change, so the sponsor-doc rule applies).
+- Files: `apps/web/src/app/globals.css` (`:root` and the dark block only); `apps/web/AGENTS.md` (point "visual source of truth" at Neel and this file); `docs/BRYUNTUM.md` and `docs/AG_STUDIO.md` (their colours change, so the sponsor-doc rule applies).
 - Depends on: nothing.
 - Done when: every token in §3 is defined in both themes; no rule in `globals.css` still uses a renamed or dropped token; `pnpm verify` passes; Bryntum and AG Studio variables still resolve.
 
@@ -198,7 +198,7 @@ What changed:
 - **Shell:** `SandboxBar` (in `SiteFooter.tsx`) renders the existing "PayPal sandbox only · Not tax or legal advice · Disclaimer" line above `main` in the app and CA layouts; the app footer drops that duplicate text and keeps the Disclaimer link. The "Sandbox" pills in the top bar and menu are removed. Sidebar default width is 264px; resizing still works from 224 to 384px.
 - **Brand:** new mark (marigold disc, indigo leaf and seed) in `BrandMark`; the wordmark is "Niryat" in the DOM, lowercase in CSS. The Devanagari wordmark and the Devanagari watermarks on the auth panel and home hero are gone with the font.
 - **Breakpoints:** 768px (two-column forms, phone margins, 30px titles) and 1024px (sidebar, four tiles, Today's 2:1 grid, auth side panel). Today's tiles are two-up on phones. Page content stops at 1200px except Dashboard and Calendar.
-- **Docs:** `apps/web/AGENTS.md`, `docs/frontend-plan.md` §4 (superseded note), `docs/AG_STUDIO.md`, `docs/BRYUNTUM.md`.
+- **Docs:** `apps/web/AGENTS.md`, `docs/AG_STUDIO.md`, `docs/BRYUNTUM.md`.
 
 Not built, as decided: ReviewPanel, mobile decisions pill, sidebar station states, confirm dialogs, Tabs, MonthStrip, stacking tables, expandable `Term`, the four optional icons. No new dependency.
 

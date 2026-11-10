@@ -6,6 +6,10 @@ Each entry gives the date, the tool, its purpose and the outcome. Record what th
 
 ## Summary for reviewers
 
+Niryat uses APIMatic in two ways:
+1. **At runtime:** the APIMatic-generated **PayPal Server SDK for TypeScript** (`@paypal/paypal-server-sdk` 2.5.0) is Niryat's PayPal ledger adapter, in [packages/paypal/src/sdk](../packages/paypal/src/sdk/index.ts). It makes four calls: `TransactionSearchController.searchTransactions`, which reads every page of results for the nightly and half-hourly reconciliation, and `PaymentsController.getCapturedPayment`, `refundCapturedPayment` and `getRefund`. Every refund runs only after the user approves it in Niryat's approval queue.
+2. **While building:** the **APIMatic PayPal Context Plugin** (`paypal:typescript-*` skills) was loaded in Claude Code while we wrote and tested that adapter. The table below lists the SDK behaviour the plugin warned us about and the shipped code that handles it.
+
 Niryat reads a freelancer's PayPal ledger (captures, transaction search, refunds) through the APIMatic-generated PayPal Server SDK for TypeScript, `@paypal/paypal-server-sdk` 2.5.0. We wrote that adapter in Claude Code with the Context Plugin's `paypal:typescript-*` skills loaded. The skills mattered most where the SDK's types say nothing. Each point below is in shipped code:
 
 | What the plugin told us                                                                                                         | What we did                                                                                                                                                                                                                                                                                         | Where                                                                |

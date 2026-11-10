@@ -1,4 +1,53 @@
-# Render change record
+# Render in Niryat
+
+Niryat runs entirely on [Render](https://render.com). One Blueprint, [render.yaml](../render.yaml), defines the whole system: two web services, three cron jobs, a **Render Workflows** service and managed Postgres. The live demo is https://niryat-web.onrender.com.
+
+## Summary for reviewers
+
+Niryat keeps an Indian freelancer's export-compliance records in step with their PayPal account. Because PayPal activity never stops, the work cannot only happen while a page is open. Payments must be reconciled through the day, reminders proposed every night and a monthly close run for every freelancer. Render runs all of that from one Blueprint, and the long-running monthly close uses **Render Workflows** with the Render SDK (`@renderinc/sdk` 1.4.0).
+
+### Architecture on Render
+
+| Render resource        | Type      | Schedule / role                                                                                                                             | Started by                                                        |
+| ---------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `niryat-web`           | Web       | Next.js app. Proxies `/api/*` and PayPal webhooks to the API over Render's **private network**.                                             | Public traffic                                                    |
+| `niryat-api`           | Web       | Hono API: auth, invoices, approvals, PayPal webhooks, AI proxy. Health check `/health`. Starts manual monthly-close runs on Workflows.      | Web service, PayPal webhooks                                      |
+| `niryat-worker`        | Workflows | Registers the `monthlyClose` task (900-second timeout).                                                                                     | Monthly cron, or the API when a user clicks **Run monthly close** |
+| `niryat-monthly-close` | Cron      | `30 1 1 * *` (07:00 IST on the 1st): starts `monthlyClose` for every freelancer.                                                            | Schedule                                                          |
+| `niryat-sync`          | Cron      | `30 20 * * *` (02:00 IST nightly): full PayPal reconciliation, then the Claude reminder agent drafts proposals.                             | Schedule                                                          |
+| `niryat-sync-light`    | Cron      | `*/30 * * * *`: PayPal reconciliation with no AI (`--no-agent`), so data is never more than about 30 minutes behind if a webhook is missed. | Schedule                                                          |
+| `niryat-db`            | Postgres  | Managed PostgreSQL. Its connection string is injected into the API, worker and both sync crons.                                             | Blueprint                                                         |
+
+### Render features we use
+
+- **Blueprint as code:** every service, schedule, build command, health check and environment key is in `render.yaml`. All secrets are declared `sync: false`, so values are set in the Render dashboard and never committed. A [guardrail test](../scripts/guardrails.test.mts) checks the Blueprint's wiring on every `pnpm verify`.
+- **Service linking:** `DATABASE_URL` comes `fromDatabase` (`connectionString`). The web service's `API_INTERNAL_HOSTPORT` comes `fromService` (`niryat-api`, `hostport`), so web-to-API traffic stays on the private network.
+- **Private network and client IP:** because the hop stays private, the API keeps the visitor's real IP from Render's `CF-Connecting-IP` header, trusted only when `RENDER=true`. Per-user, per-IP rate limits therefore work behind the proxy ([A2](#a2-rate-limits-and-client-ip-trust)).
+- **Render Workflows** ([apps/worker/src/index.ts](../apps/worker/src/index.ts)): `task({ name: "monthlyClose", timeoutSeconds: 900 }, …)` from `@renderinc/sdk/workflows`. The task checks its input against a shared zod schema, then runs the same close used in development.
+- **Starting Workflows from the SDK:** the cron's trigger ([trigger.ts](../apps/worker/src/trigger.ts)) and the API ([workflows.ts](../apps/api/src/workflows.ts)) both call `new Render().workflows.startTask("niryat-worker/monthlyClose", …)`. The API passes the reserved run ID as the SDK's `idempotencyKey`, so a retried click cannot start a second close, and it returns HTTP 202 straight away.
+- **Durable runs:** the database claims each run before it starts, so a repeated or late task delivery skips work that has already been done. The user tested this on the hosted deployment: they restarted `niryat-api` during a close, and the run completed once with no duplicates ([G4](#g4-hosted-reliability-results-2026-11-09)).
+- **Cron jobs:** the three schedules described in the table above. Overlapping syncs are blocked by a database lock. The nightly job retries within a fixed time limit, while the light job skips, so reminders are never skipped silently ([E1 review fix](#e1-review-fix-nightly-reminders-on-poll-overlap)).
+- **Local Workflows development:** with `RENDER_USE_LOCAL_DEV=true`, `render workflows dev` runs the same task locally. With no Workflows settings, the API runs the close in-process, so `pnpm dev` needs no Render account.
+- **Production settings:** `NODE_ENV=production` on every service enables secure cookies. Security headers are set for every page ([A1](#a1-production-mode-and-security-headers)).
+
+### What the user has verified on the hosted deployment
+
+- **G3, all smoke checks passed** (2026-11-06): migrations and the judge seed, the `monthlyClose` registration, all three cron schedules, health and judge-mode responses through both services, the demo sign-in buttons and `X-Frame-Options: DENY` ([V11](verification.md#v11-hosted-resources)).
+- **G4, reliability** (2026-11-09): PayPal invoice-paid and invoice-refunded webhooks reached the API through the web proxy, passed signature checks and were recorded once, including when resent. The last-sync notice worked after a forced light-sync failure. A Workflows close survived an API restart with no duplicates. The 30-minute freshness target has not been measured.
+
+### Tests
+
+[worker index.test.ts](../apps/worker/src/index.test.ts) and [trigger.test.ts](../apps/worker/src/trigger.test.ts) cover the task's input checks and the trigger's arguments, environment and acknowledgement. [workflows.test.ts](../apps/api/src/workflows.test.ts) covers the idempotency key and the response check. [guardrails.test.mts](../scripts/guardrails.test.mts) checks the Blueprint's services, keys and private-network binding. The tests call neither the Render API nor PayPal.
+
+### Known limits
+
+- Rate-limit counters are kept in memory on each API instance; the deployment runs one instance.
+- A poll killed partway through needs a one-line manual SQL recovery, which is documented in [E1](#e1-sync-freshness-and-light-reconciliation).
+- A worker crash after a run is claimed is not replayed automatically. The user's next click starts a new run.
+
+## Change log (engineering evidence)
+
+Each entry below records a dated change, its verification and any checks still open.
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. G3 hosted setup/smoke checks are user-confirmed on 2026-11-06; G4 reliability and G5 rehearsal remain pending.
 

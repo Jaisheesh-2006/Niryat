@@ -1,4 +1,65 @@
-# AG Studio change record
+# AG Studio in Niryat
+
+Niryat is our entry for **Best Use of AG Grid**. It uses [AG Studio](https://www.ag-grid.com/studio/), AG Grid's embeddable dashboard product (`ag-studio` and `ag-studio-react` 3.0.0).
+
+## Summary for reviewers
+
+Indian freelancers paid through PayPal must collect payment proof (FIRA) for every foreign receipt and get each export invoice paid within the RBI deadline. They also pay PayPal fees and exchange-rate costs that they rarely see in one place. Niryat reads the freelancer's PayPal sandbox ledger and puts those figures into **two AG Studio dashboards**. The **AG Studio AI Assistant**, powered by Claude through our own adapter, answers plain-English questions by building new widgets.
+
+### See it in two minutes
+
+1. Open https://niryat-web.onrender.com and click **Try as freelancer (demo)**. Then open **Dashboard** (`/dashboard`).
+2. The page opens with eight widgets built from the freelancer's PayPal payments, refunds, disputes and invoices. Open the AI Assistant and pick a starter, such as _"Which unpaid invoices are closest to their RBI deadline?"_. Claude replies by adding or changing a widget, not with a paragraph of numbers.
+3. Sign out, click **Try as CA (demo)** and open `/ca`. A chartered accountant sees the same tools across three freelancer clients who shared their records.
+
+All records are synthetic sandbox data. Nothing on these pages sends money or calls PayPal on its own.
+
+### What we built with AG Studio
+
+| Dashboard                | Who uses it                                                                     | Widgets (AG Studio type)                                                                                                                                                                                                                                                                        | Code                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Freelancer, `/dashboard` | The freelancer, about their own PayPal income                                   | Income by month and currency, PayPal fees by month and currency, invoices by payment-proof status, disputes by status (`column-chart-grouped`). Health score (`value`). Unpaid invoices sorted by days to the RBI deadline, payments with and without a PayPal exchange rate, refunds (`grid`). | [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx), [dashboard.ts](../apps/web/src/lib/dashboard.ts)           |
+| CA portfolio, `/ca`      | A chartered accountant, across the freelancers who accepted their share request | Clients sorted by overdue count, then next deadline (`grid`). PayPal fees by freelancer and currency, missing payment proof by freelancer (`bar-chart-grouped`). Received per month by freelancer (`column-chart-stacked`). The ten unpaid invoices nearest their RBI deadline (`grid`).        | [CaDashboard.tsx](../apps/web/src/components/CaDashboard.tsx), [ca-dashboard.ts](../apps/web/src/lib/ca-dashboard.ts) |
+
+### AG Studio features we use
+
+- **React embedding:** `AgStudioProvider` and `AgStudio`, opened in `mode="edit"`, so users can move, resize, retitle and add widgets themselves.
+- **Typed data sources** (`AgDataSourcesDefinition`): four freelancer sources (payments, invoices, disputes, health) and the CA's portfolio sources. Every field has a readable name and an AG Studio format (`decimalFormat`, `dateFormat`, `integerFormat`, `textFormat`), so the assistant sees business terms such as "Amount after fees" and "RBI deadline".
+- **Declarative report state** (`AgReportState`): pages, widgets, data mapping (`categoryKey`, `valueKey`, `legendKey`), `sum` and `count` aggregations, multi-key sort, a 24-column `widgetLayout`, and per-widget filters (`isIn`, `greaterThan`). For example, the refunds grid filters `kind` to `refund`, and the unpaid grid shows only invoices with an unpaid amount above zero.
+- **Theming:** `studioTheme.withParams` binds AG Studio's accent, surface, text, border, radius, padding, font and the four chart palette colours to Niryat's design tokens (CSS variables), so the dashboards match the rest of the app.
+- **AI Assistant:** `AgStudioAiModule` with `createAiHarness`, a custom `AgLlmAdapter` and role-specific prompt starters (three for freelancers, three for CAs).
+- **Licensing:** `licenseKey` is passed from the server-side `AG_STUDIO_LICENSE_KEY` setting; without it, AG Studio runs in trial mode.
+
+### How the AI Assistant works: AG Studio, backed by Claude
+
+AG Studio's assistant works through function calls: its main agent hands work to page and widget agents. We kept that loop and replaced the model with Claude, so that no AI key reaches the browser.
+1. **Browser adapter** ([dashboard-adapter.ts](../apps/web/src/lib/dashboard-adapter.ts)): implements `AgLlmAdapter.executeTurn`. It sends each AG Studio turn to `POST /api/dashboard/turn`, checks the reply with zod and replays it as AG Studio events (`TEXT_MESSAGE_CHUNK`, `TOOL_CALL_START/ARGS/END`). Errors become AG Studio `failed` or `cancelled` responses with plain messages, such as a rate-limit message that gives the wait time.
+2. **Server proxy** ([routes/dashboard.ts](../apps/api/src/routes/dashboard.ts)): requires a signed-in freelancer or CA, caps the body at 256 KB and checks the monthly AI budget. It allows one turn per user at a time (`dashboard_busy`) and records every widget tool call the model makes, logging argument names only.
+3. **Claude translation** ([dashboard-llm.ts](../packages/agent/src/dashboard-llm.ts)): converts AG Studio's `function_call` and `function_call_output` items, tool list and `toolChoice` into Anthropic Messages `tool_use`, `tool_result` and `tool_choice`, then converts the reply back.
+
+The instructions are deliberate. Claude must **put every amount, count and date in a widget, never in prose**, so the figures come from the user's data rather than the model's wording. All data, including client names, is treated as data, never as instructions, which guards against prompt injection. "This year" means the Indian financial year (April to March). In the CA version, freelancers and currencies are never added together. The assistant has **no PayPal tools**; it can only arrange the data Niryat already loaded.
+
+### Why this is more than a chart page
+
+- **Real compliance data:** every deadline, health score and payment-proof status comes from Niryat's cited rules package (`packages/rules`). AG Studio only groups and totals these values for display, and amounts in different currencies are never added together.
+- **Privacy by role:** the CA dashboard loads only freelancers whose share invitation was accepted, and leaves customer emails and addresses out of its data sources ([api/ca-dashboard.ts](../apps/api/src/ca-dashboard.ts)).
+- **One theme, isolated styles:** a zero-specificity `:where()` reset in `globals.css` stops app-wide styles from leaking into AG Studio panels.
+- **Fallback:** `/ca` keeps a server-rendered client table under the dashboard for navigation and as a no-JavaScript fallback.
+
+### Tests
+
+[lib/dashboard.test.ts](../apps/web/src/lib/dashboard.test.ts) and [lib/ca-dashboard.test.ts](../apps/web/src/lib/ca-dashboard.test.ts) check that every widget references a field that exists in its source. [dashboard-adapter.test.ts](../apps/web/src/lib/dashboard-adapter.test.ts) covers the adapter's events and errors, including 429 and 413. [routes/dashboard.test.ts](../apps/api/src/routes/dashboard.test.ts) covers sessions, the budget, busy turns, CA scope and logging. [dashboard-llm.test.ts](../packages/agent/src/dashboard-llm.test.ts) covers the AG Studio-to-Claude translation. The tests call no live model and no PayPal service.
+
+### Known limits
+
+- The API returns each assistant turn in one piece. The browser then replays it as events, so text does not stream word by word.
+- Each turn is charged at a flat USD 0.05 against the monthly AI budget, not by tokens.
+- The data is a snapshot taken when the page loads; reload to see new PayPal activity.
+- The user has confirmed that the AG Studio licence covers judging through 2026-12-15 ([V15](verification.md#v15-sponsor-licences)).
+
+## Change log (engineering evidence)
+
+Each entry below records a dated change, its verification and any checks still open.
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0). Later tasks are dated separately below.
 

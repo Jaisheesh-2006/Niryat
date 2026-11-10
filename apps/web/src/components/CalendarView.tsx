@@ -13,10 +13,8 @@ import "@bryntum/calendar/svalbard-light.css";
 import "@bryntum/calendar/fontawesome/css/fontawesome.css";
 import "@bryntum/calendar/fontawesome/css/solid.css";
 
-const calendarSidebar = {
-  collapsed: false,
-  items: { resourceFilter: true },
-} satisfies SidebarConfig;
+// The resource filter is a default sidebar item; overriding it with `true` drops its type and renders an empty widget.
+const calendarSidebar = { collapsed: false } satisfies SidebarConfig;
 
 const calendarDrag = { creatable: false, resizable: false };
 

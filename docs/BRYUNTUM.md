@@ -1,4 +1,56 @@
-# Bryntum change record
+# Bryntum in Niryat
+
+Niryat uses [Bryntum Calendar](https://bryntum.com/products/calendar/) for React (`@bryntum/calendar-react` 7.3.8 with the hackathon trial package `@bryntum/calendar-trial` 7.3.8) as the **compliance calendar** for freelancers and their chartered accountants (CAs).
+
+## Summary for reviewers
+
+An Indian freelancer paid through PayPal has deadlines from four sources: GST (LUT renewal, GSTR-1 returns, credit-note declarations), income tax (advance-tax instalments), the RBI (each export invoice must be paid within its realisation deadline) and PayPal itself (dispute responses, recurring invoices). Niryat computes every one of these dates from cited rules and the user's PayPal records, then shows them in Bryntum Calendar. The freelancer can also drag their own tasks to plan when to do them. A CA sees all of their clients' deadlines in one calendar.
+
+### See it in two minutes
+
+1. Open https://niryat-web.onrender.com, click **Try as freelancer (demo)** and open **Calendar** (`/calendar`).
+2. Use the sidebar to switch categories (GST, Income tax, RBI payment deadlines, PayPal, My tasks) on and off. Switch between the week, month, year, agenda and list views.
+3. Hover over a deadline to see what to do, the legal source, and an **Open** link to the page where you act on it.
+4. Drag a task from **My tasks** to another day. The planned date is saved and the legal due date stays the same. Legal deadlines cannot be dragged.
+5. Sign out, click **Try as CA (demo)** and open `/ca/calendar`. Each client has its own colour, and the sidebar filters by client.
+
+### What we built with Bryntum Calendar
+
+| View                         | Who uses it                                               | What Bryntum shows                                                                                                                                                                                       | Code                                                                                                                                   |
+| ---------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Freelancer, `/calendar`      | The freelancer, for their own deadlines and work plan     | Eight event types grouped into five colour-coded resources: GST, Income tax, RBI payment deadlines, PayPal and My tasks. Overdue, upcoming and past events are styled differently. Tasks can be dragged. | [CalendarView.tsx](../apps/web/src/components/CalendarView.tsx), [lib/calendar.ts](../apps/web/src/lib/calendar.ts)                    |
+| CA portfolio, `/ca/calendar` | A CA, across freelancers who accepted their share request | One resource per client, each with its own colour, plus category checkboxes. Each event title starts with the client's name. Read-only.                                                                  | [CaCalendarView.tsx](../apps/web/src/components/CaCalendarView.tsx), [ca/calendar page](../apps/web/src/app/(ca)/ca/calendar/page.tsx) |
+
+### Bryntum features we use
+
+- **Resources as categories:** each event's `resourceId` is its compliance category, or the client on the CA calendar, with an `eventColor` taken from Niryat's design tokens. A `switch` with a `never` check maps every event kind, so a new kind cannot be left without a category.
+- **Sidebar resource filter:** the built-in sidebar, kept open (`sidebar={{ collapsed: false }}`), lets users show or hide categories or clients.
+- **Several views:** `modes` turns on week, month (the default), year, agenda and list views, and turns off the day view, because every deadline is an all-day event.
+- **Event tooltips** (`eventTooltipFeature`): on hover, the title, the action to take, the legal source cited by the rule behind the date and an **Open** link. The link accepts only internal paths.
+- **Drag to plan** (`dragFeature`, `onBeforeDragMove`, `onBeforeDragMoveEnd`): only the freelancer's own tasks can move. The new date is saved through `POST /api/tasks/:id/plan` before Bryntum confirms the drop. The drop is rejected if the save fails, and the result is announced in a `role="status"` message. All-day dates use the displayed local day, so a drop never shifts by a day across time zones.
+- **Locked legal dates:** each event sets `readOnly` and `draggable`. Creating, deleting, resizing, the event editor, copy and paste, and right-click menus are all turned off, because legal deadlines must never be edited in the calendar.
+- **Event clicks** open the page where the user acts, for example the invoice or the dispute.
+- **Theme:** Bryntum's `svalbard-light` theme and its bundled Font Awesome icons. Event colours come from Niryat's CSS variables.
+
+### How it fits the product
+
+- **Deadlines come from rules, not the calendar.** [api/calendar.ts](../apps/api/src/calendar.ts) builds each event from `packages/rules`: the RBI realisation deadline, advance-tax instalments, GSTR-1 due dates, LUT expiry and credit-note limits. Dispute response dates come from PayPal's Disputes API and recurring invoices from PayPal Invoicing. Bryntum only displays them.
+- **The CA sees only what was shared.** `/ca/calendar` uses the same builder, but only for freelancers whose share invitation was accepted. Old overdue items are kept until resolved.
+- **The page works without the calendar.** Bryntum loads in the browser only (`next/dynamic`, `ssr: false`). Each calendar page also has a server-rendered list of overdue deadlines and the next 10 upcoming ones, with a plain-language glossary and a colour legend.
+
+### Tests
+
+[CalendarView.test.tsx](../apps/web/src/components/CalendarView.test.tsx) and [CaCalendarView.test.tsx](../apps/web/src/components/CaCalendarView.test.tsx) cover the Bryntum props: views, sidebar, locked features, drag rules, tooltips and client filtering. [lib/calendar.test.ts](../apps/web/src/lib/calendar.test.ts) covers category mapping, client colours and the deadline list. [api/calendar.test.ts](../apps/api/src/calendar.test.ts), [routes/calendar.test.ts](../apps/api/src/routes/calendar.test.ts) and [routes/ca-calendar.test.ts](../apps/api/src/routes/ca-calendar.test.ts) cover event building, owner and CA access, and accepted-share isolation.
+
+### Known limits
+
+- Year view runs January to December, while India's financial year runs April to March.
+- The CA calendar is read-only; only the freelancer can plan their tasks.
+- The trial package needs no key. The user has confirmed that it lasts past judging on 2026-12-15 ([V15](verification.md#v15-sponsor-licences)).
+
+## Change log (engineering evidence)
+
+Each entry below records a dated change, its verification and any checks still open.
 
 Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0). Later tasks are dated separately below. This file retains the existing `BRYUNTUM.md` filename.
 
@@ -167,3 +219,13 @@ The calendar's resource colours still come from the `--niryat-cat-*` tokens and 
 Verification: `corepack.cmd pnpm verify` 27/27 (web 570/570, including CalendarView tests); `corepack.cmd pnpm build` 9/9 with a fresh Next build. Pending user verification: `/calendar` and `/ca/calendar` in light and dark, checking event colours, legend and event text contrast.
 
 Light theme only (2026-11-09): the user removed dark mode from [globals.css](../apps/web/src/app/globals.css), so the calendar always uses the light `--niryat-cat-*` and state colours; the dark values and dark checks above no longer apply. No calendar code changed.
+
+## G5 fix: sidebar resource filter rendered empty (2026-11-10)
+
+The user's hosted rehearsal of scene 4 found no client list in the `/ca/calendar` sidebar. DevTools showed the sidebar item `data-ref="resourceFilter"` as an empty generic widget (no `b-resourcefilter` class). The cause was `items: { resourceFilter: true }` in `apps/web/src/components/CalendarView.tsx`. Bryntum documents each sidebar item as a config object, or `null` to remove it. `true` replaced the default item config and lost its widget type.
+
+The resource filter is a default sidebar item, so the sidebar config is now just `{ collapsed: false }`. This shared component also renders the freelancer `/calendar` sidebar, so its category list (GST, Income tax, RBI, PayPal, My tasks) is fixed by the same change. `CalendarView.test.tsx` had pinned the faulty value and now asserts the default is kept.
+
+Browser check awaiting user verification after redeploy:
+- On `/ca/calendar`, the sidebar under "Filter events" lists the three clients with checkboxes. Unticking all but Ananya Rao leaves only her events.
+- On the freelancer `/calendar`, the sidebar lists the categories, and unticking one hides its events.
