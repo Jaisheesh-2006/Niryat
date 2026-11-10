@@ -954,6 +954,8 @@ G tasks are Phase 7. H tasks are Phase 8. Tasks marked **(user)** are done by th
 
 **Acceptance:** tick each build-flow checkbox only after its check passes. A failed check becomes an H1 bug fix and stays unticked.
 
+**Status: complete (user-confirmed 2026-11-10).** Checks 3–4 passed on 2026-11-09; checks 1–2 passed on 2026-11-10. All four build-flow checkboxes are ticked.
+
 ### G5. Feature freeze and hosted demo-script run (P0, Phase 7 exit gate)
 
 **Objective:** the Phase 7 exit gate. Freeze features on **2026-11-08**, and run the full demo script on the hosted demo.
@@ -962,6 +964,8 @@ G tasks are Phase 7. H tasks are Phase 8. Tasks marked **(user)** are done by th
 
 **User check:** run the five F1 video scenes end to end on the hosted demo. Record each scene as pass or fail in build flow §Phase 7, and set the exit-gate status. Fix failures under H1 before recording the video.
 
+**Status: complete (user-confirmed 2026-11-10).** All five scenes passed on the hosted demo after the rehearsal's fixes (Studio styling, dashboard rate limits, calendar sidebar filter). Build flow §Phase 7 records the exit gate as passed.
+
 ### H1. Testing sweep of pending manual checks (P0, Phase 8, Nov 8–10)
 
 **Objective:** Phase 8 "testing". Many tasks above end with "awaiting user verification". Work through them on the hosted demo, starting with the ones on the demo path and the security ones: role isolation (B1–B4), CA can only view (B5), synthetic refunds blocked (A5), then the rest.
@@ -969,6 +973,10 @@ G tasks are Phase 7. H tasks are Phase 8. Tasks marked **(user)** are done by th
 **Process:** the user runs each block's steps and reports pass or fail. The coding model marks each block **verified** or **failed** in place, with the date. For each failure, it writes a minimal fix with a regression test, runs `pnpm verify` (plus `pnpm build` for web changes), and the user re-runs the check.
 
 **Acceptance:** no demo-path check left as failed. Checks not run stay "awaiting user verification" and are listed as limitations in F1's Devpost text.
+
+**Status: complete (user-confirmed 2026-11-10).** On the hosted demo, using the shared judge accounts, all three priority blocks passed: role isolation (B1, B2, B4: `/auth/me` roles, cross-portal redirects, CA 401 on `/api/profile`, 404 for unknown or malformed `client`, 401 after sign-out); CA view-only (B5: only the allowed controls, CA `POST /api/close` → 401); synthetic refunds blocked (A5: no refund control, direct proposal → 422 `synthetic_payment`, no approval created). Stop sharing/managing was deliberately not exercised on the shared judge links; automated tests cover it. Every other block marked "awaiting user verification" above (mainly narrow-width, keyboard and full share/unshare cycles) was not run and is listed as a limitation in [submission](submission.md).
+
+H1 fix (2026-11-10): the user found that a failing invoice PDF link (`/api/files/:token`) showed raw JSON in the browser. The route now redirects to a public `/pdf-unavailable` page in the house card style, with separate "not found" and "temporarily unavailable" (`?reason=storage`) messages. Page URLs already had `not-found.tsx` and `error.tsx`; other `/api/*` responses stay JSON because the app and PayPal webhooks parse them. Tests: web page test 1/1; invoice route integration 69/69, zero skips, on a disposable PostgreSQL 17 `niryat_test` container (removed afterwards).
 
 ### H2. Video, compliance checklist and submission (P0, Phase 8, user)
 

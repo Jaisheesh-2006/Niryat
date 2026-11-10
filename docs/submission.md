@@ -1,6 +1,6 @@
 # Niryat submission materials
 
-Prepared 2026-11-06 for F1. Copy is based on shipped code and recorded local evidence. Hosted rehearsal, video and submission are pending. Choose **AG Studio** as the single sponsor-prize target. The [five-scene video script](PLAN.md#16-demo-script-3-minutes) runs 2:55.
+Prepared 2026-11-06 for F1. Copy is based on shipped code and recorded local evidence. Hosted rehearsal passed (G5, user-confirmed 2026-11-10); video and submission are pending. Choose **AG Studio** as the single sponsor-prize target. The [five-scene video script](PLAN.md#16-demo-script-3-minutes) runs 2:55.
 
 ## Devpost draft
 
@@ -38,9 +38,9 @@ An agent needs narrow tools and visible evidence. Niryat separates investigation
 - Seeded history and FIRA payment-proof samples are synthetic. Real PayPal India FIRA layouts remain unverified. Shared judge accounts are mutable; never enter personal data. Seed reruns preserve edits and original LUT dates.
 - Rules cite primary sources but have not been reviewed by a CA. This is not tax or legal advice, and nothing is filed automatically.
 - Invoice PDFs are not digitally signed and do not convert foreign amounts to INR. GSTR-1 CSV import acceptance is blocked before validation in the offline tool; it is not an import pass.
-- Hosted payment/refund webhooks, the last-sync notice and close recovery across an API restart passed user checks (2026-11-09). Measured polling freshness and the five-scene demo are awaiting user verification. New CA sharing/role isolation, view-only controls, synthetic-refund guards and new dashboard/calendar interactions also await their user checks. Existing local acceptance does not establish hosted behavior.
+- On the hosted demo, user checks passed for payment, refund and dispute webhooks, missed-event recovery by the 30-minute light sync, the last-sync notice, close recovery across an API restart, the five-scene demo, role isolation, CA view-only controls and synthetic-refund guards (2026-11-09 to 2026-11-10). Not yet checked by hand: narrow-screen and keyboard use, and the full CA share/unshare cycle on the hosted demo (covered by automated tests).
 - AG Studio and Bryntum licence coverage and the December AI budget are operator-confirmed through 2026-12-15 (V15). The AI cap uses stored cost estimates and is not a hard provider-billing guarantee.
-- Sandbox sends no dispute webhook at inquiry stage; disputes arrive by polling, and the hosted recovery time is unmeasured. Claude's hold advice is advisory; a prior simulated-date run used an imprecise “payment today” explanation. Do not treat that as proof of payment in progress.
+- A missed dispute or payment is recovered by polling within the 30-minute target; the exact hosted delay was not recorded. Claude's hold advice is advisory; a prior simulated-date run used an imprecise “payment today” explanation. Do not treat that as proof of payment in progress.
 
 These are the current limits; update only from actual user evidence in [verification](verification.md), [Phase 7](build-flow.md#phase-7-judge-mode-hosting-and-freeze-nov-58) and [IMPROVEMENTS](IMPROVEMENTS.md) before copying to Devpost. The hosted demo URL, public repository URL and public video URL must be supplied after those resources exist; none is claimed here.
 

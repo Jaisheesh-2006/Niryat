@@ -148,7 +148,7 @@ The user's hosted G5 rehearsal found that the dashboard didn't match the design 
 - `globals.css` resets margins, button minimum height and shadow inside `.dashboard-studio`. The selectors use zero-specificity `:where()`, so Studio's own rules still win ties.
 - The shared `theme` in `apps/web/src/components/Dashboard.tsx` now uses design tokens for base font size, borders, radii, widget padding and widget title size and weight. The extra outer wrapper border is removed. The theme is shared, so the freelancer `/dashboard` and the CA `/ca` both change.
 
-Web typecheck, tests (570/570) and `pnpm build` (9/9 tasks) pass. The browser check is awaiting user verification: after redeploying, open `/dashboard` as Ananya and `/ca` as the CA. Expect the AI Assistant header controls inside the header, widget titles at a readable size without truncation, and Studio panels using Niryat's border colour and radii.
+Web typecheck, tests (570/570) and `pnpm build` (9/9 tasks) pass. The browser check passed as part of the user-confirmed G5 rehearsal (2026-11-10): after redeploying, open `/dashboard` as Ananya and `/ca` as the CA. Expect the AI Assistant header controls inside the header, widget titles at a readable size without truncation, and Studio panels using Niryat's border colour and radii.
 
 ## Hosted review fixes: panels and CA sort (2026-11-10)
 

@@ -229,7 +229,7 @@ Every feature below is **required for v1**. Build them in this order; each one l
 
 ### 10. GSTR-1 export data
 
-**What:** Generate a WOPAY Table 6A CSV for LUT-covered invoices in a selected month/quarter, plus invoice/refund/net reconciliation per currency. Refund credit-note data is listed for Table 9B outside this file. INR rates and applicable GST percentages are supplied per invoice, never inferred or stored. Offline-tool import acceptance remains open; see [spec 10](specs/10-gstr1-export.md).
+**What:** Generate a WOPAY Table 6A CSV for LUT-covered invoices in a selected month/quarter, plus invoice/refund/net reconciliation per currency. Refund credit-note data is listed for Table 9B outside this file. INR rates and applicable GST percentages are supplied per invoice, never inferred or stored. Offline-tool import acceptance is an accepted limitation (2026-11-10); see [spec 10](specs/10-gstr1-export.md).
 
 **How:** rules engine only, using PayPal invoice and refund data.
 
@@ -487,7 +487,7 @@ The rules engine must have unit tests for every rule in [section 9](#9-rules-eng
 - **Hosted demo on Render** with a **"Try as judge"** button that logs into a pre-seeded profile, kept running until judging ends on **Dec 15**.
 - **Sandbox test credentials only** (India seller, US buyer) are listed here so judges can pay a real sandbox invoice, issue a refund and open a dispute end to end. No real keys are published.
 - **AI usage is capped** (`AI_MONTHLY_BUDGET_USD`) and rate-limited so the demo can't run out of budget during judging.
-- **Synthetic FIRA sample:** the demo uses a synthetic sample, labelled on screen. Real-FIRA parser verification remains open.
+- **Synthetic FIRA sample:** the demo uses a synthetic sample, labelled on screen. No real FIRA could be obtained, so real-FIRA parsing is an accepted limitation (2026-11-10).
 - This README documents setup, the AI tools used and how, and APIMatic usage. The repository includes an open-source **LICENSE** file visible in the repo's About section, as the hackathon rules require.
 
 ---
@@ -567,7 +567,7 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 | AI budget runs out during judging                           | Monthly budget cap and rate limits                                                             |
 | Keys leaked in the public repo                              | `.env` never committed; only sandbox test credentials published                                |
 | Judges unfamiliar with Indian GST                           | Lead with rupee amounts at risk; one simple explainer graphic                                  |
-| No API for the GST portal or FIRA downloads                 | Generate official upload files; FIRA via file upload — real data, not simulated                |
+| No API for the GST portal or FIRA downloads                 | Generate official upload files; FIRA via file upload (demo uses a synthetic FIRA)              |
 | Sensitive data (GSTIN, PAN, income)                         | Encryption at rest, minimal permissions, no training on user data                              |
 | Scope creep                                                 | Feature freeze on Nov 8; stretch features only after 1–13 are polished                         |
 
@@ -595,7 +595,7 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 - [ ] Whether PayPal India requires any per-transaction export details
 
 **Other:**
-- [ ] Your own PayPal India FIRA obtained and redacted
+- [ ] Your own PayPal India FIRA obtained and redacted (not obtained; accepted limitation 2026-11-10, synthetic fixture used)
 - [ ] Render paid Postgres set up; credits cover hosting to Dec 15
 
 ---

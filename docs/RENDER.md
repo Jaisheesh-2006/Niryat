@@ -33,7 +33,7 @@ Niryat keeps an Indian freelancer's export-compliance records in step with their
 ### What the user has verified on the hosted deployment
 
 - **G3, all smoke checks passed** (2026-11-06): migrations and the judge seed, the `monthlyClose` registration, all three cron schedules, health and judge-mode responses through both services, the demo sign-in buttons and `X-Frame-Options: DENY` ([V11](verification.md#v11-hosted-resources)).
-- **G4, reliability** (2026-11-09): PayPal invoice-paid and invoice-refunded webhooks reached the API through the web proxy, passed signature checks and were recorded once, including when resent. The last-sync notice worked after a forced light-sync failure. A Workflows close survived an API restart with no duplicates. The 30-minute freshness target has not been measured.
+- **G4, reliability** (2026-11-09): PayPal invoice-paid and invoice-refunded webhooks reached the API through the web proxy, passed signature checks and were recorded once, including when resent. The last-sync notice worked after a forced light-sync failure. A Workflows close survived an API restart with no duplicates. On 2026-11-10 the user confirmed the dispute webhook and that `niryat-sync-light` recovered a missed event within the 30-minute target; the measured delay was not supplied.
 
 ### Tests
 
@@ -49,7 +49,7 @@ Niryat keeps an Indian freelancer's export-compliance records in step with their
 
 Each entry below records a dated change, its verification and any checks still open.
 
-Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. G3 hosted setup/smoke checks are user-confirmed on 2026-11-06; G4 reliability and G5 rehearsal remain pending.
+Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0), including A2's forwarded-IP review fix. Later tasks are dated separately below. G3 hosted setup/smoke checks are user-confirmed on 2026-11-06; G4 reliability results are recorded below; the G5 hosted rehearsal is user-confirmed on 2026-11-10.
 
 ## Postgres disk reduced to 1 GB (2026-11-06)
 
@@ -291,7 +291,7 @@ Final C4 verify27/build9 passed (45.699s/4.027s); task-created --rm niryat-c4-te
 
 User-reported on the redeployed services:
 - **Webhooks:** the invoice-paid and invoice-refunded webhooks reached `niryat-api` through the `niryat-web` proxy, passed signature verification and recorded once, including on a resent duplicate.
-- **Light sync freshness (check 2): not run.** The 30-minute recovery target remains unmeasured.
+- **Light sync freshness (check 2): pass (user-confirmed 2026-11-10).** A missed event was recovered automatically within the 30-minute target; the measured delay was not supplied. The dispute webhook (rest of check 1) also passed on that date.
 - **Last-sync notice (check 3): pass.** A forced failed `niryat-sync-light` run left the last-success time unchanged and showed a warning; the next good run cleared it.
 - **Durable close (check 4): pass.** After restarting `niryat-api`, the Workflows `monthlyClose` run completed with no duplicates.
 
@@ -314,4 +314,4 @@ Cost is still bounded by the deployment-wide monthly AI budget and the one-turn-
 
 Messages: every rate-limited form goes through `sendJson` in `apps/web/src/lib/forms.ts`. The dashboard adapter uses the same message function. Both now show "Rate limit reached: too many requests in a short time. Wait N minute(s), then try again. Nothing was sent to PayPal.", with N taken from `Retry-After`. Separately, the dashboard's `too_large` now says the conversation is too long and to click New, instead of "Try rephrasing".
 
-Tests: `rate-limit.test.ts` now derives every boundary from `RATE_LIMITS` and covers the separate dashboard budget. `forms.test.ts` covers the message for a 60-second, a 3600-second and a missing `Retry-After`. `dashboard-adapter.test.ts` covers 429 and 413. The hosted re-check of scene 4 after redeploying is awaiting user verification.
+Tests: `rate-limit.test.ts` now derives every boundary from `RATE_LIMITS` and covers the separate dashboard budget. `forms.test.ts` covers the message for a 60-second, a 3600-second and a missing `Retry-After`. `dashboard-adapter.test.ts` covers 429 and 413. The hosted re-check of scene 4 after redeploying passed as part of the user-confirmed G5 rehearsal (2026-11-10).

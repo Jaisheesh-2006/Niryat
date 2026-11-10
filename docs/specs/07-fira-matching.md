@@ -1,6 +1,6 @@
 # 7. FIRA matching
 
-Status: built (2026-10-30) for the synthetic fixture; real PayPal India FIRA layout acceptance pending; AI extraction deferred to Phase 5. Source: [PLAN section 5](../PLAN.md#5-v1-features-in-order-of-importance).
+Status: built (2026-10-30) for the synthetic fixture. Real PayPal India FIRA acceptance is an **accepted limitation (2026-11-10)**: no real or official specimen could be obtained, so the synthetic fixture is the demo and test sample. AI extraction deferred to Phase 5. Source: [PLAN section 5](../PLAN.md#5-v1-features-in-order-of-importance).
 
 ## Goal
 
@@ -35,7 +35,7 @@ Unreadable or duplicate PDFs; fee/FX/date gaps; multiple candidate payments; con
 
 ## Limitations
 
-The deterministic parser fits the synthetic layout recorded in V07, not a verified PayPal India FIRA layout. The real-document criterion remains open until a consented, redacted real FIRA or an official anonymised specimen is inspected and parsed. Do not present the synthetic fixture as bank-issued proof.
+The deterministic parser fits the synthetic layout recorded in V07, not a verified PayPal India FIRA layout. On 2026-11-10 the user reported that no consented, redacted real FIRA or official anonymised specimen could be obtained. The real-document criterion is therefore an accepted limitation for the hackathon: it stays unticked, and real uploads in a different layout are rejected by the parser rather than misread. Do not present the synthetic fixture as bank-issued proof.
 
 Matching against sandbox data uses the D17 demo seed: it mirrors the uploaded lines into a fresh account's ledger, except for the flagged final line. This demonstrates matching behaviour, not independent reconciliation of real remittances. Demo invoices consume that account's invoice numbers. AI extraction and support for other layouts remain deferred to Phase 5.
 

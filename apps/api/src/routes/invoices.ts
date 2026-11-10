@@ -214,21 +214,23 @@ export function invoiceRoutes(deps: AppDeps): Hono {
   }
 
   routes.get("/files/:token", async (c) => {
+    // People open this link in a browser (PayPal invoice note, invoices page), so failures go to a page.
+    const unavailable = `${deps.publicAppUrl ?? "http://localhost:3000"}/pdf-unavailable`;
     const token = z
       .string()
       .regex(/^[A-Za-z0-9_-]{43}$/)
       .safeParse(c.req.param("token"));
-    if (!token.success) return c.json({ error: "not_found" }, 404);
+    if (!token.success) return c.redirect(unavailable, 302);
     const pdf = await findPdfByToken(deps.db, token.data);
-    if (!pdf) return c.json({ error: "not_found" }, 404);
-    if (!deps.files) return c.json({ error: "file_storage_unavailable" }, 503);
+    if (!pdf) return c.redirect(unavailable, 302);
+    if (!deps.files) return c.redirect(`${unavailable}?reason=storage`, 302);
     let bytes: Uint8Array | undefined;
     try {
       bytes = await deps.files.get(pdfKey(pdf.userId, pdf.invoiceId));
     } catch {
-      return c.json({ error: "file_storage_unavailable" }, 503);
+      return c.redirect(`${unavailable}?reason=storage`, 302);
     }
-    if (!bytes) return c.json({ error: "not_found" }, 404);
+    if (!bytes) return c.redirect(unavailable, 302);
     return c.body(new Uint8Array(bytes), 200, {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="${pdf.number.replaceAll("/", "-")}.pdf"`,

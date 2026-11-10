@@ -1,6 +1,6 @@
 # 10. GSTR-1 export data
 
-Status: implemented; reconciliation and registration gating user-confirmed (2026-11-01). Offline-tool import remains blocked before CSV validation. Source: [PLAN section 5](../PLAN.md#5-v1-features-in-order-of-importance).
+Status: implemented; reconciliation and registration gating user-confirmed (2026-11-01). Offline-tool import is an **accepted limitation (2026-11-10)**: the tool blocked setup before CSV validation, so criterion 1 stays unticked. Source: [PLAN section 5](../PLAN.md#5-v1-features-in-order-of-importance).
 
 ## Goal
 
@@ -22,7 +22,7 @@ As an Indian freelancer paid through PayPal, I want to prepare export data for m
 
 Only invoices covered by the profile's inclusive LUT dates enter the WOPAY file. Uncovered invoices are listed with an explanation. The user supplies each invoice's INR exchange rate and applicable IGST percentage separately; neither is inferred, fetched or stored. No IGST is charged in this file. Refunds reduce the separate reconciliation totals; credit-note data is listed for Table 9B, outside the CSV (U2–U3).
 
-P6-11: profile persistence, per-currency reconciliation and the not-registered view passed. Returns Offline Tool V3.2.4 rejected the synthetic GSTIN before import; December was also unavailable for the selected October–December quarter. The downloaded CSV was never parsed by the tool. Criterion 1 stays open; this is neither an import pass nor evidence that the CSV was rejected. See [V10](../verification.md#v10-gstr-1-format) and [P6-11 evidence](../verification.md#v16-phase-6-acceptance).
+P6-11: profile persistence, per-currency reconciliation and the not-registered view passed. Returns Offline Tool V3.2.4 rejected the synthetic GSTIN before import; December was also unavailable for the selected October–December quarter. The downloaded CSV was never parsed by the tool. This is neither an import pass nor evidence that the CSV was rejected. On 2026-11-10 the user closed it as an accepted limitation: criterion 1 stays unticked, and the CSV follows the V3.2.4 template headers but is not tool-validated. See [V10](../verification.md#v10-gstr-1-format) and [P6-11 evidence](../verification.md#v16-phase-6-acceptance).
 
 ## Edge cases
 

@@ -995,22 +995,24 @@ describe.skipIf(!testDatabaseUrl)("invoice routes", () => {
 
   it.each(["bad", "a".repeat(43)])("rejects an invalid or unknown PDF token: %s", async (token) => {
     const response = await app.request(`/files/${token}`);
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: "not_found" });
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toMatch(/\/pdf-unavailable$/);
     expect(files.get).not.toHaveBeenCalled();
   });
 
   it("handles missing objects and unavailable storage without exposing storage errors", async () => {
     const { cookie, input } = await setup();
     const invoice = await issue(cookie, input);
+    const location = async () => (await app.request(filePath(invoice))).headers.get("location");
     objects.clear();
-    expect((await app.request(filePath(invoice))).status).toBe(404);
+    expect(await location()).toMatch(/\/pdf-unavailable$/);
     vi.mocked(files.get).mockRejectedValueOnce(new Error("private storage detail"));
     const response = await app.request(filePath(invoice));
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "file_storage_unavailable" });
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toMatch(/\/pdf-unavailable\?reason=storage$/);
+    expect(await response.text()).not.toContain("private storage detail");
     delete deps.files;
-    expect((await app.request(filePath(invoice))).status).toBe(503);
+    expect(await location()).toMatch(/\/pdf-unavailable\?reason=storage$/);
     expect((await post(cookie, "/invoices", input)).status).toBe(503);
     expect(await list(cookie)).toHaveLength(1);
   });

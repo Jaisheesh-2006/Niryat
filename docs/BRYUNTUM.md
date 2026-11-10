@@ -226,6 +226,6 @@ The user's hosted rehearsal of scene 4 found no client list in the `/ca/calendar
 
 The resource filter is a default sidebar item, so the sidebar config is now just `{ collapsed: false }`. This shared component also renders the freelancer `/calendar` sidebar, so its category list (GST, Income tax, RBI, PayPal, My tasks) is fixed by the same change. `CalendarView.test.tsx` had pinned the faulty value and now asserts the default is kept.
 
-Browser check awaiting user verification after redeploy:
+Browser check after redeploy, passed as part of the user-confirmed G5 rehearsal (2026-11-10):
 - On `/ca/calendar`, the sidebar under "Filter events" lists the three clients with checkboxes. Unticking all but Ananya Rao leaves only her events.
 - On the freelancer `/calendar`, the sidebar lists the categories, and unticking one hides its events.

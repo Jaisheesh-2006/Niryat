@@ -4,7 +4,7 @@ An AI agent for Indian freelancers paid from abroad through PayPal.
 It turns invoices, payments, refunds and disputes into export-compliance records for CA review. Every PayPal write requires user approval; legal/numeric logic belongs to sourced rules.
 
 Built for the PayPal AI Hackathon, due November 12, 2026.
-**Current status:** freelancer/CA views, two dashboards, multi-client calendar, sync freshness, durable-close dispatch and judge mode are implemented; [submission copy and video script](docs/submission.md) are ready for rehearsal. Hosted acceptance, real-FIRA/refund evidence, and Table 6A import remain open in [build flow](docs/build-flow.md) and [verification](docs/verification.md). AG Studio and Bryntum licence coverage through judging is user-confirmed.
+**Current status:** freelancer/CA views, two dashboards, multi-client calendar, sync freshness, durable-close dispatch and judge mode are implemented; [submission copy and video script](docs/submission.md) are ready for rehearsal. Real-FIRA parsing and Table 6A offline-tool import are accepted limitations; remaining checks are in [build flow](docs/build-flow.md) and [verification](docs/verification.md). AG Studio and Bryntum licence coverage through judging is user-confirmed.
 
 ## PayPal and AI
 
@@ -12,7 +12,7 @@ Niryat uses the PayPal Developer Platform for approved Invoicing v2 invoice send
 
 The Claude Agent SDK powers source-quoted invoice extraction and a monthly-close agent that investigates the ledger and PayPal, prioritises work, advises send/hold and drafts tasks. Code validates every draft and computes every figure. Claude has no PayPal write or approval tools; the user confirms forms and approves actions. A shared AI budget bounds spend, and deterministic proposals remain available when AI is unavailable. See [ADR 0005](docs/decisions/0005-agent-boundary.md).
 
-The demo FIRA is a **synthetic sample**, labelled on screen. Niryat parses and matches it to PayPal payments without AI; real-FIRA parser verification remains open.
+The demo FIRA is a **synthetic sample**, labelled on screen. Niryat parses and matches it to PayPal payments without AI. No real FIRA could be obtained, so real-FIRA parsing is a stated limitation.
 
 ## Setup
 
