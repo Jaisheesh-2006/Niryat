@@ -47,9 +47,12 @@ function* eventsFor(response: AgLlmResponse): Generator<AgAiEvent> {
 
 // Claude is reached only through Niryat's API proxy, so the key never reaches the browser (D11).
 export function createDashboardAdapter(fetcher: typeof fetch): AgLlmAdapter {
+  // The API runs one turn per user at a time (409 dashboard_busy), but AG Studio starts parallel
+  // delegations together, so turns are sent one after another. `complete` never rejects.
+  let queue: Promise<unknown> = Promise.resolve();
   return {
     executeTurn(request, options) {
-      const complete = (async (): Promise<AgLlmResponse> => {
+      const complete = queue.then(async (): Promise<AgLlmResponse> => {
         try {
           const response = await fetcher("/api/dashboard/turn", {
             method: "POST",
@@ -74,7 +77,8 @@ export function createDashboardAdapter(fetcher: typeof fetch): AgLlmAdapter {
         } catch {
           return ended(options?.signal?.aborted ? "cancelled" : "failed", "request_failed");
         }
-      })();
+      });
+      queue = complete;
       // shortcut: the API replies in one piece, so events are replayed after it arrives; stream server-side if latency matters.
       return {
         complete,

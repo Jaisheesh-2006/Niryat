@@ -58,12 +58,14 @@ function RunwayWidget(params: AgWidgetParams<RunwayWidgetState>) {
         RBI deadline runway
       </h3>
       <ol className="runway-list">
-        {bars?.map((bar) => {
+        {bars?.map((bar, index) => {
           const status = bar.overdue
             ? `${-bar.days} ${bar.days === -1 ? "day" : "days"} overdue`
             : `${bar.days} ${bar.days === 1 ? "day" : "days"} left`;
           return (
-            <li key={`${bar.label}-${bar.href ?? ""}`} className="runway-row">
+            // Invoice numbers repeat across freelancers and rows hold no state, so position is the key.
+            // biome-ignore lint/suspicious/noArrayIndexKey: see the line above.
+            <li key={index} className="runway-row">
               {bar.href ? (
                 <a className="runway-label mono" href={bar.href}>
                   {bar.label}
@@ -132,7 +134,7 @@ export const runwayWidget: AgWidgetDefinition<typeof RUNWAY_WIDGET_TYPE, RunwayW
     description:
       "Niryat's RBI deadline runway: one bar per unpaid export invoice showing the days left until its RBI payment deadline. Overdue invoices are full red bars.",
     usage:
-      "Use to show unpaid invoices against their RBI deadlines. Not for paid invoices, money totals or other dates.",
+      "Use to show one freelancer's unpaid invoices against their RBI deadlines. Not for a portfolio of several freelancers (invoice numbers repeat across them), paid invoices, money totals or other dates.",
     configuration:
       "Map label to the invoice number, days to Days to RBI deadline and, when available, link to Invoice ID, all from the same invoices source. Add a widget filter so only invoices whose Unpaid amount is above zero are shown.",
   },

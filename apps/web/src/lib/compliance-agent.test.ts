@@ -47,6 +47,8 @@ describe("compliance reviewer agent", () => {
       expect(text).not.toMatch(/\d{2,}/);
     }
     expect(freelancer).toMatch(/rbi-runway widget/);
+    // The runway shows invoice numbers only, which repeat across a CA's freelancers.
+    expect(ca).not.toMatch(/rbi-runway/);
     expect(ca).toMatch(/Group every check by Freelancer \(freelancerId\)/);
     expect(freelancer).not.toMatch(/freelancerId/);
   });

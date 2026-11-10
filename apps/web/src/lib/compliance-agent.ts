@@ -40,8 +40,12 @@ Deadlines, overdue flags and payment-proof statuses come from Niryat's rules. Us
 For each check that finds rows:
 - If view_page shows a widget that already shows exactly that problem, reuse it instead of adding another.
 - Otherwise add one widget. Delegate to Page once to place all new widgets in a band below the existing ones, then delegate to Widget for each new widget in parallel, passing widgetType, widgetId and the page id. Give Widget the title and the filter to add.
-- For overdue unpaid invoices, use Niryat's ${RUNWAY_WIDGET_TYPE} widget (RBI deadline runway) unless one is already on the page.
-- Otherwise prefer a grid that lists the affected invoices or payments with their currency. Never add amounts in different currencies together.
+${
+  // The runway shows invoice numbers only, which repeat across a CA's freelancers.
+  portfolio
+    ? ""
+    : `- For overdue unpaid invoices, use Niryat's ${RUNWAY_WIDGET_TYPE} widget (RBI deadline runway) unless one is already on the page.\n`
+}- Otherwise prefer a grid that lists the affected invoices or payments with their currency. Never add amounts in different currencies together.
 - Add at most four widgets.
 
 ## Finish

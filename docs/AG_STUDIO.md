@@ -251,3 +251,22 @@ Awaiting user verification after deploy (browser):
 - Expect several paid turns (USD 0.05 each) per review.
 
 The live Claude answer was not exercised.
+
+## Review fixes: one turn at a time, no runway on the CA portfolio (2026-11-10)
+
+A code review of the custom agent and widget found two problems:
+- **Parallel turns were rejected.** The API runs one dashboard turn per user at a time and answers others with 409 `dashboard_busy`. AG Studio starts every tool call in one reply together (`executeCalls`), so a compliance review that handed work to several Widget agents at once lost all but one, leaving empty widgets. The built-in lead's "parallelise Widget delegations" rule could do the same.
+- **Runway on `/ca`.** Invoice numbers are unique only per freelancer (`unique(userId, number)`). On the CA portfolio, the runway could merge two freelancers' invoices into one bar when their number and days match, or give two rows the same React key.
+
+Changes:
+- [dashboard-adapter.ts](../apps/web/src/lib/dashboard-adapter.ts) sends turns one after another through a per-adapter promise chain. A failed or cancelled turn never blocks the next, because `complete` never rejects.
+- [compliance-agent.ts](../apps/web/src/lib/compliance-agent.ts) points only the freelancer reviewer at the runway.
+- The runway's AI `usage` says it is not for a portfolio of several freelancers.
+- [RunwayWidget.tsx](../apps/web/src/components/RunwayWidget.tsx) keys rows by position. The rows hold no state.
+
+Verification:
+- New adapter test: two turns sent together, where the second fetch starts only after the first, failed one finishes.
+- Compliance test: the CA instructions do not mention the runway.
+- Web tests 589/589; web typecheck passed; Biome on `apps packages docs scripts` passed; `turbo run typecheck lint test` 27/27; `pnpm build` 9/9.
+
+Awaiting user verification after deploy: as Ananya, ask "Check my records for compliance problems". Every widget the reviewer adds should be filled in, with no "Claude is still answering your previous question" step in the chat. Parallel steps now run one after another, so a review takes longer.

@@ -48,6 +48,24 @@ async function events(stream: AsyncIterable<AgAiEvent>) {
 }
 
 describe("createDashboardAdapter", () => {
+  it("sends parallel turns one at a time, because the API rejects a second running turn", async () => {
+    let release: (response: Response) => void = () => undefined;
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementationOnce(() => new Promise((resolve) => (release = resolve)))
+      .mockImplementationOnce(async () => new Response(JSON.stringify(turn)));
+    const adapter = createDashboardAdapter(fetcher);
+    const first = adapter.executeTurn(request);
+    const second = adapter.executeTurn(request);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    // A failed first turn still lets the next one through.
+    release(new Response(JSON.stringify({ error: "ai_failed" }), { status: 502 }));
+    expect(await first.complete).toMatchObject({ status: "failed" });
+    expect(await second.complete).toEqual(turn);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
   it("posts the turn to the API proxy, emits AG events and resolves complete", async () => {
     const fetcher = respond(turn);
     const signal = new AbortController().signal;
