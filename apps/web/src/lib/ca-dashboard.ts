@@ -1,6 +1,6 @@
 import type { CaDashboard } from "@niryat/shared";
 import type { AgDataSourcesDefinition, AgReportState } from "ag-studio";
-import { DASHBOARD_PANELS, dashboardSources } from "./dashboard";
+import { crossFiltered, DASHBOARD_PANELS, dashboardSources } from "./dashboard";
 
 export const CA_DASHBOARD_PROMPT_STARTERS = [
   "Which clients are missing payment proof?",
@@ -27,9 +27,8 @@ export function caDashboardSources(dashboard: CaDashboard): AgDataSourcesDefinit
       monthCurrency: `${row.month} ${row.currency}`,
     })),
   };
-  const sources = dashboardSources(ledger).sources.filter((source) =>
-    ["payments", "invoices"].includes(source.id),
-  );
+  const base = dashboardSources(ledger);
+  const sources = base.sources.filter((source) => ["payments", "invoices"].includes(source.id));
   const unpaid = dashboardSources({
     ...ledger,
     payments: [],
@@ -100,12 +99,19 @@ export function caDashboardSources(dashboard: CaDashboard): AgDataSourcesDefinit
       target: { tableId, fieldId: "freelancerId" },
       type: "one-to-many" as const,
     })),
+    // The fee-rate expressions read only payments fields, which the CA payments source keeps.
+    ...(base.expressions ? { expressions: base.expressions } : {}),
   };
 }
 
-const title = (text: string) => ({ title: { enabled: true, text } });
-
 export function caDashboardInitialState(financialYear: string): AgReportState {
+  const currentYearPayments = [
+    { field: { id: "payments.kind" }, model: { operator: "isIn" as const, value: ["payment"] } },
+    {
+      field: { id: "payments.financialYear" },
+      model: { operator: "isIn" as const, value: [financialYear] },
+    },
+  ];
   return {
     panels: DASHBOARD_PANELS,
     pages: [
@@ -132,7 +138,7 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
             },
             // AG Studio rejects a grid sort with more than one field.
             sort: [{ field: { id: "clients.overdueCount" }, direction: "desc" }],
-            format: title("Clients"),
+            format: crossFiltered("Clients"),
           },
           fees: {
             type: "bar-chart-grouped",
@@ -142,7 +148,7 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
               legendKey: [{ id: "payments.currency" }],
               tooltipKey: [],
             },
-            format: title(`PayPal fees by freelancer and currency (${financialYear})`),
+            format: crossFiltered(`PayPal fees by freelancer and currency (${financialYear})`),
           },
           received: {
             type: "column-chart-stacked",
@@ -153,7 +159,7 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
               tooltipKey: [],
             },
             sort: [{ field: { id: "payments.monthCurrency" }, direction: "asc" }],
-            format: title("Received per month by freelancer and currency"),
+            format: crossFiltered("Received per month by freelancer and currency"),
           },
           unpaid: {
             type: "grid",
@@ -169,7 +175,7 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
               ].map((field) => ({ id: `unpaid.${field}` })),
             },
             sort: [{ field: { id: "unpaid.deadline" }, direction: "asc" }],
-            format: title("Unpaid invoices nearest to their RBI deadline (top 10)"),
+            format: crossFiltered("Unpaid invoices nearest to their RBI deadline (top 10)"),
           },
           fira: {
             type: "bar-chart-grouped",
@@ -178,7 +184,26 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
               valueKey: [{ id: "clients.firaMissingCount", aggregation: "sum" }],
               tooltipKey: [],
             },
-            format: title("Missing payment proof by freelancer"),
+            format: crossFiltered("Missing payment proof by freelancer"),
+          },
+          // Currencies are pivot columns with no total column, so different currencies are never added together.
+          pivot: {
+            type: "pivot-grid",
+            dataMapping: {
+              rows: [{ id: "payments.freelancerId" }, { id: "payments.month" }],
+              columns: [{ id: "payments.currency" }],
+              values: [
+                { id: "payments.gross", aggregation: "sum" },
+                { id: "payments.fee", aggregation: "sum" },
+                { id: "effectiveFeeRate" },
+              ],
+            },
+            format: {
+              ...crossFiltered(
+                `Payments, fees and fee rate by freelancer and month (${financialYear})`,
+              ),
+              style: { totalColumns: false },
+            },
           },
         },
         widgetLayout: {
@@ -188,16 +213,12 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
           received: { xTrack: 12, yTrack: 20, xSpan: 12, ySpan: 12 },
           unpaid: { xTrack: 0, yTrack: 32, xSpan: 24, ySpan: 12 },
           fira: { xTrack: 0, yTrack: 44, xSpan: 24, ySpan: 12 },
+          pivot: { xTrack: 0, yTrack: 56, xSpan: 24, ySpan: 14 },
         },
         filter: {
           widget: {
-            fees: [
-              { field: { id: "payments.kind" }, model: { operator: "isIn", value: ["payment"] } },
-              {
-                field: { id: "payments.financialYear" },
-                model: { operator: "isIn", value: [financialYear] },
-              },
-            ],
+            fees: currentYearPayments,
+            pivot: currentYearPayments,
             received: [
               { field: { id: "payments.kind" }, model: { operator: "isIn", value: ["payment"] } },
             ],

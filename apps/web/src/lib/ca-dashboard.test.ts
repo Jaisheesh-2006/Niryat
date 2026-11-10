@@ -69,13 +69,12 @@ const firstInvoice = dashboard.invoices[0];
 const firstClient = dashboard.portfolio[0];
 if (!firstInvoice || !firstClient) throw new Error("Expected dashboard fixtures");
 
+// Every `id` below widgets or filters is a field reference (source or expression field).
 function fieldReferences(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap(fieldReferences);
   if (typeof value !== "object" || value === null) return [];
   return Object.entries(value).flatMap(([key, child]) =>
-    key === "id" && typeof child === "string" && child.includes(".")
-      ? [child]
-      : fieldReferences(child),
+    key === "id" && typeof child === "string" ? [child] : fieldReferences(child),
   );
 }
 
@@ -88,12 +87,13 @@ describe("CA portfolio sources and widgets", () => {
   const state = caDashboardInitialState(dashboard.financialYear);
   const [page] = state.pages ?? [];
 
-  it("places all five widgets and the freelancer filter, and references only existing fields", () => {
+  it("places all six widgets and the freelancer filter, and references only existing fields", () => {
     expect(Object.keys(page?.widgets ?? {}).sort()).toEqual([
       "clients",
       "fees",
       "fira",
       "freelancer",
+      "pivot",
       "received",
       "unpaid",
     ]);
@@ -110,8 +110,10 @@ describe("CA portfolio sources and widgets", () => {
     for (const relation of caDashboardSources(dashboard).relationships ?? [])
       for (const end of [relation.source, relation.target])
         expect(known).toContain("fieldId" in end ? `${end.tableId}.${end.fieldId}` : "calendar");
-    const references = fieldReferences(state);
-    expect(references.length).toBeGreaterThan(0);
+    for (const expression of caDashboardSources(dashboard).expressions ?? [])
+      known.add(expression.id);
+    const references = fieldReferences([page?.widgets, page?.filter]);
+    expect(references).toContain("effectiveFeeRate");
     expect(references.filter((id) => !known.has(id))).toEqual([]);
     for (const source of sources) {
       const fields = (source.fields ?? []).map((field) => field.id).sort();
@@ -181,6 +183,16 @@ describe("CA portfolio sources and widgets", () => {
         categoryKey: [{ id: "payments.monthCurrency" }],
         legendKey: [{ id: "payments.freelancerId" }],
       },
+    });
+    // The pivot puts each currency in its own column and adds no total column across them.
+    expect(page?.filter?.widget?.pivot).toEqual(page?.filter?.widget?.fees);
+    expect(page?.widgets?.pivot).toMatchObject({
+      type: "pivot-grid",
+      dataMapping: {
+        rows: [{ id: "payments.freelancerId" }, { id: "payments.month" }],
+        columns: [{ id: "payments.currency" }],
+      },
+      format: { crossFilter: "filter", style: { totalColumns: false } },
     });
     expect(caDashboardInitialState("2027-28").pages?.[0]?.filter?.widget?.fees).toContainEqual({
       field: { id: "payments.financialYear" },

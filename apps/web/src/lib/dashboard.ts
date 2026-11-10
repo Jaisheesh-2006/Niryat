@@ -113,10 +113,48 @@ export function dashboardSources(dashboard: Dashboard): AgDataSourcesDefinition 
       target: { tableId: "invoices", fieldId: "number" },
       type: "many-to-one" as const,
     })),
+    // Display ratio only (D3). Refunds carry no fee, so the base counts payments alone.
+    expressions: [
+      {
+        id: "feeBase",
+        name: "Payment amount before fees (payments only)",
+        hide: true,
+        isMeasure: false,
+        expression: {
+          operator: "if",
+          inputs: [
+            {
+              operator: "equals",
+              inputs: [{ id: "payments.kind" }, { type: "string", value: "payment" }],
+            },
+            { id: "payments.gross" },
+            { type: "number", value: null },
+          ],
+        },
+      },
+      {
+        id: "effectiveFeeRate",
+        name: "Effective PayPal fee rate",
+        description:
+          "PayPal fees as a share of payments received, refunds excluded. Group by currency; never compare a rate across mixed currencies.",
+        format: "percentageFormat",
+        formatOptions: { format: "#,##0.0%" },
+        isMeasure: true,
+        expression: {
+          operator: "divide",
+          inputs: [
+            { id: "payments.fee", aggregation: "sum" },
+            { id: "feeBase", aggregation: "sum" },
+          ],
+        },
+      },
+    ],
   };
 }
 
 const title = (text: string) => ({ title: { enabled: true, text } });
+// Clicking a bar or row filters every other widget; Studio leaves this off unless set.
+export const crossFiltered = (text: string) => ({ ...title(text), crossFilter: "filter" as const });
 const byMonthAndCurrency = (value: string) => ({
   categoryKey: [{ id: "payments.month" }],
   valueKey: [{ id: value, aggregation: "sum" as const }],
@@ -146,15 +184,33 @@ export const dashboardInitialState: AgReportState = {
           // The filter labels itself ("Filter by: Client"); a widget title would clip its buttons.
           format: {},
         },
+        // On invoice date: payments and disputes follow through their invoice, and unpaid invoices stay visible.
+        dates: {
+          type: "date-filter",
+          dataMapping: { value: [{ id: "invoices.date" }] },
+          format: { style: { filterType: "between" } },
+        },
         income: {
           type: "column-chart-grouped",
           dataMapping: byMonthAndCurrency("payments.signedGross"),
-          format: title("Income by month and currency"),
+          format: crossFiltered("Income by month and currency"),
         },
         fees: {
           type: "column-chart-grouped",
           dataMapping: byMonthAndCurrency("payments.fee"),
-          format: title("PayPal fees by month and currency"),
+          format: crossFiltered("PayPal fees by month and currency"),
+        },
+        feeRate: {
+          type: "grid",
+          dataMapping: {
+            cols: [
+              { id: "payments.currency" },
+              { id: "payments.gross", aggregation: "sum" },
+              { id: "payments.fee", aggregation: "sum" },
+              { id: "effectiveFeeRate" },
+            ],
+          },
+          format: crossFiltered("Effective PayPal fee rate by currency"),
         },
         fx: {
           type: "grid",
@@ -167,7 +223,7 @@ export const dashboardInitialState: AgReportState = {
               { id: "payments.inrAtPaypalRate", aggregation: "sum" },
             ],
           },
-          format: title("FX: payments with and without a PayPal rate"),
+          format: crossFiltered("FX: payments with and without a PayPal rate"),
         },
         refunds: {
           type: "grid",
@@ -180,7 +236,7 @@ export const dashboardInitialState: AgReportState = {
               { id: "payments.gross", aggregation: "sum" },
             ],
           },
-          format: title("Refunds"),
+          format: crossFiltered("Refunds"),
         },
         disputes: {
           type: "column-chart-grouped",
@@ -189,12 +245,16 @@ export const dashboardInitialState: AgReportState = {
             valueKey: [{ id: "disputes.amount", aggregation: "count" }],
             tooltipKey: [],
           },
-          format: title("Disputes by status"),
+          format: crossFiltered("Disputes by status"),
         },
+        // The health source joins nothing, so it neither sends nor receives cross-filters.
         health: {
-          type: "value",
+          type: "radial-gauge",
           dataMapping: { value: [{ id: "health.score", aggregation: "sum" }] },
-          format: title("Health score"),
+          format: {
+            ...title("Health score"),
+            style: { scaleLabel: { enabled: true, min: 0, max: 100 } },
+          },
         },
         fira: {
           type: "column-chart-grouped",
@@ -203,7 +263,7 @@ export const dashboardInitialState: AgReportState = {
             valueKey: [{ id: "invoices.amount", aggregation: "count" }],
             tooltipKey: [],
           },
-          format: title("Invoices by payment proof status"),
+          format: crossFiltered("Invoices by payment proof status"),
         },
         unpaid: {
           type: "grid",
@@ -218,23 +278,26 @@ export const dashboardInitialState: AgReportState = {
             ],
           },
           sort: [{ field: { id: "invoices.daysRemaining" }, direction: "asc" }],
-          format: title("Unpaid invoices by RBI deadline"),
+          format: crossFiltered("Unpaid invoices by RBI deadline"),
         },
       },
       widgetLayout: {
-        client: { xTrack: 0, yTrack: 0, xSpan: 24, ySpan: 8 },
+        client: { xTrack: 0, yTrack: 0, xSpan: 16, ySpan: 8 },
+        dates: { xTrack: 16, yTrack: 0, xSpan: 8, ySpan: 8 },
         income: { xTrack: 0, yTrack: 8, xSpan: 12, ySpan: 12 },
         fees: { xTrack: 12, yTrack: 8, xSpan: 12, ySpan: 12 },
         health: { xTrack: 0, yTrack: 20, xSpan: 8, ySpan: 12 },
         fira: { xTrack: 8, yTrack: 20, xSpan: 8, ySpan: 12 },
         disputes: { xTrack: 16, yTrack: 20, xSpan: 8, ySpan: 12 },
         unpaid: { xTrack: 0, yTrack: 32, xSpan: 24, ySpan: 12 },
-        fx: { xTrack: 0, yTrack: 44, xSpan: 12, ySpan: 12 },
-        refunds: { xTrack: 12, yTrack: 44, xSpan: 12, ySpan: 12 },
+        feeRate: { xTrack: 0, yTrack: 44, xSpan: 12, ySpan: 12 },
+        fx: { xTrack: 12, yTrack: 44, xSpan: 12, ySpan: 12 },
+        refunds: { xTrack: 0, yTrack: 56, xSpan: 24, ySpan: 12 },
       },
       filter: {
         widget: {
           fees: kindIs("payment"),
+          feeRate: kindIs("payment"),
           fx: kindIs("payment"),
           refunds: kindIs("refund"),
           unpaid: [

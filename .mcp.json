@@ -14,6 +14,12 @@
     "next-devtools": {
       "command": "npx",
       "args": ["-y", "next-devtools-mcp@0.4.0"]
+    },
+    "ag-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["ag-mcp"],
+      "env": {}
     }
   }
 }
