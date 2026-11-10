@@ -2167,6 +2167,17 @@ button:has(.spinner)::before {
   font-size: 14px;
   line-height: 20px;
 }
+.dashboard-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--niryat-space-3);
+  margin-bottom: var(--niryat-space-3);
+}
+.dashboard-toolbar p {
+  margin: 0;
+}
 .dashboard-studio {
   height: 60rem;
 }

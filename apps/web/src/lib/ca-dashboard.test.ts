@@ -88,20 +88,28 @@ describe("CA portfolio sources and widgets", () => {
   const state = caDashboardInitialState(dashboard.financialYear);
   const [page] = state.pages ?? [];
 
-  it("places all five widgets and references only existing fields", () => {
+  it("places all five widgets and the freelancer filter, and references only existing fields", () => {
     expect(Object.keys(page?.widgets ?? {}).sort()).toEqual([
       "clients",
       "fees",
       "fira",
+      "freelancer",
       "received",
       "unpaid",
     ]);
     expect(Object.keys(page?.widgetLayout ?? {}).sort()).toEqual(
       Object.keys(page?.widgets ?? {}).sort(),
     );
+    // AG Studio rejects the whole widget ("Sort definition has too many fields") otherwise.
+    for (const widget of Object.values(page?.widgets ?? {}))
+      expect((widget && "sort" in widget ? widget.sort : [])?.length ?? 0).toBeLessThanOrEqual(1);
     const known = new Set(
       sources.flatMap((source) => (source.fields ?? []).map((field) => `${source.id}.${field.id}`)),
     );
+    // Relationships carry the freelancer filter from the client rows to every other source.
+    for (const relation of caDashboardSources(dashboard).relationships ?? [])
+      for (const end of [relation.source, relation.target])
+        expect(known).toContain("fieldId" in end ? `${end.tableId}.${end.fieldId}` : "calendar");
     const references = fieldReferences(state);
     expect(references.length).toBeGreaterThan(0);
     expect(references.filter((id) => !known.has(id))).toEqual([]);

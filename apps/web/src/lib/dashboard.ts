@@ -106,6 +106,13 @@ export function dashboardSources(dashboard: Dashboard): AgDataSourcesDefinition 
           : [],
       },
     ],
+    // Payments and disputes join their invoice, so the Client filter and the AI can work across sources.
+    relationships: ["payments", "disputes"].map((tableId) => ({
+      id: `${tableId}-invoice`,
+      source: { tableId, fieldId: "invoiceNumber" },
+      target: { tableId: "invoices", fieldId: "number" },
+      type: "many-to-one" as const,
+    })),
   };
 }
 
@@ -120,11 +127,25 @@ const kindIs = (kind: "payment" | "refund") => [
   { field: { id: "payments.kind" }, model: { operator: "isIn" as const, value: [kind] } },
 ];
 
+// Open edit panels squeeze the widget canvas to nothing; only the AI Assistant starts open.
+export const DASHBOARD_PANELS: NonNullable<AgReportState["panels"]> = {
+  filters: { collapsed: true },
+  edit: { collapsed: true },
+  data: { collapsed: true },
+};
+
 export const dashboardInitialState: AgReportState = {
+  panels: DASHBOARD_PANELS,
   pages: [
     {
       id: "overview",
       widgets: {
+        client: {
+          type: "button-filter",
+          dataMapping: { value: [{ id: "invoices.clientName" }] },
+          // The filter labels itself ("Filter by: Client"); a widget title would clip its buttons.
+          format: {},
+        },
         income: {
           type: "column-chart-grouped",
           dataMapping: byMonthAndCurrency("payments.signedGross"),
@@ -201,14 +222,15 @@ export const dashboardInitialState: AgReportState = {
         },
       },
       widgetLayout: {
-        income: { xTrack: 0, yTrack: 0, xSpan: 12, ySpan: 12 },
-        fees: { xTrack: 12, yTrack: 0, xSpan: 12, ySpan: 12 },
-        health: { xTrack: 0, yTrack: 12, xSpan: 8, ySpan: 12 },
-        fira: { xTrack: 8, yTrack: 12, xSpan: 8, ySpan: 12 },
-        disputes: { xTrack: 16, yTrack: 12, xSpan: 8, ySpan: 12 },
-        unpaid: { xTrack: 0, yTrack: 24, xSpan: 24, ySpan: 12 },
-        fx: { xTrack: 0, yTrack: 36, xSpan: 12, ySpan: 12 },
-        refunds: { xTrack: 12, yTrack: 36, xSpan: 12, ySpan: 12 },
+        client: { xTrack: 0, yTrack: 0, xSpan: 24, ySpan: 8 },
+        income: { xTrack: 0, yTrack: 8, xSpan: 12, ySpan: 12 },
+        fees: { xTrack: 12, yTrack: 8, xSpan: 12, ySpan: 12 },
+        health: { xTrack: 0, yTrack: 20, xSpan: 8, ySpan: 12 },
+        fira: { xTrack: 8, yTrack: 20, xSpan: 8, ySpan: 12 },
+        disputes: { xTrack: 16, yTrack: 20, xSpan: 8, ySpan: 12 },
+        unpaid: { xTrack: 0, yTrack: 32, xSpan: 24, ySpan: 12 },
+        fx: { xTrack: 0, yTrack: 44, xSpan: 12, ySpan: 12 },
+        refunds: { xTrack: 12, yTrack: 44, xSpan: 12, ySpan: 12 },
       },
       filter: {
         widget: {

@@ -98,9 +98,9 @@ describe("dashboard sources and widgets", () => {
   const sources = sourcesOf(dashboard);
   const [page] = dashboardInitialState.pages ?? [];
 
-  it("builds the seven required widgets (refunds and disputes as two tiles), all placed", () => {
+  it("builds the seven required widgets (refunds and disputes as two tiles) and a client filter, all placed", () => {
     expect(Object.keys(page?.widgets ?? {}).sort()).toEqual(
-      ["disputes", "fees", "fira", "fx", "health", "income", "refunds", "unpaid"].sort(),
+      ["client", "disputes", "fees", "fira", "fx", "health", "income", "refunds", "unpaid"].sort(),
     );
     expect(Object.keys(page?.widgetLayout ?? {}).sort()).toEqual(
       Object.keys(page?.widgets ?? {}).sort(),
@@ -109,6 +109,10 @@ describe("dashboard sources and widgets", () => {
 
   it("references only fields that exist in a source", () => {
     const known = new Set(sources.flatMap((s) => (s.fields ?? []).map((f) => `${s.id}.${f.id}`)));
+    // Relationships carry the client filter from invoices to payments and disputes.
+    for (const relation of dashboardSources(dashboard).relationships ?? [])
+      for (const end of [relation.source, relation.target])
+        expect(known).toContain("fieldId" in end ? `${end.tableId}.${end.fieldId}` : "calendar");
     expect(sources.map((s) => s.id)).toEqual(["payments", "invoices", "disputes", "health"]);
     const references = fieldReferences(dashboardInitialState);
     expect(references.length).toBeGreaterThan(0);

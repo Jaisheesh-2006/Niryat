@@ -9,25 +9,31 @@ Indian freelancers paid through PayPal must collect payment proof (FIRA) for eve
 ### See it in two minutes
 
 1. Open https://niryat-web.onrender.com and click **Try as freelancer (demo)**. Then open **Dashboard** (`/dashboard`).
-2. The page opens with eight widgets built from the freelancer's PayPal payments, refunds, disputes and invoices. Open the AI Assistant and pick a starter, such as _"Which unpaid invoices are closest to their RBI deadline?"_. Claude replies by adding or changing a widget, not with a paragraph of numbers.
-3. Sign out, click **Try as CA (demo)** and open `/ca`. A chartered accountant sees the same tools across three freelancer clients who shared their records.
+2. The page opens with eight widgets built from the freelancer's PayPal payments, refunds, disputes and invoices, beside the open AI Assistant (the Filters, Compose and Data panels start collapsed). Pick a starter, such as _"Which unpaid invoices are closest to their RBI deadline?"_. Claude replies by adding or changing a widget, not with a paragraph of numbers.
+3. Click a client in the **Filter by: Client** row. Every widget narrows to that client, including payment, refund and dispute widgets that come from other sources. Ask _"What is a FIRA?"_: Claude calls Niryat's own `explain_term` tool and answers from the app's glossary.
+4. Reload the page. The filter, and any widget you or Claude added, are still there. **Reset layout** restores the default.
+5. Sign out, click **Try as CA (demo)** and open `/ca`. A chartered accountant sees the same tools across three freelancer clients who shared their records.
 
 All records are synthetic sandbox data. Nothing on these pages sends money or calls PayPal on its own.
 
 ### What we built with AG Studio
 
-| Dashboard                | Who uses it                                                                     | Widgets (AG Studio type)                                                                                                                                                                                                                                                                        | Code                                                                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Freelancer, `/dashboard` | The freelancer, about their own PayPal income                                   | Income by month and currency, PayPal fees by month and currency, invoices by payment-proof status, disputes by status (`column-chart-grouped`). Health score (`value`). Unpaid invoices sorted by days to the RBI deadline, payments with and without a PayPal exchange rate, refunds (`grid`). | [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx), [dashboard.ts](../apps/web/src/lib/dashboard.ts)           |
-| CA portfolio, `/ca`      | A chartered accountant, across the freelancers who accepted their share request | Clients sorted by overdue count, then next deadline (`grid`). PayPal fees by freelancer and currency, missing payment proof by freelancer (`bar-chart-grouped`). Received per month by freelancer (`column-chart-stacked`). The ten unpaid invoices nearest their RBI deadline (`grid`).        | [CaDashboard.tsx](../apps/web/src/components/CaDashboard.tsx), [ca-dashboard.ts](../apps/web/src/lib/ca-dashboard.ts) |
+| Dashboard                | Who uses it                                                                     | Widgets (AG Studio type)                                                                                                                                                                                                                                                                                                         | Code                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Freelancer, `/dashboard` | The freelancer, about their own PayPal income                                   | Client filter (`button-filter`). Income by month and currency, PayPal fees by month and currency, invoices by payment-proof status, disputes by status (`column-chart-grouped`). Health score (`value`). Unpaid invoices sorted by days to the RBI deadline, payments with and without a PayPal exchange rate, refunds (`grid`). | [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx), [dashboard.ts](../apps/web/src/lib/dashboard.ts)           |
+| CA portfolio, `/ca`      | A chartered accountant, across the freelancers who accepted their share request | Freelancer filter (`button-filter`). Clients sorted by overdue count (`grid`). PayPal fees by freelancer and currency, missing payment proof by freelancer (`bar-chart-grouped`). Received per month by freelancer (`column-chart-stacked`). The ten unpaid invoices nearest their RBI deadline (`grid`).                        | [CaDashboard.tsx](../apps/web/src/components/CaDashboard.tsx), [ca-dashboard.ts](../apps/web/src/lib/ca-dashboard.ts) |
 
 ### AG Studio features we use
 
-- **React embedding:** `AgStudioProvider` and `AgStudio`, opened in `mode="edit"`, so users can move, resize, retitle and add widgets themselves.
+- **React embedding:** `AgStudioProvider` and `AgStudio`, opened in `mode="edit"`, so users can move, resize, retitle and add widgets themselves. The initial `panels` state collapses the Filters, Compose and Data panels so the widgets have room; the AI Assistant starts open.
 - **Typed data sources** (`AgDataSourcesDefinition`): four freelancer sources (payments, invoices, disputes, health) and the CA's portfolio sources. Every field has a readable name and an AG Studio format (`decimalFormat`, `dateFormat`, `integerFormat`, `textFormat`), so the assistant sees business terms such as "Amount after fees" and "RBI deadline".
-- **Declarative report state** (`AgReportState`): pages, widgets, data mapping (`categoryKey`, `valueKey`, `legendKey`), `sum` and `count` aggregations, multi-key sort, a 24-column `widgetLayout`, and per-widget filters (`isIn`, `greaterThan`). For example, the refunds grid filters `kind` to `refund`, and the unpaid grid shows only invoices with an unpaid amount above zero.
+- **Declarative report state** (`AgReportState`): pages, widgets, data mapping (`categoryKey`, `valueKey`, `legendKey`), `sum` and `count` aggregations, single-field sort, a 24-column `widgetLayout`, and per-widget filters (`isIn`, `greaterThan`). For example, the refunds grid filters `kind` to `refund`, and the unpaid grid shows only invoices with an unpaid amount above zero.
+- **Data model with relationships** (`relationships`): freelancer payments and disputes join their invoice (`many-to-one`); in the CA portfolio, each client row joins that freelancer's payments, invoices and unpaid invoices (`one-to-many`). This lets one filter reach every source, and lets the assistant build widgets that combine sources.
+- **Filter widgets** (`button-filter`): a Client filter on the freelancer dashboard and a Freelancer filter on the CA dashboard. The CA filter shows names through the field's `createValueFormatter`, while it filters on IDs.
+- **Saved layouts:** `onStateUpdated` saves the full `AgReportState` (widgets, layout, filters) in the browser, and it is passed back as `initialState` on the next visit. **Reset layout** clears it. The storage key includes a hash of the default layout, so a changed default retires older saved layouts ([dashboard-layout.ts](../apps/web/src/lib/dashboard-layout.ts)).
+- **Error handling:** `onErrorRaised` logs AG Studio configuration errors. If a saved layout fails fatally, the dashboard falls back to the default.
 - **Theming:** `studioTheme.withParams` binds AG Studio's accent, surface, text, border, radius, padding, font and the four chart palette colours to Niryat's design tokens (CSS variables), so the dashboards match the rest of the app.
-- **AI Assistant:** `AgStudioAiModule` with `createAiHarness`, a custom `AgLlmAdapter` and role-specific prompt starters (three for freelancers, three for CAs).
+- **AI Assistant:** `AgStudioAiModule` with `createAiHarness`, a custom `AgLlmAdapter` and role-specific prompt starters (three for freelancers, three for CAs). The harness is built from AG's five built-in agents with `directLlmRunner`. The lead agent also gets a Niryat tool, `explain_term`, defined with `api.defineAiTool`: a client-side tool that answers "what is a FIRA / LUT / GSTR-1?" from the app's own glossary, so Claude does not define compliance terms from memory.
 - **Licensing:** `licenseKey` is passed from the server-side `AG_STUDIO_LICENSE_KEY` setting; without it, AG Studio runs in trial mode.
 
 ### How the AI Assistant works: AG Studio, backed by Claude
@@ -48,9 +54,11 @@ The instructions are deliberate. Claude must **put every amount, count and date 
 
 ### Tests
 
-[lib/dashboard.test.ts](../apps/web/src/lib/dashboard.test.ts) and [lib/ca-dashboard.test.ts](../apps/web/src/lib/ca-dashboard.test.ts) check that every widget references a field that exists in its source. [dashboard-adapter.test.ts](../apps/web/src/lib/dashboard-adapter.test.ts) covers the adapter's events and errors, including 429 and 413. [routes/dashboard.test.ts](../apps/api/src/routes/dashboard.test.ts) covers sessions, the budget, busy turns, CA scope and logging. [dashboard-llm.test.ts](../packages/agent/src/dashboard-llm.test.ts) covers the AG Studio-to-Claude translation. The tests call no live model and no PayPal service.
+[dashboard-layout.test.ts](../apps/web/src/lib/dashboard-layout.test.ts) covers saving, restoring, clearing, the default-layout key and storage that is broken or blocked. [lib/dashboard.test.ts](../apps/web/src/lib/dashboard.test.ts) and [lib/ca-dashboard.test.ts](../apps/web/src/lib/ca-dashboard.test.ts) check that every widget references a field that exists in its source. [dashboard-adapter.test.ts](../apps/web/src/lib/dashboard-adapter.test.ts) covers the adapter's events and errors, including 429 and 413. [routes/dashboard.test.ts](../apps/api/src/routes/dashboard.test.ts) covers sessions, the budget, busy turns, CA scope and logging. [dashboard-llm.test.ts](../packages/agent/src/dashboard-llm.test.ts) covers the AG Studio-to-Claude translation. The tests call no live model and no PayPal service.
 
 ### Known limits
+
+- Saved layouts live in the browser, so they don't follow a user to another device. On the shared judge accounts, each judge's browser keeps its own layout.
 
 - The API returns each assistant turn in one piece. The browser then replays it as events, so text does not stream word by word.
 - Each turn is charged at a flat USD 0.05 against the monthly AI budget, not by tokens.
@@ -129,3 +137,40 @@ The user's hosted G5 rehearsal found that the dashboard didn't match the design 
 - The shared `theme` in `apps/web/src/components/Dashboard.tsx` now uses design tokens for base font size, borders, radii, widget padding and widget title size and weight. The extra outer wrapper border is removed. The theme is shared, so the freelancer `/dashboard` and the CA `/ca` both change.
 
 Web typecheck, tests (570/570) and `pnpm build` (9/9 tasks) pass. The browser check is awaiting user verification: after redeploying, open `/dashboard` as Ananya and `/ca` as the CA. Expect the AI Assistant header controls inside the header, widget titles at a readable size without truncation, and Studio panels using Niryat's border colour and radii.
+
+## Hosted review fixes: panels and CA sort (2026-11-10)
+
+A read-only headless-Chrome review of the hosted site found two AG Studio problems:
+- All four Studio panels (AI Assistant, Filters, Compose, Data) opened at once and squeezed the widget canvas to almost nothing on `/dashboard` and `/ca`, even at 1920px.
+- On `/ca`, AG Studio rejected the `clients` widget with "Sort definition has too many fields".
+
+Changes:
+- `DASHBOARD_PANELS` in `apps/web/src/lib/dashboard.ts` sets the initial `AgReportState.panels` to collapse `filters`, `edit` and `data`. Both dashboards use it, and the AI Assistant stays open. The panel IDs come from the installed `ag-studio` 3.0.0 types (`AgEditModePanelType`, `AgPanelState.collapsed`).
+- The CA `clients` grid in `apps/web/src/lib/ca-dashboard.ts` sorts by overdue count only. `ca-dashboard.test.ts` now fails if any widget sorts on more than one field.
+
+`pnpm verify` passes (27/27 tasks). Awaiting user verification after redeploy: as Ananya, `/dashboard` shows the widgets beside the open AI Assistant, with the other three panels collapsed but available. As the CA, `/ca` shows the Clients grid, with no console error about the sort definition.
+
+## Deeper integration: relationships, filters, saved layouts and a Niryat AI tool (2026-11-10)
+
+Goal: show judges more than an embedded chart page. All of the following uses AG Studio 3.0.0 APIs, checked against the installed type definitions. The ag-mcp server indexes AG Grid documentation only, so it could not be used for AG Studio.
+- **Relationships:** `dashboardSources` declares payments→invoices and disputes→invoices (`many-to-one`). `caDashboardSources` declares clients→payments/invoices/unpaid (`one-to-many`).
+- **Filter widgets:** a `button-filter` on `invoices.clientName` (freelancer) and on `clients.freelancerId` (CA), each in an 8-track row above the widgets. It has no widget title, because a title clipped the buttons.
+- **Saved layouts:** `StudioDashboard` in `apps/web/src/components/Dashboard.tsx` is now shared by both dashboards. It reads the saved state after mount, writes it on `onStateUpdated`, and remounts Studio on **Reset layout**. `onErrorRaised` logs errors, and a fatal error on a saved layout resets it.
+- **AI tool:** `explain_term` (`api.defineAiTool`, client-side) is added to AG's lead agent, together with one extra instruction line. The other four built-in agents are unchanged. The tool sends nothing extra to the server; its result reaches Claude through the existing proxy.
+- **Skipped:** saving AI chat history (`AgAiHistoryStore`). It would leave financial questions and answers in the browser after sign-out, and judges rarely reload mid-chat. The three prompt starters are unchanged, because the spec records exactly three as user-accepted.
+
+Verification:
+- `pnpm --filter @niryat/web test`: 579/579 passed. Typecheck passed.
+- A headless-Chrome harness rendered the real `Dashboard` and `CaDashboard` components (bundled with esbuild) with synthetic data and a fake `/api/dashboard/turn`:
+  - Clicking one client also filtered the Refunds and FX grids (payments source) and the unpaid grid (invoices source).
+  - The selection survived a reload. **Reset layout** cleared it and the saved key.
+  - The CA filter showed freelancer names and filtered the unpaid grid.
+  - Asking "What is a FIRA?" sent requests that pass the server's `dashboardTurnRequestSchema`, with `explain_term` listed. The tool returned the glossary text, and the chat showed the tool step and the answer.
+  - No AG Studio configuration errors were raised.
+
+Awaiting user verification on the hosted site after deploy:
+- As Ananya on `/dashboard`: click a client and check that every widget narrows. Reload: the filter is kept. Click **Reset layout**: the default returns.
+- Ask "What is a FIRA?": the answer shows an `explain_term` step.
+- As the CA on `/ca`: the Freelancer filter shows names and narrows the widgets.
+
+The live Claude answer was not exercised.

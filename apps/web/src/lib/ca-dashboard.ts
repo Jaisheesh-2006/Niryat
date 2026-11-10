@@ -1,6 +1,6 @@
 import type { CaDashboard } from "@niryat/shared";
 import type { AgDataSourcesDefinition, AgReportState } from "ag-studio";
-import { dashboardSources } from "./dashboard";
+import { DASHBOARD_PANELS, dashboardSources } from "./dashboard";
 
 export const CA_DASHBOARD_PROMPT_STARTERS = [
   "Which clients are missing payment proof?",
@@ -93,6 +93,13 @@ export function caDashboardSources(dashboard: CaDashboard): AgDataSourcesDefinit
           : source,
       ),
     ],
+    // One client row per freelancer; the Freelancer filter and the AI reach every source through it.
+    relationships: ["payments", "invoices", "unpaid"].map((tableId) => ({
+      id: `${tableId}-freelancer`,
+      source: { tableId: "clients", fieldId: "freelancerId" },
+      target: { tableId, fieldId: "freelancerId" },
+      type: "one-to-many" as const,
+    })),
   };
 }
 
@@ -100,10 +107,16 @@ const title = (text: string) => ({ title: { enabled: true, text } });
 
 export function caDashboardInitialState(financialYear: string): AgReportState {
   return {
+    panels: DASHBOARD_PANELS,
     pages: [
       {
         id: "portfolio",
         widgets: {
+          freelancer: {
+            type: "button-filter",
+            dataMapping: { value: [{ id: "clients.freelancerId" }] },
+            format: {},
+          },
           clients: {
             type: "grid",
             dataMapping: {
@@ -117,10 +130,8 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
                 "pendingApprovals",
               ].map((field) => ({ id: `clients.${field}` })),
             },
-            sort: [
-              { field: { id: "clients.overdueCount" }, direction: "desc" },
-              { field: { id: "clients.nextDeadline" }, direction: "asc" },
-            ],
+            // AG Studio rejects a grid sort with more than one field.
+            sort: [{ field: { id: "clients.overdueCount" }, direction: "desc" }],
             format: title("Clients"),
           },
           fees: {
@@ -171,11 +182,12 @@ export function caDashboardInitialState(financialYear: string): AgReportState {
           },
         },
         widgetLayout: {
-          clients: { xTrack: 0, yTrack: 0, xSpan: 24, ySpan: 12 },
-          fees: { xTrack: 0, yTrack: 12, xSpan: 12, ySpan: 12 },
-          received: { xTrack: 12, yTrack: 12, xSpan: 12, ySpan: 12 },
-          unpaid: { xTrack: 0, yTrack: 24, xSpan: 24, ySpan: 12 },
-          fira: { xTrack: 0, yTrack: 36, xSpan: 24, ySpan: 12 },
+          freelancer: { xTrack: 0, yTrack: 0, xSpan: 24, ySpan: 8 },
+          clients: { xTrack: 0, yTrack: 8, xSpan: 24, ySpan: 12 },
+          fees: { xTrack: 0, yTrack: 20, xSpan: 12, ySpan: 12 },
+          received: { xTrack: 12, yTrack: 20, xSpan: 12, ySpan: 12 },
+          unpaid: { xTrack: 0, yTrack: 32, xSpan: 24, ySpan: 12 },
+          fira: { xTrack: 0, yTrack: 44, xSpan: 24, ySpan: 12 },
         },
         filter: {
           widget: {
