@@ -1,6 +1,7 @@
 import type { CaDashboard } from "@niryat/shared";
 import type { AgDataSourcesDefinition, AgReportState } from "ag-studio";
 import { crossFiltered, DASHBOARD_PANELS, dashboardSources } from "./dashboard";
+import type { NiryatRegistry } from "./runway";
 
 export const CA_DASHBOARD_PROMPT_STARTERS = [
   "Which clients are missing payment proof?",
@@ -8,7 +9,9 @@ export const CA_DASHBOARD_PROMPT_STARTERS = [
   "Show PayPal fees by freelancer this year",
 ].map((prompt) => ({ label: prompt, prompt }));
 
-export function caDashboardSources(dashboard: CaDashboard): AgDataSourcesDefinition {
+export function caDashboardSources(
+  dashboard: CaDashboard,
+): AgDataSourcesDefinition<NiryatRegistry> {
   const names = new Map(
     dashboard.portfolio.map((row) => [row.freelancerId, row.name ?? "Unnamed freelancer"]),
   );

@@ -2189,6 +2189,57 @@ button:has(.spinner)::before {
   min-height: 0;
   box-shadow: none;
 }
+/* Niryat's custom AG Studio widget: RBI deadline runway (RunwayWidget.tsx). */
+.runway {
+  display: flex;
+  flex-direction: column;
+  gap: var(--niryat-space-3);
+  height: 100%;
+  overflow: auto;
+}
+.runway-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--niryat-text);
+}
+.runway-list {
+  display: grid;
+  gap: var(--niryat-space-2);
+  padding: 0;
+  list-style: none;
+}
+.runway-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) 1fr auto;
+  align-items: center;
+  gap: var(--niryat-space-3);
+  font-size: 13px;
+}
+.runway-label {
+  color: var(--niryat-text);
+}
+.runway-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--niryat-border);
+}
+.runway-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--niryat-primary);
+}
+.runway-bar[data-overdue] {
+  background: var(--niryat-danger);
+}
+.runway-status {
+  color: var(--niryat-muted);
+  white-space: nowrap;
+}
+.runway-status[data-overdue] {
+  color: var(--niryat-danger);
+  font-weight: 600;
+}
 main:has(.dashboard-studio, .calendar-card),
 .content:has(.dashboard-studio, .calendar-card) {
   max-width: none;

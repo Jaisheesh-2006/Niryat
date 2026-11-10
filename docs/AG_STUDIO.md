@@ -9,19 +9,20 @@ Indian freelancers paid through PayPal must collect payment proof (FIRA) for eve
 ### See it in two minutes
 
 1. Open https://niryat-web.onrender.com and click **Try as freelancer (demo)**. Then open **Dashboard** (`/dashboard`).
-2. The page opens with nine widgets built from the freelancer's PayPal payments, refunds, disputes and invoices, beside the open AI Assistant (the Filters, Compose and Data panels start collapsed). Pick a starter, such as _"Which unpaid invoices are closest to their RBI deadline?"_. Claude replies by adding or changing a widget, not with a paragraph of numbers.
+2. The page opens with ten widgets built from the freelancer's PayPal payments, refunds, disputes and invoices, beside the open AI Assistant (the Filters, Compose and Data panels start collapsed). One of them, **RBI deadline runway**, is Niryat's own custom widget. Pick a starter, such as _"Which unpaid invoices are closest to their RBI deadline?"_. Claude replies by adding or changing a widget, not with a paragraph of numbers.
 3. Click a client in the **Filter by: Client** row, or set an invoice date range. Every widget narrows, including payment, refund and dispute widgets that come from other sources. Click a month bar in **Income by month and currency**: the other charts and grids filter to that month. **Effective PayPal fee rate by currency** shows what PayPal really keeps, per currency. Ask _"What is a FIRA?"_: Claude calls Niryat's own `explain_term` tool and answers from the app's glossary.
-4. Reload the page. The filter, and any widget you or Claude added, are still there. **Reset layout** restores the default.
-5. Sign out, click **Try as CA (demo)** and open `/ca`. A chartered accountant sees the same tools across three freelancer clients who shared their records.
+4. Ask _"Check my records for compliance problems"_. The lead agent hands the work to Niryat's custom **Compliance reviewer** agent. It runs queries, then has Studio's built-in Page and Widget agents add widgets that flag each problem.
+5. Reload the page. The filter, and any widget you or Claude added, are still there. **Reset layout** restores the default.
+6. Sign out, click **Try as CA (demo)** and open `/ca`. A chartered accountant sees the same tools across three freelancer clients who shared their records.
 
 All records are synthetic sandbox data. Nothing on these pages sends money or calls PayPal on its own.
 
 ### What we built with AG Studio
 
-| Dashboard                | Who uses it                                                                     | Widgets (AG Studio type)                                                                                                                                                                                                                                                                                                                                                                                                                                  | Code                                                                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Freelancer, `/dashboard` | The freelancer, about their own PayPal income                                   | Client filter (`button-filter`) and invoice-date filter (`date-filter`). Income by month and currency, PayPal fees by month and currency, invoices by payment-proof status, disputes by status (`column-chart-grouped`). Health score (`radial-gauge`). Effective PayPal fee rate by currency (`grid` with a calculated measure). Unpaid invoices sorted by days to the RBI deadline, payments with and without a PayPal exchange rate, refunds (`grid`). | [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx), [dashboard.ts](../apps/web/src/lib/dashboard.ts)           |
-| CA portfolio, `/ca`      | A chartered accountant, across the freelancers who accepted their share request | Freelancer filter (`button-filter`). Clients sorted by overdue count (`grid`). PayPal fees by freelancer and currency, missing payment proof by freelancer (`bar-chart-grouped`). Received per month by freelancer (`column-chart-stacked`). The ten unpaid invoices nearest their RBI deadline (`grid`). Payments, fees and fee rate by freelancer and month, one column per currency (`pivot-grid`).                                                    | [CaDashboard.tsx](../apps/web/src/components/CaDashboard.tsx), [ca-dashboard.ts](../apps/web/src/lib/ca-dashboard.ts) |
+| Dashboard                | Who uses it                                                                     | Widgets (AG Studio type)                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Code                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Freelancer, `/dashboard` | The freelancer, about their own PayPal income                                   | Client filter (`button-filter`) and invoice-date filter (`date-filter`). Income by month and currency, PayPal fees by month and currency, invoices by payment-proof status, disputes by status (`column-chart-grouped`). Health score (`radial-gauge`). Effective PayPal fee rate by currency (`grid` with a calculated measure). Unpaid invoices sorted by days to the RBI deadline, payments with and without a PayPal exchange rate, refunds (`grid`). RBI deadline runway (custom `rbi-runway`). | [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx), [dashboard.ts](../apps/web/src/lib/dashboard.ts)           |
+| CA portfolio, `/ca`      | A chartered accountant, across the freelancers who accepted their share request | Freelancer filter (`button-filter`). Clients sorted by overdue count (`grid`). PayPal fees by freelancer and currency, missing payment proof by freelancer (`bar-chart-grouped`). Received per month by freelancer (`column-chart-stacked`). The ten unpaid invoices nearest their RBI deadline (`grid`). Payments, fees and fee rate by freelancer and month, one column per currency (`pivot-grid`).                                                                                               | [CaDashboard.tsx](../apps/web/src/components/CaDashboard.tsx), [ca-dashboard.ts](../apps/web/src/lib/ca-dashboard.ts) |
 
 ### AG Studio features we use
 
@@ -33,6 +34,14 @@ All records are synthetic sandbox data. Nothing on these pages sends money or ca
 - **Calculated fields** (`expressions`): a hidden calculated column (`feeBase`: the amount before fees for payments only) and a measure (`effectiveFeeRate`: summed fees divided by `feeBase`, shown as a one-decimal percentage). Both dashboards and the AI Assistant can use them. A rate is only shown per currency.
 - **Cross-filtering** (`format.crossFilter: "filter"`): clicking a bar or a grid row filters every other widget on the related sources. Studio leaves this off unless set.
 - **Pivot grid and gauge**: the CA pivot puts each currency in its own column with no total column; the freelancer health score is a 0–100 radial gauge.
+- **Custom widget** (`rbi-runway`, [RunwayWidget.tsx](../apps/web/src/components/RunwayWidget.tsx)): a React `AgWidgetDefinition` registered through the `widgets` property, in its own "Niryat" menu group next to AG's widgets.
+  - It shows one bar per unpaid invoice, with the days left to its RBI deadline; overdue invoices are full red bars. On the freelancer dashboard each bar opens that invoice.
+  - It reads its data through `widgetApi.getData`, so the page filters, the Client and date filters and cross-filters all apply to it. It reports its state with `setDisplayState`.
+  - Its `ai` metadata and data-mapping descriptions let the AI Assistant add and configure it.
+- **Custom agent** (Compliance reviewer, [compliance-agent.ts](../apps/web/src/lib/compliance-agent.ts)): an `AgAiAgentDefinition` that runs next to AG's five built-in agents.
+  - The lead agent can hand work to it, because the lead's `delegate_to` targets now include it.
+  - It checks for overdue unpaid invoices, missing payment proof, payments without a PayPal rate, and refunds and disputes, using Studio's `execute_query`.
+  - It then delegates to Studio's built-in Page and Widget agents to add widgets, using the runway widget for overdue invoices. It has no tool to change the dashboard itself, and no PayPal tools.
 - **Saved layouts:** `onStateUpdated` saves the full `AgReportState` (widgets, layout, filters) in the browser, and it is passed back as `initialState` on the next visit. **Reset layout** clears it. The storage key includes a hash of the default layout, so a changed default retires older saved layouts ([dashboard-layout.ts](../apps/web/src/lib/dashboard-layout.ts)).
 - **Error handling:** `onErrorRaised` logs AG Studio configuration errors. If a saved layout fails fatally, the dashboard falls back to the default.
 - **Theming:** `studioTheme.withParams` binds AG Studio's accent, surface, text, border, radius, padding, font and the four chart palette colours to Niryat's design tokens (CSS variables), so the dashboards match the rest of the app.
@@ -203,5 +212,42 @@ Awaiting user verification after deploy (browser):
 - As Ananya on `/dashboard`: the Client and invoice-date filters share the top row without clipping. Set a date range: the widgets narrow and unpaid invoices dated in that range remain. Click an October bar in **Income by month and currency**: the other charts and grids filter to October, and clicking again clears it. **Effective PayPal fee rate by currency** shows one row per currency with a one-decimal percentage. **Health score** is a 0–100 gauge. No AG Studio configuration error appears in the console.
 - As the CA on `/ca`: the pivot at the bottom shows freelancer names, month rows and one column group per currency, with no cross-currency total column. Clicking a bar in **PayPal fees by freelancer and currency** filters the other widgets.
 - Ask the AI Assistant "What is my effective PayPal fee rate by currency?": it should build a widget that uses **Effective PayPal fee rate** grouped by currency.
+
+The live Claude answer was not exercised.
+
+## Custom widget and custom agent (2026-11-10)
+
+Why: the sponsor brief asks for "custom widgets" and "a custom agent talking to Studio's built-in agents, or a swapped-in harness". Niryat already had the swapped-in harness (Claude through our adapter). This entry adds the other two. All APIs were checked against the installed `ag-studio`/`ag-studio-react` 3.0.0 type definitions and bundle, and against AG's React custom-widget guide. Context7 has no AG Studio library, and the ag-mcp server covers AG Grid only.
+
+**Custom agent: Compliance reviewer** ([compliance-agent.ts](../apps/web/src/lib/compliance-agent.ts), wired in [Dashboard.tsx](../apps/web/src/components/Dashboard.tsx)):
+- It is an `AgAiAgentDefinition` run with `directLlmRunner` on the same Claude adapter as AG's five agents.
+- The lead agent's `delegate_to` is replaced by one targeting `data`, `widget`, `page`, `planning` (AG 3.0.0's own list) plus `compliance`. One instruction line routes "check / review / audit my records" to it.
+- Its tools are only `view_schema`, `view_page`, `execute_query` and `delegate_to` (Page and Widget). It cannot change the dashboard except through Studio's built-in agents, and it has no PayPal tools.
+- It checks overdue unpaid invoices, missing or pending payment proof, payments without a PayPal rate, and refunds and disputes. It uses the rules-computed `overdue`, `daysRemaining` and payment-proof fields as they are, with no thresholds of its own. On `/ca` it groups by freelancer.
+- It adds at most four widgets, uses the runway widget for overdue invoices, caps itself at `maxTurns: 12`, and reports widget references without figures.
+- No server change: `/dashboard/turn` already accepts any client-side agent and tool list, and adds its own figure and data rules to each agent's instructions.
+
+**Custom widget: RBI deadline runway** (`rbi-runway`, [RunwayWidget.tsx](../apps/web/src/components/RunwayWidget.tsx), [runway.ts](../apps/web/src/lib/runway.ts)):
+- It is a React `AgWidgetDefinition`, added through the `widgets` property on top of AG's defaults, with a "Niryat" menu group. `NiryatRegistry` types the report state and data sources.
+- It shows one bar per unpaid invoice, scaled to the longest runway. Overdue invoices are full red bars with "N days overdue" in text, not colour alone.
+- On `/dashboard` each invoice opens `/invoices#invoice-<id>`. Links are off on `/ca` through Studio `context`, because a CA cannot open that page.
+- It loads rows with `widgetApi.getData` and passes `{ crossFilter: "filter" }`, so page filters, the Client and date filters and cross-filters apply, and Studio refreshes it when they change. It reports `loading`, `displayed`, `noData` or `incompleteDataMapping`.
+- It sits beside the unpaid grid on `/dashboard`, with the same `shortfall > 0` filter.
+- It has no `format`: AG Studio 3.0.0 exports no runtime shape builder for a custom `formatShape`, so the widget shows its own title. The AI configures its data mapping through the `ai` metadata and per-field `aiDescription`.
+- One commented cast covers a 3.0.0 typing bug in `createDataMapping` (the runtime reads the bare data-mapping key).
+
+Verification:
+- Web tests 588/588, including the new [runway.test.ts](../apps/web/src/lib/runway.test.ts) and [compliance-agent.test.ts](../apps/web/src/lib/compliance-agent.test.ts).
+- `pnpm verify` steps run separately (the root `biome check .` still stops on the pre-existing `.mcp.json` formatting, which was left untouched): scripts typecheck, Biome on `apps packages docs scripts`, scaffold check, script tests 17/17, and `turbo run typecheck lint test` 27/27.
+- `pnpm build` 9/9.
+- No browser, live model or PayPal call was used.
+
+Awaiting user verification after deploy (browser):
+- As Ananya on `/dashboard`: **RBI deadline runway** appears to the right of **Unpaid invoices by RBI deadline**, nearest deadline first. Overdue rows are red and say "days overdue". Clicking an invoice opens it on `/invoices`.
+  - Pick a client or a date range: the runway narrows. Click a month bar in **Income by month and currency**: the runway follows.
+  - In edit mode, the widget menu shows a "Niryat" group with **RBI deadline runway**.
+- Ask "Check my records for compliance problems". The chat shows the lead handing work to **Compliance reviewer**, which then hands work to Page and Widget. New widgets appear below the existing ones (at most four), and the answer names them without figures.
+- As the CA on `/ca`: ask the same question. The checks are grouped by freelancer, and any runway the assistant adds has no invoice links.
+- Expect several paid turns (USD 0.05 each) per review.
 
 The live Claude answer was not exercised.

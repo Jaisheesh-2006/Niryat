@@ -1,5 +1,5 @@
 import { dashboardSchema } from "@niryat/shared";
-import { createDataEngine } from "ag-studio";
+import { type AgDataSourcesDefinition, createDataEngine } from "ag-studio";
 import { describe, expect, it } from "vitest";
 import { dashboardInitialState, dashboardSources } from "./dashboard";
 
@@ -112,6 +112,7 @@ describe("dashboard sources and widgets", () => {
         "health",
         "income",
         "refunds",
+        "runway",
         "unpaid",
       ].sort(),
     );
@@ -140,6 +141,7 @@ describe("dashboard sources and widgets", () => {
   it("computes the PayPal fee rate per currency in AG Studio's engine, leaving refunds out", async () => {
     const [payment] = dashboard.payments;
     if (!payment) throw new Error("Expected payment fixture");
+    // The registries differ only in widgets, which the data engine never reads.
     const engine = createDataEngine(
       dashboardSources({
         ...dashboard,
@@ -147,7 +149,7 @@ describe("dashboard sources and widgets", () => {
           ...dashboard.payments,
           { ...payment, paymentId: "eur", currency: "EUR", gross: "200.00", fee: "7.00" },
         ],
-      }),
+      }) as unknown as AgDataSourcesDefinition,
     ) as ReturnType<typeof createDataEngine> & { finalize(): void };
     // shortcut: finalize() is engine-internal (Studio calls it on mount); recheck on an ag-studio upgrade.
     engine.finalize();
@@ -182,12 +184,12 @@ describe("dashboard sources and widgets", () => {
     );
   });
 
-  it("cross-filters every chart and grid on the related sources, but not the filters or the unrelated health gauge", () => {
+  it("cross-filters every chart and grid on the related sources; filters, the unrelated health gauge and the format-less runway (which asks in getData) are excluded", () => {
     for (const [id, widget] of Object.entries(page?.widgets ?? {})) {
       const crossFilter = widget && "format" in widget ? widget.format?.crossFilter : undefined;
       expect([id, crossFilter]).toEqual([
         id,
-        ["client", "dates", "health"].includes(id) ? undefined : "filter",
+        ["client", "dates", "health", "runway"].includes(id) ? undefined : "filter",
       ]);
     }
     expect(page?.widgets?.health).toMatchObject({

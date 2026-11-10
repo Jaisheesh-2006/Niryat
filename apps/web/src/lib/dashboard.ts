@@ -1,5 +1,6 @@
 import type { Dashboard } from "@niryat/shared";
 import type { AgDataSourcesDefinition, AgReportState } from "ag-studio";
+import { type NiryatRegistry, RUNWAY_WIDGET_TYPE } from "./runway";
 
 export const DASHBOARD_EMPTY =
   "No PayPal payments or invoices yet. Widgets fill in after your first invoice.";
@@ -8,7 +9,7 @@ export const DASHBOARD_EMPTY =
 const amount = (value: string | null) => (value === null ? null : Number(value));
 const day = (value: string | null) => (value === null ? null : new Date(`${value}T00:00:00`));
 
-export function dashboardSources(dashboard: Dashboard): AgDataSourcesDefinition {
+export function dashboardSources(dashboard: Dashboard): AgDataSourcesDefinition<NiryatRegistry> {
   return {
     sources: [
       {
@@ -165,6 +166,10 @@ const kindIs = (kind: "payment" | "refund") => [
   { field: { id: "payments.kind" }, model: { operator: "isIn" as const, value: [kind] } },
 ];
 
+const unpaidOnly = [
+  { field: { id: "invoices.shortfall" }, model: { operator: "greaterThan" as const, value: 0 } },
+];
+
 // Open edit panels squeeze the widget canvas to nothing; only the AI Assistant starts open.
 export const DASHBOARD_PANELS: NonNullable<AgReportState["panels"]> = {
   filters: { collapsed: true },
@@ -172,7 +177,7 @@ export const DASHBOARD_PANELS: NonNullable<AgReportState["panels"]> = {
   data: { collapsed: true },
 };
 
-export const dashboardInitialState: AgReportState = {
+export const dashboardInitialState: AgReportState<NiryatRegistry> = {
   panels: DASHBOARD_PANELS,
   pages: [
     {
@@ -280,6 +285,15 @@ export const dashboardInitialState: AgReportState = {
           sort: [{ field: { id: "invoices.daysRemaining" }, direction: "asc" }],
           format: crossFiltered("Unpaid invoices by RBI deadline"),
         },
+        // Niryat's custom widget (RunwayWidget.tsx); it titles itself and has no format.
+        runway: {
+          type: RUNWAY_WIDGET_TYPE,
+          dataMapping: {
+            label: [{ id: "invoices.number" }],
+            days: [{ id: "invoices.daysRemaining" }],
+            link: [{ id: "invoices.invoiceId" }],
+          },
+        },
       },
       widgetLayout: {
         client: { xTrack: 0, yTrack: 0, xSpan: 16, ySpan: 8 },
@@ -289,7 +303,8 @@ export const dashboardInitialState: AgReportState = {
         health: { xTrack: 0, yTrack: 20, xSpan: 8, ySpan: 12 },
         fira: { xTrack: 8, yTrack: 20, xSpan: 8, ySpan: 12 },
         disputes: { xTrack: 16, yTrack: 20, xSpan: 8, ySpan: 12 },
-        unpaid: { xTrack: 0, yTrack: 32, xSpan: 24, ySpan: 12 },
+        unpaid: { xTrack: 0, yTrack: 32, xSpan: 14, ySpan: 12 },
+        runway: { xTrack: 14, yTrack: 32, xSpan: 10, ySpan: 12 },
         feeRate: { xTrack: 0, yTrack: 44, xSpan: 12, ySpan: 12 },
         fx: { xTrack: 12, yTrack: 44, xSpan: 12, ySpan: 12 },
         refunds: { xTrack: 0, yTrack: 56, xSpan: 24, ySpan: 12 },
@@ -300,9 +315,8 @@ export const dashboardInitialState: AgReportState = {
           feeRate: kindIs("payment"),
           fx: kindIs("payment"),
           refunds: kindIs("refund"),
-          unpaid: [
-            { field: { id: "invoices.shortfall" }, model: { operator: "greaterThan", value: 0 } },
-          ],
+          unpaid: unpaidOnly,
+          runway: unpaidOnly,
         },
       },
     },
