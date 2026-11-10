@@ -2,7 +2,7 @@ import {
   clientSchema,
   closePageSchema,
   invoiceViewSchema,
-  isSyntheticJudgePayment,
+  isSyntheticJudgeId,
 } from "@niryat/shared";
 import { Suspense } from "react";
 import { z } from "zod";
@@ -199,7 +199,7 @@ export default async function Invoices() {
                               : "Not matched"}
                         </td>
                         <td>
-                          {!isSyntheticJudgePayment(payment.paypalTxnId) &&
+                          {!isSyntheticJudgeId(payment.paypalTxnId) &&
                             !invoice.refundActions.some(
                               (action) =>
                                 action.paymentId === payment.id &&

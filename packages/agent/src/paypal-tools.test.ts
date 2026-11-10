@@ -20,7 +20,7 @@ const known: CloseAgentInput["known"] = {
   candidates: [],
   invoiceIds: new Set(),
   clientIds: new Set(),
-  disputeIds: new Set(["PP-OWN"]),
+  disputeIds: new Set(["PP-OWN", "JUDGE-SYNTHETIC-DISPUTE"]),
   firaLineIds: new Set(),
   paypalInvoiceIds: new Set(["INV2-OWN"]),
   paypalTxnIds: new Set(["TXN-OWN"]),
@@ -97,6 +97,10 @@ it("rejects unknown IDs and extra inputs before dispatch", async () => {
     "Rejected: unknown_entity",
   );
   expect((await call("get_invoice", { invoiceId: "INV2-OWN", note: "extra" })).isError).toBe(true);
+  // Seeded demo disputes never reach PayPal, so Claude cannot misread the lookup failure.
+  expect((await call("get_dispute", { disputeId: "JUDGE-SYNTHETIC-DISPUTE" })).text).toBe(
+    "Rejected: demo_record_not_in_paypal",
+  );
   expect(run).not.toHaveBeenCalled();
 });
 

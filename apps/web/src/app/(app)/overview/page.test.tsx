@@ -146,7 +146,9 @@ it("shows the no-profile tile, empty approvals without an accent edge, and no sc
   expect(html).toContain('<p class="stat-value">—</p>');
   expect(html).toContain("Complete your profile");
   expect(html).toContain("Nothing to approve");
-  expect(html).toContain("Niryat proposes PayPal reminders here when a deadline gets close.");
+  expect(html).toContain(
+    "Invoice sends, refunds and PayPal reminders wait here for your approval.",
+  );
   expect(html).not.toContain('data-tone="attention"');
   expect(html).not.toContain("overdue</span>");
   expect(html).toContain("None scheduled");
@@ -194,49 +196,65 @@ it("caps approval cards at three and retains every overdue plus five upcoming de
   expect(html.indexOf("Deadline 1</a>")).toBeLessThan(html.indexOf("Deadline 2</a>"));
 });
 
-it("shows the first five invoices in API order with formatted amounts and anchor links", async () => {
-  responses.set(
-    "/invoices",
-    [6, 2, 5, 1, 4, 3].map((index) => ({
-      id: `40000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-      clientId: "40000000-0000-4000-8000-000000000099",
-      clientName: "Acme",
-      type: "one_time",
-      number: `INV-${index}`,
-      fy: "2026-27",
-      date: "2026-11-01",
-      currency: "USD",
-      amount: "1234.50",
-      description: "Work",
-      sac: "998314",
-      recurrence: null,
-      status: "paid",
-      pdfUrl: null,
-      paypalInvoiceId: null,
-      paypalRecurringSeriesId: null,
-      paidTotal: "1234.50",
-      payments: [],
-      firaStatus: "pending",
-      refundedTotal: "0",
-      refunds: [],
-      disputes: [],
-      action: null,
-      refundActions: [],
-      compliance: {
-        realisation: {
-          exportValue: "1234.50",
-          received: "1234.50",
-          shortfall: "0.00",
-          adjustment: "none",
-          message: null,
-          citation: { ruleId: "RBI", source: "Test", effectiveFrom: null },
-        },
-        deadline: null,
-        creditNotes: [],
-        disputeAlerts: [],
+function invoice(index: number) {
+  return {
+    id: `40000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    clientId: "40000000-0000-4000-8000-000000000099",
+    clientName: "Acme",
+    type: "one_time",
+    number: `INV-${index}`,
+    fy: "2026-27",
+    date: "2026-11-01",
+    currency: "USD",
+    amount: "1234.50",
+    description: "Work",
+    sac: "998314",
+    recurrence: null,
+    status: "paid",
+    pdfUrl: null,
+    paypalInvoiceId: null,
+    paypalRecurringSeriesId: null,
+    paidTotal: "1234.50",
+    payments: [],
+    firaStatus: "pending",
+    refundedTotal: "0",
+    refunds: [],
+    disputes: [],
+    action: null,
+    refundActions: [],
+    compliance: {
+      realisation: {
+        exportValue: "1234.50",
+        received: "1234.50",
+        shortfall: "0.00",
+        adjustment: "none",
+        message: null,
+        citation: { ruleId: "RBI", source: "Test", effectiveFrom: null },
       },
-    })),
-  );
+      deadline: null,
+      creditNotes: [],
+      disputeAlerts: [],
+    },
+  };
+}
+
+it("counts and shows invoice send approvals alongside reminders", async () => {
+  responses.set("/close", { runs: [], approvals: [action(1)] });
+  responses.set("/invoices", [
+    {
+      ...invoice(7),
+      status: "issued",
+      action: { ...action(7), paypalAction: "send_invoice", payload: {} },
+    },
+  ]);
+  const html = await render();
+  expect(html).toContain('<h2>Approvals waiting</h2><p class="stat-value">2</p>');
+  expect(html.match(/class="card approval-card"/g)).toHaveLength(2);
+  expect(html).toContain("INV-7");
+});
+
+it("shows the first five invoices in API order with formatted amounts and anchor links", async () => {
+  responses.set("/invoices", [6, 2, 5, 1, 4, 3].map(invoice));
   const html = await render();
   expect(html.match(/class="mono" href="\/invoices#invoice-/g)).toHaveLength(5);
   expect(html.indexOf("INV-6</a>")).toBeLessThan(html.indexOf("INV-2</a>"));

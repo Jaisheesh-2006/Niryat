@@ -1,13 +1,17 @@
 "use client";
 
-import type { ReminderAction } from "@niryat/shared";
+import type { Action } from "@niryat/shared";
 import { useState } from "react";
 import { approvalKind, approvalTitle } from "../lib/status";
 import { ApprovalCard } from "./ApprovalCard";
 import { EmptyState } from "./EmptyState";
 import { CircleCheck } from "./icons";
 
-export function OverviewApprovals({ approvals }: { approvals: readonly ReminderAction[] }) {
+export function OverviewApprovals({
+  approvals,
+}: {
+  approvals: readonly (Action & { invoiceNumber: string })[];
+}) {
   const [ids, setIds] = useState(
     approvals
       .filter((action) => action.status === "proposed")
@@ -40,7 +44,7 @@ export function OverviewApprovals({ approvals }: { approvals: readonly ReminderA
         })
       ) : (
         <EmptyState icon={CircleCheck} title="Nothing to approve">
-          Niryat proposes PayPal reminders here when a deadline gets close.
+          Invoice sends, refunds and PayPal reminders wait here for your approval.
         </EmptyState>
       )}
     </>

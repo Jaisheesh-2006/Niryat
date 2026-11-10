@@ -4,7 +4,7 @@ import { PayPalApiError } from "@niryat/paypal";
 import {
   agentAdviceSchema,
   invoiceInputSchema,
-  isSyntheticJudgePayment,
+  isSyntheticJudgeId,
   recurrenceSchema,
   reminderStageSchema,
 } from "@niryat/shared";
@@ -167,7 +167,7 @@ export function actionHandlers(deps: AppDeps): Readonly<Record<PayPalActionName,
       ) {
         throw Object.assign(new Error("invalid_payload"), { code: "invalid_payload" });
       }
-      if (isSyntheticJudgePayment(payment.paypalTxnId)) {
+      if (isSyntheticJudgeId(payment.paypalTxnId)) {
         throw Object.assign(new Error("synthetic_payment"), { code: "synthetic_payment" });
       }
       const paypal = deps.paypal;

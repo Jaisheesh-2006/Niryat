@@ -23,8 +23,9 @@ export const JUDGE_EMAILS = {
 } as const;
 export const judgeLoginSchema = z.strictObject({ as: z.enum(["freelancer", "ca"]) });
 export const judgeModeSchema = z.object({ enabled: z.boolean() });
-export const isSyntheticJudgePayment = (paypalTxnId: string): boolean =>
-  paypalTxnId.startsWith("JUDGE-SYNTHETIC-");
+// Seeded judge-demo records (payments, refund, dispute) that PayPal has never seen.
+export const isSyntheticJudgeId = (paypalId: string): boolean =>
+  paypalId.startsWith("JUDGE-SYNTHETIC-");
 
 export const PDF_TEXT_PATTERN = /^[\x20-\x7E\u00A0-\u00FF\n]*$/;
 

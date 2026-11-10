@@ -28,15 +28,36 @@ function TileIcon({ icon: Icon }: { icon: ComponentType<{ size?: number }> }) {
   );
 }
 
+// Invoice sends and refunds wait on the invoice; reminders wait in the monthly close.
+async function pendingApprovals() {
+  const [close, invoices] = await Promise.all([
+    apiGet("/close", closePageSchema),
+    apiGet("/invoices", invoiceViewSchema.array()),
+  ]);
+  return [
+    ...(invoices ?? []).flatMap((invoice) =>
+      [...(invoice.action ? [invoice.action] : []), ...invoice.refundActions].map((action) => ({
+        ...action,
+        invoiceNumber: invoice.number,
+      })),
+    ),
+    ...(close?.approvals ?? []),
+  ];
+}
+
 async function ApprovalsTile() {
-  const close = await apiGet("/close", closePageSchema);
-  const count = close?.approvals.filter((action) => action.status === "proposed").length ?? 0;
+  const approvals = await pendingApprovals();
+  const count = approvals.filter((action) => action.status === "proposed").length;
   return (
-    <Link href="/close" className="stat-tile" data-tone={count > 0 ? "attention" : "neutral"}>
+    <Link
+      href="#overview-approvals"
+      className="stat-tile"
+      data-tone={count > 0 ? "attention" : "neutral"}
+    >
       <TileIcon icon={CalendarCheck} />
       <h2>Approvals waiting</h2>
       <p className="stat-value">{count}</p>
-      <p>Review in Monthly close</p>
+      <p>Review below</p>
     </Link>
   );
 }
@@ -100,14 +121,14 @@ async function TasksTile() {
 }
 
 async function Approvals() {
-  const close = await apiGet("/close", closePageSchema);
+  const approvals = await pendingApprovals();
   return (
     <section className="card" aria-labelledby="overview-approvals">
       <div className="card-header">
         <h2 id="overview-approvals">Waiting for your approval</h2>
         <Link href="/close">All approvals</Link>
       </div>
-      <OverviewApprovals approvals={close?.approvals ?? []} />
+      <OverviewApprovals approvals={approvals} />
     </section>
   );
 }

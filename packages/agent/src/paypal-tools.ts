@@ -1,3 +1,4 @@
+import { isSyntheticJudgeId } from "@niryat/shared";
 import { PayPalAgentToolkit } from "@paypal/agent-toolkit/openai";
 import { z } from "zod";
 import type { AgentTool } from "./claude";
@@ -208,7 +209,11 @@ export function paypalReadTools(
       "get_dispute",
       { disputeId: z.string().regex(/^[A-Za-z0-9_-]{1,255}$/) },
       ({ disputeId }) =>
-        known.disputeIds.has(disputeId) ? { dispute_id: disputeId } : "unknown_entity",
+        !known.disputeIds.has(disputeId)
+          ? "unknown_entity"
+          : isSyntheticJudgeId(disputeId)
+            ? "demo_record_not_in_paypal"
+            : { dispute_id: disputeId },
       (raw, { disputeId }) => {
         const row = dispute.parse(raw);
         if (row.disputeId !== disputeId) throw new Error("dispute_id mismatch");

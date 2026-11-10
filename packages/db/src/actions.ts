@@ -2,7 +2,7 @@ import type { ActionStore } from "@niryat/agent";
 import {
   actionSchema,
   invoiceInputSchema,
-  isSyntheticJudgePayment,
+  isSyntheticJudgeId,
   type ReminderAction,
   reminderActionSchema,
 } from "@niryat/shared";
@@ -140,7 +140,7 @@ export async function proposeRefund(
         })
         .safeParse(row);
       if (!payment.success) throw new Error("Stored payment is invalid");
-      if (isSyntheticJudgePayment(payment.data.captureId))
+      if (isSyntheticJudgeId(payment.data.captureId))
         return { ok: false, reason: "synthetic_payment" } as const;
       const [pending] = await tx
         .select({ id: agentActions.id })
