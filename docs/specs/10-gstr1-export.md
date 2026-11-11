@@ -33,7 +33,7 @@ Unregistered profiles; empty periods; refunds across periods; rounding and curre
 - [Rules](../../packages/rules/src/gstr1.test.ts): monthly/quarterly periods and year boundaries; inclusive LUT coverage; invalid dates/rates; explicit GST percentage; exact rounding, large values and empty periods.
 - [Preview/CSV](../../apps/api/src/gstr1.test.ts): per-currency reconciliation, cross-period refunds by IST date, exclusions, exact header/order, dates, CRLF and supplied rates.
 - [Routes](../../apps/api/src/routes/gstr1.test.ts): authentication, registration/frequency gates, malformed inputs and missing rates; stored-ledger reconciliation and user isolation.
-- [Web](../../apps/web/src/app/gstr1/page.test.tsx): period navigation, registration messages, rate labels without defaults, LUT exclusions, empty periods and disabled downloads. Offline-tool parser acceptance remains manual.
+- [Web](../../apps/web/src/app/(app)/gstr1/page.test.tsx): period navigation, registration messages, rate labels without defaults, LUT exclusions, empty periods and disabled downloads. Offline-tool parser acceptance remains manual.
 
 ## Out of scope
 

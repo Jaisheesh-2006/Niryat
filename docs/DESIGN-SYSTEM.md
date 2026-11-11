@@ -1,8 +1,41 @@
-# Frontend implementation: Niryat Neel
+# Niryat design system (Neel)
+
+Neel is Niryat's interface system. Indigo was one of India's first great exports; Neel uses calm indigo surfaces, one marigold signal for "your decision", and dates laid out on a timeline. Every signed-in page uses it. The principles below are what ships; §3 lists every token value and §12 records what was built. The app ships the light theme only (§12).
+
+## Principles
+
+**Product rules the design enforces**
+- **Marigold means one thing: waiting for your decision.** It is used only as a fill (`--niryat-accent` with `--niryat-on-accent`): the decision badge, the Approve button and the approvals count. Never as text or decoration. Refund approval stays red because it moves money out.
+- **Every legal figure carries its rule.** A deadline, tax figure or eligibility result shows a citation with its rule id from `packages/rules`; the UI never computes them.
+- **Sandbox and not advice, on every signed-in page,** in a bar at the top of the main content.
+- **Fail in place.** A section that fails to load shows an alert where it would have been and offers Try again; other sections still render. No toasts: results stay on the page.
+
+**Voice**
+- Write to the user as "you"; "we" only in errors about Niryat itself. Name Claude when it drafted something.
+- Sentence case everywhere, no emoji. Plain words first, official term second: "GST sales return (GSTR-1)", "payment proof (FIRA)", with a term explanation where it first appears.
+- Buttons say verb plus object ("Upload FIRA", "Try again"); results say what happened ("Sent to PayPal sandbox.").
+- Amounts always carry the ISO currency code (`USD 4,800.00`); dates read `11 Nov` in lists and `11 Nov 2026` in details.
+
+**Colour, type and shape**
+- Ground `bg` (mist) with content on `surface` cards; `primary` (indigo) for links, primary buttons, selection and today. Status uses soft/strong pairs: attention (due soon, partial), success (paid, matched), danger (overdue, missing), neutral (settled). Success and danger always add a word and an icon. The sidebar and mobile top bar use the `shell` tokens with a marigold focus ring.
+- Indigo replaced green as primary so that "button" and "paid" no longer look alike.
+- Bricolage Grotesque (optical size on) for titles; Figtree for everything else, with tabular figures so amounts line up. System monospace only for rule ids and file names. Running text stays within 680px.
+- 4px spacing base (4–64px). Every control is at least 44px tall. Radii 10 / 12 / 18 / 24 / pill for inner items, controls, cards, sheets and badges. Cards have shadows, not borders, and no coloured left edges.
+- Navigation switches at 1024px; layout margins and title sizes step down below 768px.
+
+**Icons and motion**
+- Lucide outline icons on a 24px grid with a 1.5px stroke and `currentColor`: 20px in controls, 16px in badges. Decorative icons are `aria-hidden`; icon-only buttons are labelled. The mark (marigold disc, indigo leaf) appears only in the sidebar and top bar.
+- 120ms for colour changes, 200ms for hover and disclosure, easing `cubic-bezier(0.2, 0, 0, 1)`. `prefers-reduced-motion` removes all movement.
+
+**Accessibility targets**
+- WCAG 2.2 AA: text pairs at 4.5:1, control borders, focus rings and meaningful icons at 3:1 (ratios from the token notes, not yet measured in a browser; §11).
+- Focus is always visible; one `h1` per page; `nav` and `main` landmarks; tables with captions and scopes; visible form labels. Results use `role="status"`, and only blocking errors use `role="alert"`. Text resizes to 200% without loss.
+
+## Implementation plan and record
 
 Status: **approved 2026-11-09 with every recommended answer in §10; implemented in phases A–F** (see §12). Browser checks in phase G await user verification. Assessed 2026-11-09 against HEAD `665c088` (clean working tree).
 
-Source of truth: the published design system [Niryat Neel](https://claude.ai/artifact/TpCSbQELpgnrX6zg64GpGK) (`project/README.md`, `project/Decisions.md`, `project/tokens.json`, 16 component READMEs, `project/components/bundle.css`).
+Source: Neel's token file, component guidelines, decisions and stylesheet, summarised in the principles above and §1–§4.
 
 Constraints: frontend only. No backend, database, API contract or business-logic changes. Routes, authentication and data flows stay as they are. Any behaviour change listed in §7 needs explicit approval first.
 

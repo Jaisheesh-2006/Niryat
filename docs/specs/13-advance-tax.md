@@ -33,7 +33,7 @@ Uncertain eligibility; missing receipts; refunds; changes in applicable law; unk
 - [Rules](../../packages/rules/src/advance-tax.test.ts): valid/invalid tax years, all eligibility branches and boundaries, YAML-driven parameters, four/one instalments, missing estimates, threshold equality and exact rounding.
 - [Receipts](../../apps/api/src/advance-tax.test.ts): IST year boundary, refunds/negative net receipts, rates and rules-derived results.
 - [Route](../../apps/api/src/routes/advance-tax.test.ts): session/profile gates, eligibility branches, invalid/duplicate queries, all currencies and user-scoped reads.
-- [Page](../../apps/web/src/app/advance-tax/page.test.tsx): Next development proxy regression, valid/missing rates and rejection of malformed currency inputs before API calls. [Calendar builder](../../apps/api/src/calendar.test.ts) verifies the shared tax dates.
+- [Page](../../apps/web/src/app/(app)/advance-tax/page.test.tsx): Next development proxy regression, valid/missing rates and rejection of malformed currency inputs before API calls. [Calendar builder](../../apps/api/src/calendar.test.ts) verifies the shared tax dates.
 
 ## Out of scope
 

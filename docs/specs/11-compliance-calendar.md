@@ -31,7 +31,7 @@ Time zones; overdue items; recurring dates; duplicate events; missing source rec
 - [Event builder](../../apps/api/src/calendar.test.ts): exact IDs/titles/links/rules, inclusive window edges, overdue/past states, GST gates, paid invoices, missing dispute dates, month-end recurrence and unique sorted IDs.
 - [Route](../../apps/api/src/routes/calendar.test.ts): authentication, empty-profile tax dates and stored-ledger isolation between users.
 - [Mapping](../../apps/web/src/lib/calendar.test.ts): all-day dates, state prefixes/classes and links for all three states.
-- [Fallback](../../apps/web/src/app/calendar/page.test.tsx): all overdue plus ten upcoming events, empty list, invalid responses and unauthenticated redirect. P6-11 user-confirmed calendar rendering and RBI/GSTR-1 navigation; licence validity is a separate [V15](../verification.md#v15-sponsor-licences) check.
+- [Fallback](../../apps/web/src/app/(app)/calendar/page.test.tsx): all overdue plus ten upcoming events, empty list, invalid responses and unauthenticated redirect. P6-11 user-confirmed calendar rendering and RBI/GSTR-1 navigation; licence validity is a separate [V15](../verification.md#v15-sponsor-licences) check.
 
 ## Out of scope
 

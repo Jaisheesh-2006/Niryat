@@ -1,6 +1,6 @@
 # 6. Refunds and disputes handling
 
-Status: built (2026-10-30) except dashboard and monthly-close display (specs 12 and 08). Source: [PLAN section 5](../PLAN.md#5-v1-features-in-order-of-importance).
+Status: built (2026-10-30); refunds and open disputes appear in the dashboard tiles (spec 12, user-confirmed 2026-11-01) and the monthly close summary (spec 08). Source: [PLAN section 5](../PLAN.md#5-v1-features-in-order-of-importance).
 
 ## Goal
 
@@ -14,7 +14,7 @@ As an Indian freelancer paid through PayPal, I want to understand the compliance
 
 - [x] A sandbox refund updates the invoice, GST data and realised amount
 - [x] A sandbox dispute creates an alert and a task with its compliance impact
-- [ ] Both appear in the dashboard and monthly close summary
+- [x] Both appear in the dashboard and monthly close summary
 
 ## Data & APIs used
 
@@ -36,7 +36,7 @@ Partial or repeated refunds; dispute won/lost; duplicate events; missing invoice
 
 ## Limitations
 
-The sandbox dispute appeared after manual sync; automatic dispute-webhook delivery remains unverified. The invoice-refund event path is user-confirmed, but its raw delivery, exact resource-ID variant and HTTP result still need recording for the Phase 4 evidence gate. Dashboard and monthly-close display remain open. See [Phase 4 status](../build-flow.md#phase-4-corrections-and-proof-specs-0607-oct-31nov-2).
+Hosted refund (2026-11-09) and dispute (2026-11-10) webhook delivery, the refund payload and its HTTP 200 result are recorded in V06. Dashboard and monthly-close display are built. See [Phase 4 status](../build-flow.md#phase-4-corrections-and-proof-specs-0607-oct-31nov-2).
 
 ## Out of scope
 

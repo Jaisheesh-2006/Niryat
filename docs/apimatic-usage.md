@@ -1,6 +1,6 @@
 # APIMatic usage
 
-Record of how the [APIMatic](https://www.apimatic.io/) PayPal Context Plugin and other APIMatic tooling were used while building Niryat. It is evidence for the APIMatic sponsor prize ([PLAN §12](PLAN.md#12-sponsor-tools)), so add an entry in the same task whenever an APIMatic tool is used ([AGENTS.md](../AGENTS.md)).
+Record of how the [APIMatic](https://www.apimatic.io/) PayPal Context Plugin and other APIMatic tooling were used while building Niryat. Add an entry in the same task whenever an APIMatic tool is used ([AGENTS.md](../AGENTS.md)).
 
 Each entry gives the date, the tool, its purpose and the outcome. Record what the tool actually changed or prevented, not just that it was opened.
 
@@ -10,7 +10,7 @@ Niryat uses APIMatic in two ways:
 1. **At runtime:** the APIMatic-generated **PayPal Server SDK for TypeScript** (`@paypal/paypal-server-sdk` 2.5.0) is Niryat's PayPal ledger adapter, in [packages/paypal/src/sdk](../packages/paypal/src/sdk/index.ts). It makes four calls: `TransactionSearchController.searchTransactions`, which reads every page of results for the nightly and half-hourly reconciliation, and `PaymentsController.getCapturedPayment`, `refundCapturedPayment` and `getRefund`. Every refund runs only after the user approves it in Niryat's approval queue.
 2. **While building:** the **APIMatic PayPal Context Plugin** (`paypal:typescript-*` skills) was loaded in Claude Code while we wrote and tested that adapter. The table below lists the SDK behaviour the plugin warned us about and the shipped code that handles it.
 
-Niryat reads a freelancer's PayPal ledger (captures, transaction search, refunds) through the APIMatic-generated PayPal Server SDK for TypeScript, `@paypal/paypal-server-sdk` 2.5.0. We wrote that adapter in Claude Code with the Context Plugin's `paypal:typescript-*` skills loaded. The skills mattered most where the SDK's types say nothing. Each point below is in shipped code:
+The plugin's skills mattered most where the SDK's types say nothing. Each point below is in shipped code:
 
 | What the plugin told us                                                                                                         | What we did                                                                                                                                                                                                                                                                                         | Where                                                                |
 | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -35,6 +35,6 @@ Numbering scope update (2026-11-06, spec 04/G4): `packages/rules/src/invoice-num
 
 ## 2026-11-04: A1/A2 platform scope
 
-[A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0) changed shared deployment/security settings and API rate limits, including the forwarded-IP trust fix. The affected implementation is [render.yaml](../render.yaml), [Next configuration](../apps/web/next.config.ts) and the API's [limiter](../apps/api/src/rate-limit.ts) and [composition root](../apps/api/src/server.ts). See the [Render record](RENDER.md) for the changes, reasons, private-network binding, test results and pending hosted checks.
+A1 and A2 changed shared deployment/security settings and API rate limits, including the forwarded-IP trust fix. The affected implementation is [render.yaml](../render.yaml), [Next configuration](../apps/web/next.config.ts) and the API's [limiter](../apps/api/src/rate-limit.ts) and [composition root](../apps/api/src/server.ts). See the [Render record](RENDER.md) for the changes, reasons, private-network binding, test results and pending hosted checks.
 
 These phases made no APIMatic-generated SDK adapter or payload changes and used no APIMatic tools. This scope note is not a new tool-use log entry or sponsor-usage claim. The existing log above remains the APIMatic usage evidence. A1/A2's `pnpm verify` and production builds passed; database-dependent skips and hosted/browser checks remain as recorded in [validation details](RENDER.md#recorded-automated-validation). No PayPal operation was performed for these phases.

@@ -3,7 +3,7 @@
 Follow the root AGENTS.md and the selected feature spec.
 Use App Router and server components by default; add client boundaries only when needed.
 Before using a Next.js API, read its guide in `node_modules/next/dist/docs/` (version-matched).
-Visual design source of truth: the Niryat Neel design system, as mapped in docs/IMPLEMENTATION-FRONTEND.md.
+Visual design source of truth: the Niryat Neel design system, as mapped in docs/DESIGN-SYSTEM.md.
 Biome owns formatting/linting. No ESLint or Prettier.
 Keep legal/numeric decisions in packages/rules, reached through validated API contracts.
 Pages include dashboard, calendar, GSTR-1 and advance tax alongside the earlier profile/invoice/close flows.

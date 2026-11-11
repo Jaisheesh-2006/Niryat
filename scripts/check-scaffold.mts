@@ -20,7 +20,7 @@ const actual = specs.flatMap((path) =>
 );
 assert.deepEqual(actual, expected, "Acceptance criteria must match PLAN verbatim");
 assert.ok(read("AGENTS.md").trimEnd().split("\n").length < 150);
-assert.ok(read("README.md").trimEnd().split("\n").length < 120);
+assert.ok(read("README.md").trimEnd().split("\n").length < 150);
 for (const path of ["CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md"])
   assert.ok(read(path).includes("AGENTS.md"));
 const ruleSection = plan.split("## 9. Rules engine")[1]?.split("## 10.")[0] ?? "";

@@ -52,7 +52,7 @@ An Indian freelancer paid through PayPal has deadlines from four sources: GST (L
 
 Each entry below records a dated change, its verification and any checks still open.
 
-Initial record 2026-11-04: [A1 and A2](IMPROVEMENTS.md#a1-security-quick-fixes-p0). Later tasks are dated separately below. This file retains the existing `BRYUNTUM.md` filename.
+Initial record 2026-11-04: A1 and A2. Later tasks are dated separately below. This file retains the existing `BRYUNTUM.md` filename.
 
 ## Licence: trial package confirmed, unused key removed
 
@@ -60,9 +60,9 @@ Recorded 2026-11-05. The hackathon's [Bryntum prize page](https://paypalaihackat
 
 ## D1/D2: plain calendar wording
 
-Recorded 2026-11-05. The [calendar API builder](../apps/api/src/calendar.ts) now labels the yearly export form, GST sales return, income-tax payments, export-payment deadline and invoice adjustments in plain words before LUT/GSTR-1/RBI/credit-note terms. Actions identify the CA, bank, user or PayPal as before. The owner and CA calendar pages add one-line descriptions and native disclosures containing the shared glossary explanations; the CA client-record page also explains terms before its records. IDs, dates, state/window rules, citations, percentages, links, categories/resources, filters, tooltip safety and read-only behavior are retained. This is wording work under [D1/D2](IMPROVEMENTS.md#d1-plain-language-glossary-and-term-helper-p0); the user approved the rules-message review gate before UI/API wording work began.
+Recorded 2026-11-05. The [calendar API builder](../apps/api/src/calendar.ts) now labels the yearly export form, GST sales return, income-tax payments, export-payment deadline and invoice adjustments in plain words before LUT/GSTR-1/RBI/credit-note terms. Actions identify the CA, bank, user or PayPal as before. The owner and CA calendar pages add one-line descriptions and native disclosures containing the shared glossary explanations; the CA client-record page also explains terms before its records. IDs, dates, state/window rules, citations, percentages, links, categories/resources, filters, tooltip safety and read-only behavior are retained. This is wording work under D1/D2; the user approved the rules-message review gate before UI/API wording work began.
 
-Step 3 web tests passed 541/541. The revised API calendar exact-title/action suite passed 16/16; final checks are recorded in [D2 verification](IMPROVEMENTS.md#d2-verification-and-manual-checks). No package, wrapper option, palette, licence setting or deployment changed. Browser layout, long-title wrapping, keyboard/no-JavaScript disclosures and licence/trial coverage remain **awaiting user verification**. Follow the D2 prerequisites, then open `/calendar` as the freelancer and `/ca/calendar` as their accepted CA. Expand “What these deadlines mean”; compare dates/categories/links with existing records, then inspect the updated titles/actions in tooltips and fallback tables. January–December year navigation, repeating client colours and loaded snapshots retain the previously documented limits.
+Step 3 web tests passed 541/541. The revised API calendar exact-title/action suite passed 16/16; final checks are recorded in D2 verification. No package, wrapper option, palette, licence setting or deployment changed. Browser layout, long-title wrapping, keyboard/no-JavaScript disclosures and licence/trial coverage remain **awaiting user verification**. Follow the D2 prerequisites, then open `/calendar` as the freelancer and `/ca/calendar` as their accepted CA. Expand “What these deadlines mean”; compare dates/categories/links with existing records, then inspect the updated titles/actions in tooltips and fallback tables. January–December year navigation, repeating client colours and loaded snapshots retain the previously documented limits.
 
 ## A1: shared security headers
 
@@ -214,7 +214,7 @@ Manual check — awaiting user verification: use the existing C4 prerequisites/m
 
 ## Niryat Neel visual system (2026-11-09)
 
-The calendar's resource colours still come from the `--niryat-cat-*` tokens and its state classes from `--niryat-overdue`, `--niryat-upcoming`, `--niryat-past` and `--niryat-event-text`; [calendar.ts](../apps/web/src/lib/calendar.ts) is unchanged. The token values in [globals.css](../apps/web/src/app/globals.css) now follow the approved Niryat Neel design system ([IMPLEMENTATION-FRONTEND.md](IMPLEMENTATION-FRONTEND.md)): GST `#3b348c` / `#c3befa`, Income tax `#7a3e8f` / `#e0b2ee`, RBI `#8a5300` / `#f5c77e`, PayPal `#2f6a8a` / `#9ed0ea` (light / dark); `upcoming` aliases indigo primary, `past` `#6b6890` / `#b6b3cf`, event text white / `#1e1a4d`. No Bryntum package, licence or behaviour change.
+The calendar's resource colours still come from the `--niryat-cat-*` tokens and its state classes from `--niryat-overdue`, `--niryat-upcoming`, `--niryat-past` and `--niryat-event-text`; [calendar.ts](../apps/web/src/lib/calendar.ts) is unchanged. The token values in [globals.css](../apps/web/src/app/globals.css) now follow the approved Niryat Neel design system ([design system](DESIGN-SYSTEM.md)): GST `#3b348c` / `#c3befa`, Income tax `#7a3e8f` / `#e0b2ee`, RBI `#8a5300` / `#f5c77e`, PayPal `#2f6a8a` / `#9ed0ea` (light / dark); `upcoming` aliases indigo primary, `past` `#6b6890` / `#b6b3cf`, event text white / `#1e1a4d`. No Bryntum package, licence or behaviour change.
 
 Verification: `corepack.cmd pnpm verify` 27/27 (web 570/570, including CalendarView tests); `corepack.cmd pnpm build` 9/9 with a fresh Next build. Pending user verification: `/calendar` and `/ca/calendar` in light and dark, checking event colours, legend and event text contrast.
 

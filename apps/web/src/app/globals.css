@@ -1,4 +1,4 @@
-/* Niryat Neel design system (docs/IMPLEMENTATION-FRONTEND.md; values from Neel tokens.json).
+/* Niryat Neel design system (docs/DESIGN-SYSTEM.md; values from Neel tokens.json).
    Token names are shared with AG Studio and Bryntum; keep them stable. */
 :root {
   /* Palette */
@@ -89,7 +89,7 @@
   --niryat-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2355527a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   color-scheme: light;
 }
-/* Light only: the user chose no dark theme (IMPLEMENTATION-FRONTEND.md §12). */
+/* Light only: the user chose no dark theme (DESIGN-SYSTEM.md §12). */
 
 /* ---------- Base ---------- */
 *,
@@ -819,7 +819,7 @@ p.suggestion {
   max-width: 72ch;
 }
 
-/* ---------- Decision card (Neel DecisionCard; Approve stays on the card, see IMPLEMENTATION-FRONTEND.md §10) ---------- */
+/* ---------- Decision card (Neel DecisionCard; Approve stays on the card, see DESIGN-SYSTEM.md §10) ---------- */
 .approval-card {
   container-type: inline-size;
 }

@@ -25,7 +25,7 @@ Built for the **[PayPal AI Hackathon](https://paypalaihackathon.devpost.com/)** 
 13. [Data model](#13-data-model)
 14. [Getting started](#14-getting-started)
 15. [Judge mode](#15-judge-mode)
-16. [Demo script (3 minutes)](#16-demo-script-3-minutes)
+16. [Demo](#16-demo)
 17. [Timeline](#17-timeline)
 18. [Team roles](#18-team-roles)
 19. [Hackathon compliance checklist](#19-hackathon-compliance-checklist)
@@ -191,7 +191,7 @@ Every feature below is **required for v1**. Build them in this order; each one l
 **Done when:**
 - [x] A sandbox refund updates the invoice, GST data and realised amount
 - [x] A sandbox dispute creates an alert and a task with its compliance impact
-- [ ] Both appear in the dashboard and monthly close summary
+- [x] Both appear in the dashboard and monthly close summary
 
 ### 7. FIRA matching
 
@@ -391,14 +391,12 @@ APIMatic PayPal Context Plugin used while coding the integration     ← APIMati
 
 ## 12. Sponsor tools
 
-| Sponsor                 | How Niryat uses it                                                                                                   | Prize                                  |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| **AG Grid (AG Studio)** | Main dashboard on PayPal data, custom widgets and theming, natural-language questions via the Studio Agent Framework | $5K / $2K / 3×$1K — **primary target** |
-| **Bryntum**             | Compliance calendar (Calendar component)                                                                             | 3×$1K                                  |
-| **Render**              | Hosting + Render Workflows for scheduled agent jobs                                                                  | Credits                                |
-| **APIMatic**            | PayPal Context Plugin used while building the PayPal integration (documented here)                                   | 3×$1K + subscription                   |
-
-A project can win at most one main prize and one sponsor prize; AG Studio is the main sponsor target.
+| Sponsor                 | How Niryat uses it                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **AG Grid (AG Studio)** | Main dashboard on PayPal data, custom widgets and theming, natural-language questions via the Studio Agent Framework |
+| **Bryntum**             | Compliance calendar (Calendar component)                                                                             |
+| **Render**              | Hosting + Render Workflows for scheduled agent jobs                                                                  |
+| **APIMatic**            | PayPal Context Plugin used while building the PayPal integration (documented here)                                   |
 
 **Licence timing:** AG Studio and Bryntum offer 45-day trials, and judging runs until **Dec 15**. Start both trials **on or after Nov 1** (45 days from Nov 1 reaches Dec 16) and ask on the PayPal Discord whether hackathon licences can cover the full judging period.
 
@@ -492,19 +490,9 @@ The rules engine must have unit tests for every rule in [section 9](#9-rules-eng
 
 ---
 
-## 16. Demo script (3 minutes)
+## 16. Demo
 
-F1 replaces the earlier nine scenes with these five, totalling **2:55**. Keep PayPal beside Niryat during invoice/payment and reminder delivery. This is a recording plan, not evidence that the hosted demo passed. Rehearsal prerequisites, exact inputs and expected outcomes are in [submission materials](submission.md#recording-and-rehearsal-user-only).
-
-| Time      | Scene and screen actions                                                                                                                                                                                                                                                                                                   | Suggested narration                                                                                                                                                                                                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0:00–0:20 | **Problem.** Freelancer `/overview` → `/health-check`; show the actual LUT countdown, without inventing income or dates.                                                                                                                                                                                                   | “Indian freelancers get paid through PayPal, then piece together export records. This yearly form lets you bill foreign clients without GST: the LUT. Niryat helps you prepare the records for your CA.”                                                                 |
-| 0:20–1:05 | **Email to payment.** `/invoices`: paste the prepared email, inspect source quotes, use the values, complete export answers and issue. Approve the queued send. Show the new invoice in the sandbox buyer's PayPal, pay it, then show its fee and net in Niryat. Label any cut while waiting for delivery/indexing.        | “Claude extracts a draft. I check the fields and approve sending. The buyer receives and pays the invoice in PayPal. Niryat records PayPal's amount before fees, fee and amount after fees.”                                                                             |
-| 1:05–1:45 | **Monthly close.** `/close`: run close and leave the latest **Tool calls** log visible. Show actual successful Claude PayPal reads, disputed-client hold advice and a separate send candidate. Leave the hold unapproved; approve only the safe reminder and show the buyer notification. Label any simulated `asOf` date. | “Claude reads my PayPal records and investigates the dispute. It advises holding this client's reminder. I approve a different reminder; the buyer receives it. Nothing is sent by the model.”                                                                           |
-| 1:45–2:30 | **Two dashboards and calendar.** `/dashboard`: enter edit mode and ask “PayPal fees by client this year”. Switch to CA `/ca`, show accepted clients and the AI Assistant, then `/ca/calendar`; filter a client/category and open a tooltip with an action and source. Label synthetic portfolio records.                   | “AG Studio lets freelancers and CAs ask about their records. The CA portfolio combines accepted clients. Bryntum shows their deadlines, filters and what to do next.”                                                                                                    |
-| 2:30–2:55 | **Safety and close.** Show an approval, a rule's source link and the CA's view-only client page. Display the business model and sandbox/synthetic-data disclosure.                                                                                                                                                         | “The freelancer approves every PayPal action. Rules cite primary sources; your CA verifies the result. CAs can only view financial records. Free for freelancers; CA firms pay per client. Run your export business on PayPal. Niryat prepares the records for your CA.” |
-
-Use no third-party logos or copyrighted music. Never show credentials or private buyer login details. Keep the sandbox label visible; synthetic records are not proof of PayPal delivery. Cut waiting time transparently, never fabricate delivery, successful tool calls or hold advice. The business model is proposed; billing is not implemented. Record scene outcomes before filming; all five hosted scenes currently await user verification.
+The hosted demo has one-click freelancer and CA accounts with synthetic records; the walkthrough is in the [README](../README.md#try-it). The five-scene hosted walkthrough passed on 2026-11-10 ([V17](verification.md#v17-hosted-demo-rehearsal)).
 
 ---
 
@@ -587,11 +575,11 @@ Based on the [official rules](https://paypalaihackathon.devpost.com/rules):
 - [x] Invoice attachments work (otherwise link the PDF in `note`): no upload, so link the PDF in `note` ([findings](paypal-sandbox-findings.md))
 
 **Indian rules:**
-- [ ] Current RBI realisation period for services (official RBI notification)
-- [ ] Income-tax Act 2025 section numbers and presumptive-tax limits
-- [ ] Rule 46 export invoice wording and numbering requirements
-- [ ] Credit-note treatment for refunds on export invoices
-- [ ] GSTR-1 Table 6A file format for services
+- [x] Current RBI realisation period for services (official RBI notification): 9 months, FEMA 23(R)/2026-RB ([V09](verification.md#v09-rules-review))
+- [x] Income-tax Act 2025 section numbers and presumptive-tax limits
+- [x] Rule 46 export invoice wording and numbering requirements
+- [x] Credit-note treatment for refunds on export invoices
+- [x] GSTR-1 Table 6A file format for services: header from the GST offline tool V3.2.4; import into the tool untested ([V10](verification.md#v10-gstr-1-format))
 - [ ] Whether PayPal India requires any per-transaction export details
 
 **Other:**
