@@ -1,6 +1,7 @@
 # Niryat
 
-**Turns an Indian freelancer's PayPal activity into export-compliance records.** Built for the PayPal AI Hackathon (2026). Live demo: **https://niryat-web.onrender.com**
+**Turns an Indian freelancer's PayPal activity into export-compliance records.** Built for the PayPal AI Hackathon (2026). Live demo: **https://niryat-web.onrender.com**\
+![Niryat's Today page: approvals waiting, next deadline, health score, a PayPal invoice awaiting approval and upcoming compliance deadlines](public/niryat-overview.png)
 
 ## Who it helps
 
