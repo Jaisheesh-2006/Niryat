@@ -93,7 +93,7 @@ export function approvalTitle({
   clientName?: string;
 }): string {
   const titles: Record<Action["paypalAction"], string> = {
-    send_invoice: `Send invoice ${invoiceNumber} to ${clientName} through PayPal`,
+    send_invoice: `Send invoice ${invoiceNumber}${clientName ? ` to ${clientName}` : ""} through PayPal`,
     create_recurring_series: `Start the PayPal recurring series for invoice ${invoiceNumber}`,
     refund_payment: `Refund a payment on invoice ${invoiceNumber} through PayPal`,
     send_invoice_reminder: `Send PayPal's standard reminder for invoice ${invoiceNumber}`,

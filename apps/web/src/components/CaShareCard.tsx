@@ -92,7 +92,7 @@ export function CaShareCard({ link }: { link: CaLink | null }) {
             />
           </>
         )}
-        <button className="btn" type="submit" disabled={isPending}>
+        <button type="submit" disabled={isPending}>
           {isPending
             ? "Saving…"
             : link?.status === "pending"

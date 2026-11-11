@@ -110,6 +110,12 @@ it.each(paypalActionNames)("titles PayPal action %s from the supplied invoice fi
   if (name !== "send_invoice_reminder") expect(approvalKind(action(name))).toBeUndefined();
 });
 
+it("omits the client from a send title when the page has no client name", () => {
+  expect(approvalTitle({ action: action("send_invoice"), invoiceNumber: "INV-0007" })).toBe(
+    "Send invoice INV-0007 through PayPal",
+  );
+});
+
 it.each([30, 60])("labels the validated %i-day reminder stage", (stage) => {
   const reminder = action("send_invoice_reminder", { stage });
   expect(approvalKind(reminder)).toBe(`Reminder · ${stage}-day stage`);

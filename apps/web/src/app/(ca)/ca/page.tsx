@@ -53,12 +53,22 @@ export default async function CaClients() {
               <thead>
                 <tr>
                   <th scope="col">Client</th>
-                  <th scope="col">Health score</th>
-                  <th scope="col">Unpaid invoices</th>
-                  <th scope="col">Overdue invoices</th>
+                  <th scope="col" className="num">
+                    Health score
+                  </th>
+                  <th scope="col" className="num">
+                    Unpaid invoices
+                  </th>
+                  <th scope="col" className="num">
+                    Overdue invoices
+                  </th>
                   <th scope="col">Next deadline</th>
-                  <th scope="col">Missing payment proof</th>
-                  <th scope="col">Approvals waiting</th>
+                  <th scope="col" className="num">
+                    Missing payment proof
+                  </th>
+                  <th scope="col" className="num">
+                    Approvals waiting
+                  </th>
                   <th scope="col">Shared since</th>
                 </tr>
               </thead>

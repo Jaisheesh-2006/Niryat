@@ -103,9 +103,15 @@ export default async function AdvanceTax({
           <thead>
             <tr>
               <th scope="col">Currency</th>
-              <th scope="col">Payments</th>
-              <th scope="col">Refunds</th>
-              <th scope="col">Net receipts</th>
+              <th scope="col" className="num">
+                Payments
+              </th>
+              <th scope="col" className="num">
+                Refunds
+              </th>
+              <th scope="col" className="num">
+                Net receipts
+              </th>
             </tr>
           </thead>
           <tbody>

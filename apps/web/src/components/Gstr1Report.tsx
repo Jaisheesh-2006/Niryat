@@ -76,7 +76,9 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
                 <tr>
                   <th scope="col">Invoice</th>
                   <th scope="col">Date</th>
-                  <th scope="col">Amount</th>
+                  <th scope="col" className="num">
+                    Amount
+                  </th>
                   <th scope="col">Status</th>
                   <th scope="col">LUT</th>
                 </tr>
@@ -138,9 +140,15 @@ export function Gstr1Report({ preview, client }: { preview: Gstr1Preview; client
           <thead>
             <tr>
               <th scope="col">Currency</th>
-              <th scope="col">Invoices</th>
-              <th scope="col">Refunds</th>
-              <th scope="col">Net</th>
+              <th scope="col" className="num">
+                Invoices
+              </th>
+              <th scope="col" className="num">
+                Refunds
+              </th>
+              <th scope="col" className="num">
+                Net
+              </th>
             </tr>
           </thead>
           <tbody>

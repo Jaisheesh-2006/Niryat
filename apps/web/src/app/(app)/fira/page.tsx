@@ -37,7 +37,9 @@ export default async function Fira() {
               <thead>
                 <tr>
                   <th scope="col">Date</th>
-                  <th scope="col">Amount</th>
+                  <th scope="col" className="num">
+                    Amount
+                  </th>
                   <th scope="col">Reference</th>
                   <th scope="col">Purpose code</th>
                   <th scope="col">Match</th>

@@ -978,6 +978,9 @@ p.suggestion {
 .stat-grid {
   margin-block: var(--niryat-space-4) 0;
 }
+.stat-grid + .table-wrap {
+  margin-top: var(--niryat-space-5);
+}
 .overview-grid {
   gap: var(--niryat-space-5);
   margin-top: var(--niryat-space-5);

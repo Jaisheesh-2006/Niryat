@@ -166,9 +166,15 @@ export default async function Invoices() {
                     <tr>
                       <th scope="col">PayPal transaction</th>
                       <th scope="col">Received</th>
-                      <th scope="col">Gross</th>
-                      <th scope="col">PayPal fee</th>
-                      <th scope="col">Net</th>
+                      <th scope="col" className="num">
+                        Gross
+                      </th>
+                      <th scope="col" className="num">
+                        PayPal fee
+                      </th>
+                      <th scope="col" className="num">
+                        Net
+                      </th>
                       <th scope="col">FX rate</th>
                       <th scope="col">FIRA</th>
                       <th scope="col">Refund</th>
@@ -223,9 +229,15 @@ export default async function Invoices() {
                       <tr>
                         <th scope="col">PayPal refund</th>
                         <th scope="col">Refunded on</th>
-                        <th scope="col">Amount</th>
-                        <th scope="col">PayPal fee returned</th>
-                        <th scope="col">Net</th>
+                        <th scope="col" className="num">
+                          Amount
+                        </th>
+                        <th scope="col" className="num">
+                          PayPal fee returned
+                        </th>
+                        <th scope="col" className="num">
+                          Net
+                        </th>
                       </tr>
                     </thead>
                     <tbody>

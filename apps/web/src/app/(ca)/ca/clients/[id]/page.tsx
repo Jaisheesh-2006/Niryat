@@ -145,8 +145,12 @@ export default async function CaClient({
                   <th scope="col">Invoice</th>
                   <th scope="col">Date</th>
                   <th scope="col">Client</th>
-                  <th scope="col">Amount</th>
-                  <th scope="col">Received</th>
+                  <th scope="col" className="num">
+                    Amount
+                  </th>
+                  <th scope="col" className="num">
+                    Received
+                  </th>
                   <th scope="col">Status</th>
                   <th scope="col">RBI deadline</th>
                   <th scope="col">Payment proof</th>
