@@ -36,12 +36,7 @@ Getting paid through PayPal is easy; staying compliant afterwards is not. Every 
 
 1. Open https://niryat-web.onrender.com and click **Try as freelancer (demo)**. Explore **Overview**, **Invoices**, **Close**, **Dashboard** and **Calendar**.
 2. Sign out and click **Try as CA (demo)** to see a chartered accountant's view across three freelancers.
-3. To pay an invoice the freelancer sends through PayPal, sign in at https://www.sandbox.paypal.com as the US buyer below.
-
-| PayPal sandbox buyer (sandbox only, no real money) |                                         |
-| -------------------------------------------------- | --------------------------------------- |
-| Email                                              | `sb-uhvts53532529@personal.example.com` |
-| Password                                           | `F_EyVZ02`                              |
+3. To pay an invoice the freelancer sends through PayPal, sign in at https://www.sandbox.paypal.com as our US sandbox buyer (sandbox only, no real money). Judges: the buyer login is in our Devpost testing instructions.
 
 Niryat itself needs no login details. The demo accounts are shared and hold synthetic records, so please don't enter personal data.
 
