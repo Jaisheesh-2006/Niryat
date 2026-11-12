@@ -2046,6 +2046,32 @@ button:has(.spinner)::before {
   width: 100%;
   margin-top: var(--niryat-space-5);
 }
+.password-field {
+  position: relative;
+  margin-top: 6px;
+}
+.password-field > input {
+  margin-top: 0;
+  padding-right: calc(var(--niryat-control-height) + 4px);
+}
+.password-field > .password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--niryat-control-height);
+  min-height: var(--niryat-control-height);
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0 var(--niryat-radius-control) var(--niryat-radius-control) 0;
+  background: transparent;
+  color: var(--niryat-muted);
+  box-shadow: none;
+}
+.password-field > .password-toggle:hover {
+  color: var(--niryat-primary);
+  background: transparent;
+}
 .auth-switch {
   margin: var(--niryat-space-3) 0 0;
   font-size: 14px;

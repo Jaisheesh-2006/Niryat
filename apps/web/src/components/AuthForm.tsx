@@ -15,6 +15,7 @@ export function AuthForm({
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [loginPath, setLoginPath] = useState<"/ca/login" | "/login" | undefined>();
   useEffect(() => setReady(true), []);
 
@@ -56,16 +57,45 @@ export function AuthForm({
         required
       />
       <label htmlFor="password">Password</label>
-      <input
-        id="password"
-        name="password"
-        type="password"
-        minLength={12}
-        maxLength={128}
-        autoComplete={mode === "login" ? "current-password" : "new-password"}
-        aria-describedby={message ? "auth-error" : undefined}
-        required
-      />
+      <div className="password-field">
+        <input
+          id="password"
+          name="password"
+          type={showPassword ? "text" : "password"}
+          minLength={12}
+          maxLength={128}
+          autoComplete={mode === "login" ? "current-password" : "new-password"}
+          autoCapitalize="none"
+          spellCheck={false}
+          aria-describedby={message ? "auth-error" : undefined}
+          required
+        />
+        <button
+          type="button"
+          className="password-toggle"
+          aria-controls="password"
+          aria-pressed={showPassword}
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          title={showPassword ? "Hide password" : "Show password"}
+          onClick={() => setShowPassword((shown) => !shown)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+            {showPassword && <path d="M3 3l18 18" />}
+          </svg>
+        </button>
+      </div>
       <button type="submit" className="btn" data-variant="primary" disabled={!ready || submitting}>
         {mode === "login" ? "Sign in" : "Create account"}
       </button>
