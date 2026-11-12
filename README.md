@@ -67,6 +67,11 @@ All agents run on Claude. They investigate, explain and draft; they never approv
 
 Every figure comes from the cited rules package (`packages/rules`), not the model. Each PayPal action an agent proposes waits in the approval queue, and the model can never approve its own action. A monthly AI budget caps spending, and every feature still works by hand without AI. See [ADR 0005](docs/decisions/0005-agent-boundary.md).
 
+## Architecture
+
+![Niryat architecture: freelancers and CAs use the Next.js web app on Render, which calls the Hono API. The API stores data in Postgres and PDFs in S3-compatible storage, takes every legal number from the rules package, and receives signature-verified PayPal webhooks. Claude agents read PayPal through the read-only Agent Toolkit and propose actions to the approval queue; only approved actions reach PayPal Invoicing and the APIMatic Server SDK. Render crons reconcile with PayPal and trigger the monthly-close workflow.](public/architecture.png)\
+Every PayPal write passes through the approval queue; Claude only reads and proposes. Diagram source: [docs/architecture.eraser](docs/architecture.eraser) (Eraser). Details: [architecture](docs/architecture.md).
+
 ## How Niryat meets the judging criteria
 
 | Criterion                    | Evidence                                                                                                                                                                                   |

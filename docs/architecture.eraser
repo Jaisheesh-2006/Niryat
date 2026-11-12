@@ -1,0 +1,63 @@
+// Niryat architecture (Eraser diagram-as-code). Paste into an Eraser diagram; export to public/architecture.png.
+title Niryat architecture
+direction right
+colorMode pastel
+styleMode shadow
+typeface clean
+
+People [icon: users, color: gray] {
+  Freelancer [icon: user]
+  CA [icon: briefcase, label: "Chartered accountant (view-only)"]
+}
+
+Render [icon: cloud, color: purple, label: "Render (one Blueprint)"] {
+  Web [icon: nextjs, label: "Next.js web: AG Studio dashboards, Bryntum calendar"]
+  API [icon: nodejs, label: "Hono API"]
+  Worker [icon: refresh-cw, label: "Render Workflows: monthly close"]
+  Crons [icon: clock, label: "Crons: 30-min sync, nightly reminders, monthly close"]
+  Postgres [icon: postgresql, label: "Postgres (encrypted profile fields)"]
+}
+
+Core [icon: package, color: blue, label: "Shared packages"] {
+  Rules [icon: shield, label: "Rules: cited law, deadlines, tax figures"]
+  Agents [icon: cpu, label: "Claude agents: extract, close, reminders, dashboard"]
+  Approvals [icon: check-circle, label: "Approval queue: user approves every PayPal action"]
+}
+
+PayPal [icon: paypal, color: blue, label: "PayPal sandbox"] {
+  Identity [icon: log-in, label: "Log in with PayPal"]
+  Invoicing [icon: file-text, label: "Invoicing v2 (REST)"]
+  ServerSDK [icon: credit-card, label: "Payments + Transaction Search (APIMatic Server SDK)"]
+  Disputes [icon: alert-triangle, label: "Disputes v1 (REST)"]
+  Webhooks [icon: zap, label: "Webhooks (9 events, verified)"]
+  Toolkit [icon: tool, label: "Agent Toolkit (5 read-only tools)"]
+}
+
+Claude [icon: message-square, color: orange, label: "Anthropic Claude API"]
+Storage [icon: hard-drive, label: "S3-compatible storage: invoice and FIRA PDFs"]
+
+// Users
+Freelancer > Web
+CA > Web
+Web > API: private network
+Freelancer > Identity: sign in
+
+// API and data
+API > Postgres
+API > Rules: every legal number
+API > Storage
+Webhooks > API: signature-verified events
+API > Disputes: poll
+
+// AI
+API > Agents
+Crons > Worker: monthly
+Worker > Agents: close
+Crons > ServerSDK: reconcile
+Agents > Claude
+Agents > Toolkit: read-only, logged
+Agents > Approvals: proposes
+
+// Approved actions only
+Approvals > Invoicing: send, remind
+Approvals > ServerSDK: refund
