@@ -1,6 +1,6 @@
 # Niryat
 
-**Turns an Indian freelancer's PayPal activity into export-compliance records.** Built for the PayPal AI Hackathon (2026). Live demo: **https://niryat-web.onrender.com**\
+**Turns an Indian freelancer's PayPal activity into export-compliance records.** Built for the PayPal AI Hackathon (2026). Live demo: **https://niryat-web.onrender.com** · Demo video: **https://youtu.be/zXUrKFutWZs**\
 ![Niryat's Today page: approvals waiting, next deadline, health score, a PayPal invoice awaiting approval and upcoming compliance deadlines](public/niryat-overview.png)
 
 ## Who it helps
@@ -80,7 +80,7 @@ Every figure comes from the cited rules package (`packages/rules`), not the mode
 | Design                       | A complete product for two roles: 12 freelancer pages and a CA portal, one design system, plain-language explanations of legal terms, and fallbacks that work without JavaScript.          |
 | Potential impact             | Built for freelancers paid from abroad through PayPal, PayPal India's core users, and for the CAs who serve them. Each problem in [Why it exists](#why-it-exists) maps to a feature above. |
 | Innovation                   | Turns PayPal activity directly into Indian export compliance. AI agents investigate and draft, cited rules compute, and the user approves.                                                 |
-| Presentation                 | A live demo with one-click accounts, the step-by-step [Try it](#try-it) guide, a short demo video and a separate document for each sponsor tool.                                           |
+| Presentation                 | A live demo with one-click accounts, the step-by-step [Try it](#try-it) guide, a short [demo video](https://youtu.be/zXUrKFutWZs) and a separate document for each sponsor tool.           |
 
 ## Sponsor tools
 
