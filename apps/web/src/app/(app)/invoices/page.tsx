@@ -43,7 +43,7 @@ export default async function Invoices() {
         }
       />
       <CardBoundary title="PayPal data freshness">
-        <Suspense fallback={<p>Loading PayPal data freshness…</p>}>
+        <Suspense fallback={<p className="sync-status">Loading PayPal data freshness…</p>}>
           <SyncFreshness />
         </Suspense>
       </CardBoundary>
@@ -146,7 +146,7 @@ export default async function Invoices() {
                   : "One-time"}
               </dd>
               <dt>Paid so far</dt>
-              <dd className="num">{formatMoney(invoice.paidTotal, invoice.currency)}</dd>
+              <dd>{formatMoney(invoice.paidTotal, invoice.currency)}</dd>
               <dt>GST invoice PDF</dt>
               <dd>
                 {invoice.pdfUrl !== null ? (
@@ -175,7 +175,9 @@ export default async function Invoices() {
                       <th scope="col" className="num">
                         Net
                       </th>
-                      <th scope="col">FX rate</th>
+                      <th scope="col" className="num">
+                        FX rate
+                      </th>
                       <th scope="col">FIRA</th>
                       <th scope="col">Refund</th>
                     </tr>
@@ -196,7 +198,7 @@ export default async function Invoices() {
                             ? "Not provided by PayPal"
                             : formatMoney(payment.net, payment.currency)}
                         </td>
-                        <td>{payment.fxRate ?? "Not provided by PayPal"}</td>
+                        <td className="num">{payment.fxRate ?? "Not provided by PayPal"}</td>
                         <td>
                           {payment.fira?.state === "matched"
                             ? "Matched"
@@ -266,17 +268,11 @@ export default async function Invoices() {
             <h3>Export money received</h3>
             <dl>
               <dt>Export value</dt>
-              <dd className="num">
-                {formatMoney(invoice.compliance.realisation.exportValue, invoice.currency)}
-              </dd>
+              <dd>{formatMoney(invoice.compliance.realisation.exportValue, invoice.currency)}</dd>
               <dt>Received through PayPal, net of refunds</dt>
-              <dd className="num">
-                {formatMoney(invoice.compliance.realisation.received, invoice.currency)}
-              </dd>
+              <dd>{formatMoney(invoice.compliance.realisation.received, invoice.currency)}</dd>
               <dt>Not yet received</dt>
-              <dd className="num">
-                {formatMoney(invoice.compliance.realisation.shortfall, invoice.currency)}
-              </dd>
+              <dd>{formatMoney(invoice.compliance.realisation.shortfall, invoice.currency)}</dd>
             </dl>
             {invoice.compliance.realisation.message && (
               <p>{invoice.compliance.realisation.message}</p>

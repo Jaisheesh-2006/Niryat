@@ -77,7 +77,7 @@ export function ProfileForm({
       </fieldset>
       <fieldset className="card">
         <legend>GST and your yearly export form</legend>
-        <p>
+        <p className="field-intro">
           <Term term="lut" />
         </p>
         <fieldset>
@@ -105,7 +105,7 @@ export function ProfileForm({
             No
           </label>
         </fieldset>
-        <p>
+        <p className="field-intro">
           <Term term="gstin" />
         </p>
         <label htmlFor="gstin">GSTIN</label>
@@ -144,7 +144,7 @@ export function ProfileForm({
             />
           </div>
         </div>
-        <p>
+        <p className="field-intro">
           <Term term="gstr1" />
         </p>
         <label htmlFor="gstr1Frequency">How often do you file GSTR-1?</label>
@@ -164,7 +164,7 @@ export function ProfileForm({
       </fieldset>
       <fieldset className="card">
         <legend>Your work and foreign payments</legend>
-        <p>
+        <p className="field-intro">
           <Term term="purpose_code" />
         </p>
         <label htmlFor="workType">What work do you do for foreign clients?</label>
@@ -186,7 +186,7 @@ export function ProfileForm({
             </option>
           ))}
         </select>
-        <p>
+        <p className="field-intro">
           <Term term="presumptive" />
         </p>
         <label htmlFor="specifiedProfession">
@@ -213,7 +213,7 @@ export function ProfileForm({
         Save profile
       </button>
       {message && (
-        <p id="profile-error" role="alert">
+        <p id="profile-error" role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}

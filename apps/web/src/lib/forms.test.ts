@@ -400,14 +400,14 @@ it("shows source quotes and Discard clears extraction without a request", () => 
   expect(html).toContain(
     "Extracted by Claude from your text. Check every value before you use it.",
   );
-  const result = Children.toArray(element.props.children).find(
-    (child) =>
-      isValidElement<{ children: ReactNode }>(child) &&
-      Children.toArray(child.props.children).some(
-        (nested) =>
-          isValidElement<{ children: unknown }>(nested) && nested.props.children === "Discard",
-      ),
-  );
+  const result = Children.toArray(element.props.children)
+    .flatMap((child) =>
+      isValidElement<{ children: ReactNode }>(child) ? Children.toArray(child.props.children) : [],
+    )
+    .find(
+      (child) =>
+        isValidElement<{ className?: string }>(child) && child.props.className === "button-row",
+    );
   if (!isValidElement<{ children: ReactNode }>(result))
     throw new Error("Expected extraction results");
   const buttons = Children.toArray(result.props.children);
@@ -1147,7 +1147,12 @@ it.each([
     );
   vi.stubGlobal("fetch", fetch);
   const element = FiraLineButtons({ lineId: "line-id" });
-  const buttons = Children.toArray(element.props.children).filter(
+  const row = Children.toArray(element.props.children).find(
+    (child) =>
+      isValidElement<{ className?: string }>(child) && child.props.className === "button-row",
+  );
+  if (!isValidElement<{ children: ReactNode }>(row)) throw new Error("Expected button row");
+  const buttons = Children.toArray(row.props.children).filter(
     (child) => isValidElement(child) && child.type === "button",
   );
   const button = buttons[decision === "confirm" ? 0 : 1];
@@ -1202,7 +1207,7 @@ it("shows matched, uncertain and flagged FIRA lines beside their source text", a
   for (const expected of [
     "Payment proof",
     "FIRA for October 2026",
-    "Uploaded 30 Oct 2026",
+    'Uploaded <time dateTime="2026-10-29T20:00:00Z">30 Oct 2026</time>',
     "$40.00",
     "Not shown",
     'Payment <span class="mono">transaction-0</span> (invoice <span class="mono">DEMO-0</span>)',

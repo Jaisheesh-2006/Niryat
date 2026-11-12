@@ -68,7 +68,15 @@ export default async function AdvanceTax({
   const { estimate } = result;
   return (
     <>
-      <PageHeader title="Income tax payments" description={<Term term="advance_tax" />} />
+      <PageHeader
+        title="Income tax payments"
+        description={<Term term="advance_tax" />}
+        actions={
+          <Link className="btn" data-variant="secondary" href="/profile">
+            Edit profile
+          </Link>
+        }
+      />
       <p>{estimateNote}</p>
       <form className="card" method="get">
         <label htmlFor="taxYear">Tax year</label>
@@ -161,16 +169,7 @@ export default async function AdvanceTax({
           . {estimateNote}
         </p>
         {estimate.messages.map((message) => (
-          <div key={message}>
-            <p>{message}</p>
-            {estimate.citations
-              .filter((citation) => citation.ruleId === "ADVANCE_TAX_DATES")
-              .map((citation) => (
-                <p key={citation.ruleId} className="citation">
-                  Rule {citation.ruleId}: {citation.source}. Verify with your CA.
-                </p>
-              ))}
-          </div>
+          <p key={message}>{message}</p>
         ))}
         <div className="table-wrap">
           <table>
@@ -189,12 +188,7 @@ export default async function AdvanceTax({
                     By {formatDate(row.date)}: {row.cumulativePercent}% of the year&apos;s tax
                   </td>
                   <td className="num">
-                    {row.amountInr !== null && (
-                      <>
-                        {" "}
-                        ({formatMoney(row.amountInr, "INR")}) — {estimateNote}
-                      </>
-                    )}
+                    {row.amountInr === null ? "—" : formatMoney(row.amountInr, "INR")}
                   </td>
                 </tr>
               ))}
@@ -209,7 +203,6 @@ export default async function AdvanceTax({
             </p>
           ))}
       </section>
-      <Link href="/profile">Edit profile</Link>
     </>
   );
 }

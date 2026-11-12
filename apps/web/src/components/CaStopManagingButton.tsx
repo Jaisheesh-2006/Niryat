@@ -34,7 +34,11 @@ export function CaStopManagingButton({
       >
         Stop managing this client
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p role="alert" className="banner" data-tone="danger">
+          {message}
+        </p>
+      )}
     </>
   );
 }

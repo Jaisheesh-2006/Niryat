@@ -30,8 +30,12 @@ export default async function Fira() {
       <FiraUpload />
       {documents.map((document) => (
         <section className="card" key={document.id}>
-          <h2>FIRA for {formatMonth(document.month)}</h2>
-          <p className="caption">Uploaded {formatDate(document.uploadedAt)}</p>
+          <div className="card-header">
+            <h2>FIRA for {formatMonth(document.month)}</h2>
+          </div>
+          <p>
+            Uploaded <time dateTime={document.uploadedAt}>{formatDate(document.uploadedAt)}</time>
+          </p>
           <div className="table-wrap">
             <table className="fira-lines">
               <thead>
@@ -45,7 +49,9 @@ export default async function Fira() {
                   <th scope="col">Match</th>
                   <th scope="col">State</th>
                   <th scope="col">Reason</th>
-                  <th scope="col">Confidence</th>
+                  <th scope="col" className="num">
+                    Confidence
+                  </th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -90,7 +96,7 @@ export default async function Fira() {
                       </StatusBadge>
                     </td>
                     <td>{line.note}</td>
-                    <td>
+                    <td className="num">
                       {line.match ? `${Math.round(Number(line.match.confidence) * 100)}%` : "—"}
                     </td>
                     <td>

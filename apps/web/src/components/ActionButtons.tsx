@@ -72,7 +72,10 @@ export function ActionButtons({ action, inCard = false }: { action: Action; inCa
   return (
     <div className={inCard ? "approval-controls" : undefined}>
       {!inCard && <h3>Waiting for your approval</h3>}
-      <p>Niryat will send exactly this request to PayPal. Nothing is sent until you approve.</p>
+      <p>
+        Niryat will send exactly this request to PayPal.
+        {!inCard && " Nothing is sent until you approve."}
+      </p>
       <details>
         <summary className="btn" data-variant="ghost">
           Show the PayPal request

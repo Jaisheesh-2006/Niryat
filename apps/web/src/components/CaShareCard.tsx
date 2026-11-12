@@ -15,7 +15,7 @@ export function CaShareCard({ link }: { link: CaLink | null }) {
 
   return (
     <section className="card" aria-labelledby="ca-share-heading">
-      <p>Your CA</p>
+      <p className="eyebrow">Your CA</p>
       <h2 id="ca-share-heading">Share your records with your CA</h2>
       <p>
         Your CA will see your invoices, payments, deadlines and reports. They cannot send anything
@@ -92,7 +92,12 @@ export function CaShareCard({ link }: { link: CaLink | null }) {
             />
           </>
         )}
-        <button type="submit" disabled={isPending}>
+        <button
+          type="submit"
+          className={active ? "btn" : undefined}
+          data-variant={active ? "secondary" : undefined}
+          disabled={isPending}
+        >
           {isPending
             ? "Saving…"
             : link?.status === "pending"
@@ -102,7 +107,7 @@ export function CaShareCard({ link }: { link: CaLink | null }) {
                 : "Send request"}
         </button>
         {message && (
-          <p id="ca-share-error" role="alert">
+          <p id="ca-share-error" role="alert" className="banner" data-tone="danger">
             {message}
           </p>
         )}

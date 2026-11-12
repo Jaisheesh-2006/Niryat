@@ -180,7 +180,7 @@ it("keeps a stale CA request failure visible", async () => {
   expect(refresh).not.toHaveBeenCalled();
   state.message = "Not found. Refresh the page.";
   expect(renderToStaticMarkup(<CaRequestButtons requestId={link.id} />)).toContain(
-    'role="alert">Not found. Refresh the page.</p>',
+    'data-tone="danger">Not found. Refresh the page.</p>',
   );
 });
 

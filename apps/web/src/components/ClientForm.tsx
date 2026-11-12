@@ -117,7 +117,7 @@ export function ClientForm({
         Check and save
       </button>
       {message && (
-        <p id={`${prefix}-error`} role="alert">
+        <p id={`${prefix}-error`} role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}

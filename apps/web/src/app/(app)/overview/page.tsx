@@ -155,7 +155,7 @@ async function Deadlines() {
           ))}
         </ol>
       ) : (
-        <p>None scheduled</p>
+        <p>None scheduled.</p>
       )}
     </section>
   );
@@ -205,7 +205,7 @@ async function RecentInvoices() {
           </table>
         </div>
       ) : (
-        <p>No invoices yet</p>
+        <p>No invoices yet.</p>
       )}
     </section>
   );
@@ -231,7 +231,7 @@ export default function Overview() {
         }
       />
       <CardBoundary title="PayPal data freshness">
-        <Suspense fallback={<p>Loading PayPal data freshness…</p>}>
+        <Suspense fallback={<p className="sync-status">Loading PayPal data freshness…</p>}>
           <SyncFreshness />
         </Suspense>
       </CardBoundary>

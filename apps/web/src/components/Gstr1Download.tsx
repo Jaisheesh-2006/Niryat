@@ -82,8 +82,10 @@ export function Gstr1Download({
 
   return (
     <form className="card" method="post" onSubmit={submit}>
-      <p id="inr-rate-help">Use the exchange rate your CA uses for the invoice date.</p>
-      <p id="gst-rate-help">
+      <p id="inr-rate-help" className="field-help">
+        Use the exchange rate your CA uses for the invoice date.
+      </p>
+      <p id="gst-rate-help" className="field-help">
         Enter the rate your CA confirms for this service and invoice date. This is not the INR
         exchange rate. Under LUT, no IGST is payable in this file.
       </p>

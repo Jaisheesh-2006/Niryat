@@ -97,7 +97,7 @@ export function ExtractPanel({ clients }: { clients: Client[] }) {
         </button>
       </form>
       {message && (
-        <p id={`${id}-error`} role="alert">
+        <p id={`${id}-error`} role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}
@@ -124,22 +124,32 @@ export function ExtractPanel({ clients }: { clients: Client[] }) {
             </table>
           </div>
           <p>Extracted by Claude from your text. Check every value before you use it.</p>
-          <button type="button" onClick={() => setUsing(true)} disabled={using}>
-            Use these values
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              activeExtraction.current = null;
-              setText("");
-              setResult(null);
-              setUsing(false);
-              setCreated(null);
-              setMessage("");
-            }}
-          >
-            Discard
-          </button>
+          <div className="button-row">
+            <button
+              type="button"
+              className="btn"
+              data-variant="primary"
+              onClick={() => setUsing(true)}
+              disabled={using}
+            >
+              Use these values
+            </button>
+            <button
+              type="button"
+              className="btn"
+              data-variant="secondary"
+              onClick={() => {
+                activeExtraction.current = null;
+                setText("");
+                setResult(null);
+                setUsing(false);
+                setCreated(null);
+                setMessage("");
+              }}
+            >
+              Discard
+            </button>
+          </div>
         </>
       )}
       {using && matched && <p>Matched your existing client {matched.name}.</p>}

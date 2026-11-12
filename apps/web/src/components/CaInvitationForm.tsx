@@ -44,7 +44,7 @@ export function CaInvitationForm() {
         {isPending ? "Opening…" : "Open request"}
       </button>
       {message && (
-        <p id="ca-invitation-error" role="alert">
+        <p id="ca-invitation-error" role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}

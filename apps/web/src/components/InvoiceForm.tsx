@@ -82,7 +82,7 @@ export function InvoiceForm({
         required
         defaultValue={defaults?.description}
       />
-      <p>
+      <p className="field-intro">
         <Term term="sac" />
       </p>
       <label htmlFor={`${prefix}-sac`}>Service code (SAC)</label>
@@ -132,7 +132,7 @@ export function InvoiceForm({
         {isPending ? "Issuing…" : "Issue invoice"}
       </button>
       {message && (
-        <p id={`${prefix}-error`} role="alert">
+        <p id={`${prefix}-error`} role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}

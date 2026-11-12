@@ -31,7 +31,7 @@ it("shows the flagged line badge and its reason in separate columns", async () =
   ]);
   const html = renderToStaticMarkup(await Fira());
   expect(html).toContain("FIRA for October 2026");
-  expect(html).toContain("Uploaded 2 Nov 2026");
+  expect(html).toContain('Uploaded <time dateTime="2026-11-01T18:30:00Z">2 Nov 2026</time>');
   expect(html).toContain('<th scope="col">Reason</th>');
   expect(html).toContain(
     'data-tone="danger">Flagged</span></td><td>No payment matches this reference.</td>',

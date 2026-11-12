@@ -148,7 +148,8 @@ h3 {
   font-weight: 600;
   line-height: 24px;
 }
-main > h2:not(:first-child) {
+main > h2:not(:first-child),
+main > section:not(.card) > h2:not(:first-child) {
   margin-top: 40px;
 }
 .display {
@@ -222,6 +223,15 @@ hr {
 
 /* ---------- Forms ---------- */
 form {
+  max-width: 40rem;
+}
+/* Form cards line up with the full-width cards around them; their controls keep a readable width. */
+form.card,
+form:has(> fieldset.card) {
+  max-width: none;
+}
+:is(form.card, fieldset.card)
+  :is(input:not([type="checkbox"], [type="radio"]), select, textarea, .form-grid, .password-field) {
   max-width: 40rem;
 }
 label,
@@ -304,7 +314,7 @@ input:is([type="checkbox"], [type="radio"]) {
 }
 label:has(input:is([type="checkbox"], [type="radio"])) {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   margin-right: var(--niryat-space-4);
   font-weight: 400;
 }
@@ -313,6 +323,30 @@ label:has(input:is([type="checkbox"], [type="radio"])) {
   color: var(--niryat-muted);
   font-size: 13px;
   line-height: 18px;
+}
+/* A glossary line that introduces the field below it. */
+.field-intro {
+  margin: var(--niryat-space-4) 0 0;
+}
+fieldset.card > legend + .field-intro {
+  margin-top: 0;
+}
+:where(.field-intro) + label {
+  margin-top: var(--niryat-space-2);
+}
+/* A pair of related actions (decide / dismiss) sharing one row. */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--niryat-space-2);
+  margin-top: var(--niryat-space-4);
+}
+td > .button-row {
+  margin-top: 0;
+}
+p[role="status"]:empty {
+  margin: 0;
 }
 [aria-invalid="true"] {
   border: 2px solid var(--niryat-danger);
@@ -511,6 +545,9 @@ td > p {
 }
 :is(.card > .table-wrap, .card > details > .table-wrap, .card.table-wrap) :is(th, td):last-child {
   padding-right: var(--card-pad, var(--niryat-space-5));
+}
+.card.table-wrap caption {
+  padding-inline: var(--card-pad, var(--niryat-space-5));
 }
 .card > .table-wrap:last-child {
   margin-bottom: calc(-1 * var(--card-pad, var(--niryat-space-5)));
@@ -936,6 +973,10 @@ p.suggestion {
   order: 2;
   margin-left: auto;
 }
+.approval-controls
+  > .btn:is([data-variant="decision"], [data-variant="primary"], [data-variant="danger"]) {
+  order: 3;
+}
 /* Narrow decision cards: the reassurance gets its own line and both decisions stay together. */
 @container (max-width: 420px) {
   .approval-controls > .btn {
@@ -960,10 +1001,6 @@ p.suggestion {
   .approval-facts > :where(div + div) {
     padding-left: var(--niryat-space-4);
   }
-}
-.approval-controls
-  > .btn:is([data-variant="decision"], [data-variant="primary"], [data-variant="danger"]) {
-  order: 3;
 }
 /* A hairline splits the request from the decision (Neel panel foot). */
 .approval-controls::before {
@@ -1005,9 +1042,6 @@ p.suggestion {
 }
 .overview-grid > .card {
   margin-top: 0;
-}
-.overview-grid .approval-card {
-  margin-top: var(--niryat-space-3);
 }
 .stat-tile {
   position: relative;
@@ -1296,6 +1330,13 @@ article.card > :where(.badge + p) {
   padding: var(--niryat-space-7) var(--niryat-space-6);
   text-align: center;
 }
+/* Inside a card the empty state is content, not a second raised card. */
+.card .empty-state {
+  border: 0;
+  padding: var(--niryat-space-5) 0;
+  background: none;
+  box-shadow: none;
+}
 .empty-state > svg {
   width: 52px;
   height: 52px;
@@ -1383,7 +1424,7 @@ section.card > .card-header + p:has(> time:only-child) {
   color: var(--niryat-muted);
   font-size: 14px;
 }
-main > section:not(:first-child) {
+main > section:not(.card):not(:first-child) {
   margin-top: 40px;
 }
 .card .stat-tile {
@@ -1416,12 +1457,15 @@ fieldset.card + fieldset.card {
   margin-top: var(--niryat-space-4);
 }
 ul:has(> li.card) {
-  margin: 0;
+  margin: var(--niryat-space-4) 0 0;
   padding: 0;
   list-style: none;
 }
 :where(li.card) + li.card {
   margin-top: var(--niryat-space-4);
+}
+td > form > :where(:first-child) {
+  margin-top: 0;
 }
 td > :is(.btn, button) {
   margin: 0 var(--niryat-space-1) var(--niryat-space-1) 0;
@@ -2343,8 +2387,10 @@ main:has(.dashboard-studio, .calendar-card),
 }
 
 /* ---------- Breakpoints ---------- */
-.stat-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (min-width: 480px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (min-width: 768px) {
   .form-grid,

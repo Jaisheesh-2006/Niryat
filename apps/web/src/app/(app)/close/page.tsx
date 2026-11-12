@@ -184,7 +184,9 @@ export default async function Close() {
             </div>
           </dl>
           {(summary.sync.payments === "failed" || summary.sync.disputes === "failed") && (
-            <p role="alert">PayPal sync failed; figures may be incomplete.</p>
+            <p role="alert" className="banner" data-tone="danger">
+              PayPal sync failed; figures may be incomplete.
+            </p>
           )}
           <div className="table-wrap">
             <table>
@@ -235,7 +237,7 @@ export default async function Close() {
             reminder, {action.status === "done" ? "Accepted by PayPal" : "Rejected"}
           </p>
         ))}
-        <h2>Runs</h2>
+        <h3>Runs</h3>
         {runs.map((run) => (
           <section key={run.id}>
             <p>

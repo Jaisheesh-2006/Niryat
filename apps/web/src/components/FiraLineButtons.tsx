@@ -20,13 +20,31 @@ export function FiraLineButtons({ lineId }: { lineId: string }) {
 
   return (
     <>
-      <button type="button" disabled={isPending} onClick={() => submit("confirm")}>
-        Confirm match
-      </button>
-      <button type="button" disabled={isPending} onClick={() => submit("reject")}>
-        Reject match
-      </button>
-      {message && <p role="alert">{message}</p>}
+      <div className="button-row">
+        <button
+          type="button"
+          className="btn"
+          data-variant="primary"
+          disabled={isPending}
+          onClick={() => submit("confirm")}
+        >
+          Confirm match
+        </button>
+        <button
+          type="button"
+          className="btn"
+          data-variant="secondary"
+          disabled={isPending}
+          onClick={() => submit("reject")}
+        >
+          Reject match
+        </button>
+      </div>
+      {message && (
+        <p role="alert" className="banner" data-tone="danger">
+          {message}
+        </p>
+      )}
     </>
   );
 }

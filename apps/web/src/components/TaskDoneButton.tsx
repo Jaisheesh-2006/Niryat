@@ -27,7 +27,11 @@ export function TaskDoneButton({ taskId }: { taskId: string }) {
       >
         {isPending ? "Saving…" : "Mark done"}
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p role="alert" className="banner" data-tone="danger">
+          {message}
+        </p>
+      )}
     </>
   );
 }

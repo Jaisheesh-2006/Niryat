@@ -37,7 +37,7 @@ export function RefundForm({ paymentId, currency }: { paymentId: string; currenc
         {isPending ? "Proposing…" : "Propose refund"}
       </button>
       {message && (
-        <p id={`${id}-error`} role="alert">
+        <p id={`${id}-error`} role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}

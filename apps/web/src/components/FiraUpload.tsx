@@ -58,7 +58,7 @@ export function FiraUpload() {
         {isPending ? "Reading…" : "Upload payment proof"}
       </button>
       {message && (
-        <p id={`${id}-error`} role="alert">
+        <p id={`${id}-error`} role="alert" className="banner" data-tone="danger">
           {message}
         </p>
       )}

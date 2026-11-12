@@ -15,6 +15,7 @@ export function CaRequestButtons({ requestId }: { requestId: string }) {
           <button
             key={response}
             className="btn"
+            data-variant={response === "accept" ? "primary" : "secondary"}
             type="button"
             disabled={isPending}
             onClick={() =>
@@ -34,7 +35,11 @@ export function CaRequestButtons({ requestId }: { requestId: string }) {
           </button>
         ))}
       </div>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p role="alert" className="banner" data-tone="danger">
+          {message}
+        </p>
+      )}
     </>
   );
 }
