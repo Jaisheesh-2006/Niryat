@@ -53,22 +53,26 @@ export function InvoiceForm({
       </select>
       <fieldset>
         <legend>Invoice type</legend>
-        <label htmlFor={`${prefix}-one_time`}>One-time</label>
-        <input
-          id={`${prefix}-one_time`}
-          name="type"
-          type="radio"
-          value="one_time"
-          defaultChecked={defaults?.type !== "recurring"}
-        />
-        <label htmlFor={`${prefix}-recurring`}>Recurring series</label>
-        <input
-          id={`${prefix}-recurring`}
-          name="type"
-          type="radio"
-          value="recurring"
-          defaultChecked={defaults?.type === "recurring"}
-        />
+        <label htmlFor={`${prefix}-one_time`}>
+          <input
+            id={`${prefix}-one_time`}
+            name="type"
+            type="radio"
+            value="one_time"
+            defaultChecked={defaults?.type !== "recurring"}
+          />
+          One-time
+        </label>
+        <label htmlFor={`${prefix}-recurring`}>
+          <input
+            id={`${prefix}-recurring`}
+            name="type"
+            type="radio"
+            value="recurring"
+            defaultChecked={defaults?.type === "recurring"}
+          />
+          Recurring series
+        </label>
       </fieldset>
       <label htmlFor={`${prefix}-description`}>Description of service</label>
       <textarea

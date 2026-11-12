@@ -82,24 +82,28 @@ export function ProfileForm({
         </p>
         <fieldset>
           <legend>Are you registered for GST?</legend>
-          <label htmlFor="gstRegistered-yes">Yes</label>
-          <input
-            id="gstRegistered-yes"
-            name="gstRegistered"
-            type="radio"
-            value="yes"
-            defaultChecked={initial?.gstRegistered === true}
-            required
-          />
-          <label htmlFor="gstRegistered-no">No</label>
-          <input
-            id="gstRegistered-no"
-            name="gstRegistered"
-            type="radio"
-            value="no"
-            defaultChecked={initial?.gstRegistered === false}
-            required
-          />
+          <label htmlFor="gstRegistered-yes">
+            <input
+              id="gstRegistered-yes"
+              name="gstRegistered"
+              type="radio"
+              value="yes"
+              defaultChecked={initial?.gstRegistered === true}
+              required
+            />
+            Yes
+          </label>
+          <label htmlFor="gstRegistered-no">
+            <input
+              id="gstRegistered-no"
+              name="gstRegistered"
+              type="radio"
+              value="no"
+              defaultChecked={initial?.gstRegistered === false}
+              required
+            />
+            No
+          </label>
         </fieldset>
         <p>
           <Term term="gstin" />
@@ -144,7 +148,6 @@ export function ProfileForm({
           <Term term="gstr1" />
         </p>
         <label htmlFor="gstr1Frequency">How often do you file GSTR-1?</label>
-        <p id="gstr1Frequency-help">Only for GST-registered users.</p>
         <select
           id="gstr1Frequency"
           name="gstr1Frequency"
@@ -155,6 +158,9 @@ export function ProfileForm({
           <option value="quarterly">Quarterly (QRMP)</option>
           <option value="">Not sure</option>
         </select>
+        <p id="gstr1Frequency-help" className="field-help">
+          Only for GST-registered users.
+        </p>
       </fieldset>
       <fieldset className="card">
         <legend>Your work and foreign payments</legend>

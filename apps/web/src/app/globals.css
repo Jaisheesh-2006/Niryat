@@ -302,12 +302,17 @@ input:is([type="checkbox"], [type="radio"]) {
   box-shadow: none;
   accent-color: var(--niryat-primary);
 }
-label:has(+ input[type="radio"]),
 label:has(input:is([type="checkbox"], [type="radio"])) {
   display: inline-flex;
   align-items: center;
   margin-right: var(--niryat-space-4);
   font-weight: 400;
+}
+.field-help {
+  margin: 6px 0 0;
+  color: var(--niryat-muted);
+  font-size: 13px;
+  line-height: 18px;
 }
 [aria-invalid="true"] {
   border: 2px solid var(--niryat-danger);
@@ -977,6 +982,19 @@ p.suggestion {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--niryat-space-4);
+}
+/* Side-by-side fields: a label that wraps to two lines must not push its
+   control below its neighbour, so the label grows and controls share a row. */
+.form-grid {
+  gap: 0 var(--niryat-space-4);
+}
+.form-grid > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+:where(.form-grid > div) > label {
+  flex: 1 0 auto;
 }
 .stat-grid {
   margin-block: var(--niryat-space-4) 0;

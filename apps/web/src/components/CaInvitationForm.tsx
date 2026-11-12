@@ -40,7 +40,7 @@ export function CaInvitationForm() {
         required
         disabled={isPending}
       />
-      <button className="btn" type="submit" disabled={isPending}>
+      <button type="submit" disabled={isPending}>
         {isPending ? "Opening…" : "Open request"}
       </button>
       {message && (

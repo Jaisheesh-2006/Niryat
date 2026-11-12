@@ -91,22 +91,26 @@ export function ClientForm({
       {questions.map(([name, legend]) => (
         <fieldset key={name}>
           <legend>{legend}</legend>
-          <label htmlFor={`${prefix}-${name}-yes`}>Yes</label>
-          <input
-            id={`${prefix}-${name}-yes`}
-            name={name}
-            type="radio"
-            value="yes"
-            defaultChecked={client?.exportCheck.answers[name] === true}
-          />
-          <label htmlFor={`${prefix}-${name}-no`}>No</label>
-          <input
-            id={`${prefix}-${name}-no`}
-            name={name}
-            type="radio"
-            value="no"
-            defaultChecked={client?.exportCheck.answers[name] === false}
-          />
+          <label htmlFor={`${prefix}-${name}-yes`}>
+            <input
+              id={`${prefix}-${name}-yes`}
+              name={name}
+              type="radio"
+              value="yes"
+              defaultChecked={client?.exportCheck.answers[name] === true}
+            />
+            Yes
+          </label>
+          <label htmlFor={`${prefix}-${name}-no`}>
+            <input
+              id={`${prefix}-${name}-no`}
+              name={name}
+              type="radio"
+              value="no"
+              defaultChecked={client?.exportCheck.answers[name] === false}
+            />
+            No
+          </label>
         </fieldset>
       ))}
       <button type="submit" disabled={isPending}>
